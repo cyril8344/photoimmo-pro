@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhotoImmo Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{accent:'#f59e0b'}}}}</script>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body{background:#0f1117;color:#e5e7eb;font-family:'Inter',system-ui,sans-serif;}
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-track{background:#1a1d27;}
+    ::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+    .fade-in{animation:fadeIn .2s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .sidebar-link{transition:all .15s;}
+    input,select,textarea{background:#1a1d27!important;border-color:#374151!important;color:#e5e7eb!important;}
+    input::placeholder,textarea::placeholder{color:#6b7280!important;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const SB_URL  = typeof __SUPABASE_URL__  !== 'undefined' ? __SUPABASE_URL__  : '';
+const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '';
+const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+
+const TVA = 0.20;
+const TARIFS = {
+  surface: {'<50':200,'50-100':300,'100-200':450,'>200':600},
+  photos:  {10:0,20:80,30:150,50:280},
+  visite:  {non:0,oui:350},
+  drone:   {non:0,oui:250},
+  retouche:{standard:0,premium:120},
+};
+const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
+const MISSION_STATUSES=['À confirmer','Confirmé','Réalisé','Livré'];
+const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
+const STATUS_COLORS={
+  'À confirmer':'bg-yellow-500/20 text-yellow-400',
+  'Confirmé':'bg-blue-500/20 text-blue-400',
+  'Réalisé':'bg-green-500/20 text-green-400',
+  'Livré':'bg-purple-500/20 text-purple-400',
+  'En attente':'bg-gray-500/20 text-gray-400',
+  'Envoyé':'bg-blue-500/20 text-blue-400',
+  'Accepté':'bg-green-500/20 text-green-400',
+  'Refusé':'bg-red-500/20 text-red-400',
+};
+
+// ─── LOCAL STORAGE STORE ──────────────────────────────────────────────────────
+const store = {
+  get:(k,d=[])=>{ try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;} },
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
+};
+const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+const today=()=>new Date().toISOString().split('T')[0];
+const fmt=(d)=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
+const fmtMoney=(n)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n||0);
+
+// ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
+function seedDemo(){
+  if(store.get('pii_seeded',false))return;
+  const clients=[
+    {id:uid(),name:'Martin Dupont',email:'martin@agence-immo.fr',phone:'06 12 34 56 78',agent:'Sophie Bernard',agent_email:'sophie@immo.fr',created_at:today()},
+    {id:uid(),name:'Agence Prestige',email:'contact@prestige-immo.fr',phone:'01 23 45 67 89',agent:'Julien Morel',agent_email:'julien@prestige.fr',created_at:today()},
+    {id:uid(),name:'Claire Fontaine',email:'claire@fonctions.fr',phone:'07 98 76 54 32',agent:'',agent_email:'',created_at:today()},
+  ];
+  const missionDate=new Date();missionDate.setDate(missionDate.getDate()+3);
+  const missions=[
+    {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Appartement',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'3 pièces, lumineux',created_at:today()},
+    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Villa',date:today(),status:'Réalisé',notes:'Maison avec piscine',created_at:today()},
+    {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Commerce',date:today(),status:'Livré',notes:'',created_at:today()},
+  ];
+  const quotes=[
+    {id:uid(),client_id:clients[0].id,mission_id:missions[0].id,surface:'50-100',photos:20,visite:'oui',drone:'non',retouche:'standard',ht:730,ttc:876,status:'Envoyé',num:'DEV-001',created_at:today()},
+    {id:uid(),client_id:clients[1].id,mission_id:missions[1].id,surface:'>200',photos:50,visite:'oui',drone:'oui',retouche:'premium',ht:1430,ttc:1716,status:'Accepté',num:'DEV-002',created_at:today()},
+  ];
+  store.set('pii_clients',clients);
+  store.set('pii_missions',missions);
+  store.set('pii_quotes',quotes);
+  store.set('pii_galleries',[]);
+  store.set('pii_seeded',true);
+}
+
+// ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
+const Badge=({s})=><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[s]||'bg-gray-700 text-gray-300'}`}>{s}</span>;
+const Btn=({children,onClick,variant='primary',size='md',disabled,className=''})=>{
+  const base='rounded-lg font-medium transition-all focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed';
+  const variants={primary:'bg-amber-500 hover:bg-amber-400 text-black',secondary:'bg-gray-700 hover:bg-gray-600 text-gray-100',danger:'bg-red-600 hover:bg-red-500 text-white',ghost:'hover:bg-gray-800 text-gray-300'};
+  const sizes={sm:'text-xs px-3 py-1.5',md:'text-sm px-4 py-2',lg:'text-base px-6 py-2.5'};
+  return <button onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}>{children}</button>;
+};
+const Input=({label,value,onChange,type='text',placeholder='',required,className=''})=>(
+  <div className={className}>
+    {label&&<label className="block text-xs text-gray-400 mb-1">{label}{required&&<span className="text-amber-500 ml-0.5">*</span>}</label>}
+    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+      className="w-full rounded-lg border text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+  </div>
+);
+const Select=({label,value,onChange,options,className=''})=>(
+  <div className={className}>
+    {label&&<label className="block text-xs text-gray-400 mb-1">{label}</label>}
+    <select value={value} onChange={e=>onChange(e.target.value)} className="w-full rounded-lg border text-sm px-3 py-2 focus:outline-none focus:border-amber-500">
+      {options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}
+    </select>
+  </div>
+);
+const Card=({children,className=''})=><div className={`bg-gray-900 border border-gray-800 rounded-xl p-5 ${className}`}>{children}</div>;
+const Modal=({title,onClose,children,size='md'})=>(
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
+    <div className={`relative bg-gray-900 border border-gray-700 rounded-2xl w-full ${size==='lg'?'max-w-3xl':size==='xl'?'max-w-5xl':'max-w-lg'} max-h-[90vh] overflow-y-auto fade-in`}>
+      <div className="flex items-center justify-between p-5 border-b border-gray-800">
+        <h2 className="font-semibold text-lg">{title}</h2>
+        <button onClick={onClose} className="text-gray-500 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800">✕</button>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  </div>
+);
+const StatCard=({label,value,sub,icon})=>(
+  <Card className="flex items-center gap-4">
+    <div className="text-3xl">{icon}</div>
+    <div>
+      <div className="text-2xl font-bold text-amber-400">{value}</div>
+      <div className="text-sm text-gray-400">{label}</div>
+      {sub&&<div className="text-xs text-gray-500">{sub}</div>}
+    </div>
+  </Card>
+);
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({clients,missions,quotes}){
+  const now=new Date();
+  const month=now.getMonth();const year=now.getFullYear();
+  const monthMissions=missions.filter(m=>{const d=new Date(m.date);return d.getMonth()===month&&d.getFullYear()===year;});
+  const ca=quotes.filter(q=>q.status==='Accepté').reduce((s,q)=>s+q.ttc,0);
+  const pending=quotes.filter(q=>q.status==='En attente'||q.status==='Envoyé').length;
+  const upcoming=missions.filter(m=>new Date(m.date)>=now&&m.status!=='Livré').sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
+  const getClient=id=>clients.find(c=>c.id===id);
+  return(
+    <div className="fade-in space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Tableau de bord</h1>
+        <p className="text-gray-500 text-sm mt-1">{new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon="📅" label="Missions ce mois" value={monthMissions.length}/>
+        <StatCard icon="💰" label="CA (devis acceptés)" value={fmtMoney(ca)}/>
+        <StatCard icon="📄" label="Devis en attente" value={pending}/>
+        <StatCard icon="👥" label="Clients" value={clients.length}/>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <h3 className="font-semibold mb-4 flex items-center gap-2">📅 Prochaines missions</h3>
+          {upcoming.length===0?<p className="text-gray-500 text-sm">Aucune mission à venir</p>:
+            <div className="space-y-3">
+              {upcoming.map(m=>(
+                <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                  <div>
+                    <div className="text-sm font-medium">{m.address}</div>
+                    <div className="text-xs text-gray-500">{getClient(m.client_id)?.name} · {m.type}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-amber-400 font-medium">{fmt(m.date)}</div>
+                    <Badge s={m.status}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+        </Card>
+        <Card>
+          <h3 className="font-semibold mb-4 flex items-center gap-2">📊 Missions par statut</h3>
+          {MISSION_STATUSES.map(s=>{
+            const count=missions.filter(m=>m.status===s).length;
+            const pct=missions.length?Math.round(count/missions.length*100):0;
+            return(
+              <div key={s} className="mb-3">
+                <div className="flex justify-between text-sm mb-1"><span className="text-gray-400">{s}</span><span>{count}</span></div>
+                <div className="h-1.5 bg-gray-800 rounded-full"><div className="h-full bg-amber-500 rounded-full" style={{width:`${pct}%`}}/></div>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── CLIENTS ─────────────────────────────────────────────────────────────────
+function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
+  const [search,setSearch]=useState('');
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({name:'',email:'',phone:'',agent:'',agent_email:''});
+  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase()));
+
+  const save=()=>{
+    if(!form.name)return;
+    if(modal==='new'){
+      const c={...form,id:uid(),created_at:today()};
+      const updated=[...clients,c];setClients(updated);store.set('pii_clients',updated);
+    } else {
+      const updated=clients.map(c=>c.id===modal?{...c,...form}:c);setClients(updated);store.set('pii_clients',updated);
+    }
+    setModal(null);
+  };
+  const del=(id)=>{
+    if(!confirm('Supprimer ce client ?'))return;
+    const updated=clients.filter(c=>c.id!==id);setClients(updated);store.set('pii_clients',updated);
+  };
+  const openEdit=(c)=>{setForm({name:c.name,email:c.email,phone:c.phone,agent:c.agent,agent_email:c.agent_email});setModal(c.id);};
+  const openNew=()=>{setForm({name:'',email:'',phone:'',agent:'',agent_email:''});setModal('new');};
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Clients</h1>
+        <Btn onClick={openNew}>+ Nouveau client</Btn>
+      </div>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un client…"
+        className="w-full max-w-sm rounded-lg border border-gray-700 bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+      <div className="grid gap-3">
+        {filtered.length===0&&<p className="text-gray-500 text-sm">Aucun client trouvé</p>}
+        {filtered.map(c=>{
+          const cm=missions.filter(m=>m.client_id===c.id).length;
+          const cq=quotes.filter(q=>q.client_id===c.id).length;
+          return(
+            <Card key={c.id} className="flex items-center justify-between hover:border-gray-700 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">{c.name[0]}</div>
+                <div>
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-xs text-gray-500">{c.email} · {c.phone}</div>
+                  {c.agent&&<div className="text-xs text-gray-600">Agent : {c.agent}</div>}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right text-xs text-gray-500"><div>{cm} mission{cm!==1?'s':''}</div><div>{cq} devis</div></div>
+                <Btn size="sm" variant="ghost" onClick={()=>openEdit(c)}>✏️</Btn>
+                <Btn size="sm" variant="ghost" onClick={()=>del(c.id)}>🗑️</Btn>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      {modal&&(
+        <Modal title={modal==='new'?'Nouveau client':'Modifier le client'} onClose={()=>setModal(null)}>
+          <div className="space-y-3">
+            <Input label="Nom / Raison sociale" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} required/>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Email" type="email" value={form.email} onChange={v=>setForm(f=>({...f,email:v}))}/>
+              <Input label="Téléphone" value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))}/>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Nom agent immobilier" value={form.agent} onChange={v=>setForm(f=>({...f,agent:v}))}/>
+              <Input label="Email agent" type="email" value={form.agent_email} onChange={v=>setForm(f=>({...f,agent_email:v}))}/>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+              <Btn onClick={save}>Enregistrer</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── MISSIONS ─────────────────────────────────────────────────────────────────
+function MissionsPage({missions,setMissions,clients}){
+  const [modal,setModal]=useState(null);
+  const [filter,setFilter]=useState('Tous');
+  const [form,setForm]=useState({client_id:'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});
+
+  const filtered=filter==='Tous'?missions:missions.filter(m=>m.status===filter);
+  const sorted=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const getClient=id=>clients.find(c=>c.id===id);
+
+  const save=()=>{
+    if(!form.client_id||!form.address||!form.date)return;
+    if(modal==='new'){
+      const m={...form,id:uid(),created_at:today()};
+      const u=[...missions,m];setMissions(u);store.set('pii_missions',u);
+    } else {
+      const u=missions.map(m=>m.id===modal?{...m,...form}:m);setMissions(u);store.set('pii_missions',u);
+    }
+    setModal(null);
+  };
+  const del=(id)=>{if(!confirm('Supprimer cette mission ?'))return;const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
+  const openEdit=(m)=>{setForm({client_id:m.client_id,address:m.address,type:m.type,date:m.date,status:m.status,notes:m.notes||''});setModal(m.id);};
+  const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});setModal('new');};
+  const setStatus=(id,status)=>{const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Missions</h1>
+        <Btn onClick={openNew}>+ Nouvelle mission</Btn>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {['Tous',...MISSION_STATUSES].map(s=>(
+          <button key={s} onClick={()=>setFilter(s)} className={`text-sm px-3 py-1.5 rounded-lg transition-all ${filter===s?'bg-amber-500 text-black':'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>{s}</button>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {sorted.length===0&&<p className="text-gray-500 text-sm">Aucune mission</p>}
+        {sorted.map(m=>{
+          const cl=getClient(m.client_id);
+          return(
+            <Card key={m.id} className="hover:border-gray-700 transition-colors">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge s={m.status}/>
+                    <span className="text-xs text-gray-500">{m.type}</span>
+                  </div>
+                  <div className="font-medium truncate">{m.address}</div>
+                  <div className="text-sm text-gray-400 mt-0.5">{cl?.name||'Client inconnu'}</div>
+                  {m.notes&&<div className="text-xs text-gray-500 mt-1 italic">"{m.notes}"</div>}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-medium text-amber-400">{fmt(m.date)}</div>
+                  <div className="flex gap-1 mt-2 justify-end">
+                    <select value={m.status} onChange={e=>setStatus(m.id,e.target.value)}
+                      className="text-xs rounded px-2 py-1 bg-gray-800 border border-gray-700 text-gray-300 focus:outline-none">
+                      {MISSION_STATUSES.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                    <Btn size="sm" variant="ghost" onClick={()=>openEdit(m)}>✏️</Btn>
+                    <Btn size="sm" variant="ghost" onClick={()=>del(m.id)}>🗑️</Btn>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      {modal&&(
+        <Modal title={modal==='new'?'Nouvelle mission':'Modifier la mission'} onClose={()=>setModal(null)}>
+          <div className="space-y-3">
+            <Select label="Client *" value={form.client_id} onChange={v=>setForm(f=>({...f,client_id:v}))}
+              options={clients.map(c=>({value:c.id,label:c.name}))}/>
+            <Input label="Adresse du bien *" value={form.address} onChange={v=>setForm(f=>({...f,address:v}))} required/>
+            <div className="grid grid-cols-2 gap-3">
+              <Select label="Type de bien" value={form.type} onChange={v=>setForm(f=>({...f,type:v}))} options={PROPERTY_TYPES}/>
+              <Input label="Date de la mission *" type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} required/>
+            </div>
+            <Select label="Statut" value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={MISSION_STATUSES}/>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Notes</label>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={3}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500 resize-none"/>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+              <Btn onClick={save}>Enregistrer</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── DEVIS ────────────────────────────────────────────────────────────────────
+function calcDevis(form){
+  const ht=(TARIFS.surface[form.surface]||0)+(TARIFS.photos[+form.photos]||0)+(TARIFS.visite[form.visite]||0)+(TARIFS.drone[form.drone]||0)+(TARIFS.retouche[form.retouche]||0);
+  return {ht, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
+}
+
+function exportPDF(q,client,mission){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  const amber=[245,158,11];
+  const gray=[55,65,81];
+
+  doc.setFillColor(...amber);doc.rect(0,0,210,35,'F');
+  doc.setTextColor(0,0,0);doc.setFontSize(22);doc.setFont('helvetica','bold');
+  doc.text('DEVIS PHOTOGRAPHIE IMMOBILIÈRE',105,18,{align:'center'});
+  doc.setFontSize(11);doc.setFont('helvetica','normal');
+  doc.text(`N° ${q.num} · ${fmt(q.created_at)}`,105,27,{align:'center'});
+
+  doc.setTextColor(...gray);doc.setFontSize(10);
+  doc.text('CLIENT',14,48);doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
+  doc.text(client?.name||'—',14,55);doc.setFont('helvetica','normal');doc.setTextColor(...gray);
+  doc.text(client?.email||'',14,61);doc.text(client?.phone||'',14,67);
+
+  if(mission){
+    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',130,48);
+    doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+    doc.text(mission.address||'',130,55,{maxWidth:65});
+    doc.text(mission.type||'',130,61);doc.text(fmt(mission.date),130,67);
+  }
+
+  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,75,196,75);
+
+  const rows=[
+    ['Forfait de base (surface '+q.surface+'m²)',TARIFS.surface[q.surface]],
+    ['Photos ('+q.photos+' prises de vue)',TARIFS.photos[+q.photos]],
+    ['Visite virtuelle 360°',TARIFS.visite[q.visite]],
+    ['Prise de vue drone',TARIFS.drone[q.drone]],
+    ['Retouches '+q.retouche,TARIFS.retouche[q.retouche]],
+  ].filter(r=>r[1]>0);
+
+  let y=85;
+  doc.setFontSize(9);doc.setTextColor(...gray);
+  doc.text('PRESTATION',14,y);doc.text('MONTANT HT',175,y,{align:'right'});
+  y+=5;doc.setDrawColor(200,200,200);doc.line(14,y,196,y);y+=6;
+
+  doc.setTextColor(0,0,0);
+  rows.forEach(([label,val])=>{
+    doc.text(label,14,y);doc.text(fmtMoney(val),175,y,{align:'right'});y+=8;
+  });
+
+  doc.line(14,y,196,y);y+=6;
+  doc.setFont('helvetica','bold');
+  doc.text('Total HT',130,y);doc.text(fmtMoney(q.ht),175,y,{align:'right'});y+=7;
+  doc.setFont('helvetica','normal');doc.setTextColor(...gray);
+  doc.text('TVA 20%',130,y);doc.text(fmtMoney(q.tva),175,y,{align:'right'});y+=7;
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...amber);
+  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=12;
+
+  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');
+  doc.text('Devis valable 30 jours. Acompte de 30% à la commande.',14,y);
+  doc.text(`Généré le ${fmt(today())} par PhotoImmo Pro`,196,y,{align:'right'});
+
+  doc.save(`devis-${q.num}.pdf`);
+}
+
+function QuotesPage({quotes,setQuotes,clients,missions}){
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard'});
+  const getClient=id=>clients.find(c=>c.id===id);
+  const getMission=id=>missions.find(m=>m.id===id);
+  const calc=useMemo(()=>calcDevis(form),[form]);
+  const clientMissions=missions.filter(m=>m.client_id===form.client_id);
+
+  const save=()=>{
+    if(!form.client_id)return;
+    const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
+    const q={...form,...calc,id:uid(),num,status:'En attente',created_at:today()};
+    const u=[...quotes,q];setQuotes(u);store.set('pii_quotes',u);setModal(null);
+  };
+  const setStatus=(id,status)=>{const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
+  const del=(id)=>{if(!confirm('Supprimer ce devis ?'))return;const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
+  const sorted=[...quotes].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Devis</h1>
+        <Btn onClick={()=>setModal('new')}>+ Nouveau devis</Btn>
+      </div>
+      <div className="space-y-3">
+        {sorted.length===0&&<p className="text-gray-500 text-sm">Aucun devis</p>}
+        {sorted.map(q=>{
+          const cl=getClient(q.client_id);
+          const mi=getMission(q.mission_id);
+          return(
+            <Card key={q.id} className="hover:border-gray-700 transition-colors">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-sm font-bold text-amber-400">{q.num}</span>
+                    <Badge s={q.status}/>
+                  </div>
+                  <div className="font-medium">{cl?.name||'—'}</div>
+                  {mi&&<div className="text-xs text-gray-500 mt-0.5">{mi.address}</div>}
+                  <div className="text-xs text-gray-500">{fmt(q.created_at)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-amber-400">{fmtMoney(q.ttc)}</div>
+                  <div className="text-xs text-gray-500">HT : {fmtMoney(q.ht)}</div>
+                  <div className="flex gap-1 mt-2 justify-end">
+                    <select value={q.status} onChange={e=>setStatus(q.id,e.target.value)}
+                      className="text-xs rounded px-2 py-1 bg-gray-800 border border-gray-700 text-gray-300 focus:outline-none">
+                      {QUOTE_STATUSES.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                    <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
+                    <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {modal&&(
+        <Modal title="Nouveau devis" onClose={()=>setModal(null)} size="lg">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Select label="Client *" value={form.client_id} onChange={v=>setForm(f=>({...f,client_id:v,mission_id:''}))}
+                options={[{value:'',label:'Sélectionner…'},...clients.map(c=>({value:c.id,label:c.name}))]}/>
+              {form.client_id&&(
+                <Select label="Mission liée" value={form.mission_id} onChange={v=>setForm(f=>({...f,mission_id:v}))}
+                  options={[{value:'',label:'Aucune'},...clientMissions.map(m=>({value:m.id,label:m.address}))]}/>
+              )}
+              <Select label="Surface du bien" value={form.surface} onChange={v=>setForm(f=>({...f,surface:v}))}
+                options={[{value:'<50',label:'Moins de 50 m²'},{value:'50-100',label:'50 à 100 m²'},{value:'100-200',label:'100 à 200 m²'},{value:'>200',label:'Plus de 200 m²'}]}/>
+              <Select label="Nombre de photos" value={String(form.photos)} onChange={v=>setForm(f=>({...f,photos:+v}))}
+                options={[10,20,30,50].map(n=>({value:String(n),label:`${n} photos`}))}/>
+              <Select label="Visite virtuelle 360°" value={form.visite} onChange={v=>setForm(f=>({...f,visite:v}))}
+                options={[{value:'non',label:'Non (+0€)'},{value:'oui',label:'Oui (+350€)'}]}/>
+              <Select label="Prise de vue drone" value={form.drone} onChange={v=>setForm(f=>({...f,drone:v}))}
+                options={[{value:'non',label:'Non (+0€)'},{value:'oui',label:'Oui (+250€)'}]}/>
+              <Select label="Niveau de retouche" value={form.retouche} onChange={v=>setForm(f=>({...f,retouche:v}))}
+                options={[{value:'standard',label:'Standard (+0€)'},{value:'premium',label:'Premium (+120€)'}]}/>
+            </div>
+            <div>
+              <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
+                <h3 className="font-semibold mb-4 text-amber-400">Récapitulatif</h3>
+                {[
+                  ['Forfait surface ('+form.surface+'m²)',TARIFS.surface[form.surface]],
+                  ['Photos ('+form.photos+')',TARIFS.photos[+form.photos]],
+                  ['Visite virtuelle',TARIFS.visite[form.visite]],
+                  ['Drone',TARIFS.drone[form.drone]],
+                  ['Retouches '+form.retouche,TARIFS.retouche[form.retouche]],
+                ].map(([l,v])=>(
+                  <div key={l} className="flex justify-between text-sm py-1.5 border-b border-gray-700">
+                    <span className="text-gray-400">{l}</span><span className={v>0?'text-white':'text-gray-600'}>{fmtMoney(v)}</span>
+                  </div>
+                ))}
+                <div className="mt-4 space-y-1">
+                  <div className="flex justify-between text-sm"><span className="text-gray-400">Total HT</span><span>{fmtMoney(calc.ht)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-400">TVA 20%</span><span>{fmtMoney(calc.tva)}</span></div>
+                  <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-700">
+                    <span className="text-amber-400">Total TTC</span><span className="text-amber-400">{fmtMoney(calc.ttc)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
+            <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+            <Btn onClick={save} disabled={!form.client_id}>Créer le devis</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── LIVRAISONS ───────────────────────────────────────────────────────────────
+function DeliveryPage({missions,clients,galleries,setGalleries}){
+  const [modal,setModal]=useState(null);
+  const [viewGallery,setViewGallery]=useState(null);
+  const [photos,setPhotos]=useState([]);
+  const getClient=id=>clients.find(c=>c.id===id);
+  const done=missions.filter(m=>m.status==='Réalisé'||m.status==='Livré');
+
+  const getGallery=mId=>galleries.find(g=>g.mission_id===mId);
+
+  const createGallery=(mId)=>{
+    const token=uid();
+    const g={id:uid(),mission_id:mId,token,photos:[],ready:false,created_at:today()};
+    const u=[...galleries,g];setGalleries(u);store.set('pii_galleries',u);
+  };
+  const toggleReady=(gId)=>{
+    const u=galleries.map(g=>g.id===gId?{...g,ready:!g.ready}:g);setGalleries(u);store.set('pii_galleries',u);
+  };
+  const openGallery=(g)=>{setViewGallery(g);setPhotos(g.photos||[]);};
+
+  const handleUpload=(e)=>{
+    const files=Array.from(e.target.files);
+    files.forEach(file=>{
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const p={id:uid(),name:file.name,url:ev.target.result,selected:false};
+        setPhotos(prev=>{
+          const u=[...prev,p];
+          const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
+          store.set('pii_galleries',gu);setGalleries(gu);
+          return u;
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const toggleSelect=(pid)=>{
+    setPhotos(prev=>{
+      const u=prev.map(p=>p.id===pid?{...p,selected:!p.selected}:p);
+      const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
+      store.set('pii_galleries',gu);setGalleries(gu);return u;
+    });
+  };
+
+  const copyLink=(token)=>{
+    navigator.clipboard.writeText(`${location.origin}/gallery/${token}`);
+    alert('Lien copié !');
+  };
+
+  return(
+    <div className="fade-in space-y-5">
+      <h1 className="text-2xl font-bold">Livraisons</h1>
+      <div className="space-y-3">
+        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée</p>}
+        {done.map(m=>{
+          const cl=getClient(m.client_id);
+          const g=getGallery(m.id);
+          return(
+            <Card key={m.id} className="hover:border-gray-700 transition-colors">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1"><Badge s={m.status}/><span className="text-xs text-gray-500">{m.type}</span></div>
+                  <div className="font-medium">{m.address}</div>
+                  <div className="text-sm text-gray-400">{cl?.name}</div>
+                  <div className="text-xs text-gray-500">{fmt(m.date)}</div>
+                </div>
+                <div className="flex flex-col gap-2 items-end">
+                  {!g?(
+                    <Btn size="sm" onClick={()=>createGallery(m.id)}>🖼️ Créer galerie</Btn>
+                  ):(
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${g.ready?'bg-green-500/20 text-green-400':'bg-gray-700 text-gray-400'}`}>
+                          {g.ready?'✓ Publiée':'Brouillon'}
+                        </span>
+                        <span className="text-xs text-gray-500">{g.photos?.length||0} photos</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Btn size="sm" variant="ghost" onClick={()=>openGallery(g)}>✏️ Gérer</Btn>
+                        <Btn size="sm" variant="ghost" onClick={()=>copyLink(g.token)}>🔗 Lien</Btn>
+                        <Btn size="sm" variant={g.ready?'secondary':'primary'} onClick={()=>toggleReady(g.id)}>
+                          {g.ready?'Dépublier':'Publier'}
+                        </Btn>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {viewGallery&&(
+        <Modal title={`Galerie – ${missions.find(m=>m.id===viewGallery.mission_id)?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload}/>
+                <span className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-medium px-4 py-2 rounded-lg transition-all">+ Ajouter des photos</span>
+              </label>
+              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {photos.filter(p=>p.selected).length} sélectionnée{photos.filter(p=>p.selected).length!==1?'s':''}</span>
+            </div>
+            {photos.length===0?(
+              <div className="text-center py-16 text-gray-600">
+                <div className="text-5xl mb-3">🖼️</div>
+                <p>Aucune photo encore. Cliquez pour en ajouter.</p>
+              </div>
+            ):(
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                {photos.map(p=>(
+                  <div key={p.id} className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${p.selected?'border-amber-500':'border-transparent'}`} onClick={()=>toggleSelect(p.id)}>
+                    <img src={p.url} alt={p.name} className="w-full h-24 object-cover"/>
+                    <div className={`absolute inset-0 flex items-center justify-center transition-all ${p.selected?'bg-amber-500/30':'bg-black/0 group-hover:bg-black/30'}`}>
+                      {p.selected&&<span className="text-2xl">⭐</span>}
+                    </div>
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 p-1">
+                      <p className="text-xs text-white truncate">{p.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500">Cliquez sur une photo pour la marquer comme favorite (⭐). Le client pourra sélectionner ses photos depuis le lien de livraison.</p>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+const NAV=[
+  {id:'dashboard',icon:'📊',label:'Dashboard'},
+  {id:'clients',icon:'👥',label:'Clients'},
+  {id:'missions',icon:'📅',label:'Missions'},
+  {id:'quotes',icon:'📄',label:'Devis'},
+  {id:'delivery',icon:'🖼️',label:'Livraisons'},
+];
+function Sidebar({page,setPage,sideOpen,setSideOpen}){
+  return(
+    <>
+      {sideOpen&&<div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={()=>setSideOpen(false)}/>}
+      <aside className={`fixed top-0 left-0 h-full w-56 bg-gray-950 border-r border-gray-800 z-30 flex flex-col transition-transform ${sideOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}>
+        <div className="p-5 border-b border-gray-800">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-black font-bold text-sm">PI</div>
+            <div><div className="font-bold text-sm">PhotoImmo</div><div className="text-xs text-gray-500">Pro</div></div>
+          </div>
+        </div>
+        <nav className="flex-1 p-3 space-y-1">
+          {NAV.map(n=>(
+            <button key={n.id} onClick={()=>{setPage(n.id);setSideOpen(false);}}
+              className={`sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm ${page===n.id?'bg-amber-500/15 text-amber-400 font-medium':'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}>
+              <span>{n.icon}</span><span>{n.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-gray-800 text-xs text-gray-600">PhotoImmo Pro v1.0</div>
+      </aside>
+    </>
+  );
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function Login({onLogin}){
+  const [email,setEmail]=useState('');
+  const [password,setPassword]=useState('');
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+
+  const submit=async(e)=>{
+    e.preventDefault();setError('');setLoading(true);
+    if(sb){
+      const{error:err}=await sb.auth.signInWithPassword({email,password});
+      if(err){setError(err.message);setLoading(false);}else{onLogin();}
+    } else {
+      setTimeout(()=>{onLogin();},500);
+    }
+  };
+
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-black font-bold text-2xl mx-auto mb-4">PI</div>
+          <h1 className="text-2xl font-bold">PhotoImmo Pro</h1>
+          <p className="text-gray-500 text-sm mt-1">Gestion photographe immobilier</p>
+        </div>
+        <Card>
+          <form onSubmit={submit} className="space-y-4">
+            <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="photo@studio.fr" required/>
+            <Input label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
+            {error&&<p className="text-red-400 text-sm">{error}</p>}
+            <Btn className="w-full justify-center" disabled={loading}>{loading?'Connexion…':'Se connecter'}</Btn>
+            {!sb&&<p className="text-xs text-center text-gray-600">Mode démonstration (Supabase non configuré)</p>}
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App(){
+  const [authed,setAuthed]=useState(!sb);
+  const [page,setPage]=useState('dashboard');
+  const [sideOpen,setSideOpen]=useState(false);
+  const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
+  const [missions,setMissions]=useState(()=>store.get('pii_missions',[]));
+  const [quotes,setQuotes]=useState(()=>store.get('pii_quotes',[]));
+  const [galleries,setGalleries]=useState(()=>store.get('pii_galleries',[]));
+
+  useEffect(()=>{seedDemo();
+    setClients(store.get('pii_clients',[]));
+    setMissions(store.get('pii_missions',[]));
+    setQuotes(store.get('pii_quotes',[]));
+    setGalleries(store.get('pii_galleries',[]));
+  },[]);
+
+  useEffect(()=>{
+    if(!sb)return;
+    sb.auth.getSession().then(({data:{session}})=>{if(session)setAuthed(true);});
+  },[]);
+
+  if(!authed)return <Login onLogin={()=>setAuthed(true)}/>;
+
+  const renderPage=()=>{
+    switch(page){
+      case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes}/>;
+      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes}/>;
+      case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients}/>;
+      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions}/>;
+      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries}/>;
+      default:         return null;
+    }
+  };
+
+  return(
+    <div className="min-h-screen">
+      <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen}/>
+      <div className="lg:ml-56">
+        <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center gap-3">
+          <button onClick={()=>setSideOpen(true)} className="lg:hidden text-gray-400 hover:text-white p-1">☰</button>
+          <span className="text-sm text-gray-400">{NAV.find(n=>n.id===page)?.icon} {NAV.find(n=>n.id===page)?.label}</span>
+          {sb&&(
+            <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="ml-auto text-xs text-gray-600 hover:text-gray-400">Déconnexion</button>
+          )}
+        </header>
+        <main className="p-4 lg:p-8 max-w-5xl mx-auto">{renderPage()}</main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
