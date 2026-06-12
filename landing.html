@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Gérez vos clients, missions, devis et livraisons photo en un seul outil. Conçu pour les photographes immobiliers."/>
+  <title>PhotoImmo Pro — Gestion pour photographes immobiliers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f1117; color: #e5e7eb; font-family: system-ui, -apple-system, sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card { background: #111827; border: 1px solid #1f2937; }
+    .glow-amber { box-shadow: 0 0 60px rgba(245, 158, 11, 0.2); }
+    details summary { list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] summary .chevron { transform: rotate(180deg); }
+    .chevron { transition: transform 0.2s; display: inline-block; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+    .fade-up { animation: fadeUp 0.7s ease forwards; }
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- NAVIGATION -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-xl border-b border-gray-800">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-black font-bold text-sm">PI</div>
+        <span class="font-bold text-white">PhotoImmo <span class="text-amber-400">Pro</span></span>
+      </div>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Fonctionnalités</a>
+        <a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Tarifs</a>
+        <a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/app" class="text-sm text-gray-400 hover:text-white transition-colors hidden sm:block">Connexion</a>
+        <a href="/app" class="bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold px-5 py-2 rounded-lg transition-all">Essai gratuit</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="pt-40 pb-24 px-6 text-center relative overflow-hidden">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="relative max-w-4xl mx-auto fade-up">
+      <div class="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-1.5 text-sm text-amber-400 mb-8">
+        <span>✨</span>
+        <span>14 jours d'essai gratuit · Sans carte bancaire</span>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-[1.1] tracking-tight">
+        L'outil tout-en-un pour<br/>
+        <span class="gradient-text">photographes immobiliers</span>
+      </h1>
+      <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+        Gérez vos clients, planifiez vos missions, créez des devis professionnels et livrez vos photos en galerie privée. Tout en un.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href="/app" class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-8 py-4 rounded-xl text-lg transition-all glow-amber w-full sm:w-auto">
+          Commencer gratuitement →
+        </a>
+        <a href="#demo" class="border border-gray-700 hover:border-amber-500/50 text-gray-300 hover:text-white font-medium px-8 py-4 rounded-xl text-lg transition-all w-full sm:w-auto">
+          Voir la démo ↓
+        </a>
+      </div>
+      <p class="text-xs text-gray-600 mt-5">Aucune carte bancaire requise · Annulation à tout moment</p>
+    </div>
+  </section>
+
+  <!-- APP MOCKUP -->
+  <section id="demo" class="px-6 pb-24">
+    <div class="max-w-5xl mx-auto">
+      <div class="card rounded-2xl p-3 glow-amber">
+        <div class="bg-gray-900 rounded-xl overflow-hidden">
+          <!-- Window chrome -->
+          <div class="bg-gray-950 border-b border-gray-800 px-4 py-2.5 flex items-center gap-2">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-red-500/40"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500/40"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/40"></div>
+            </div>
+            <div class="flex-1 flex justify-center">
+              <div class="bg-gray-800 rounded px-4 py-0.5 text-xs text-gray-500 min-w-32 text-center">photoimmo.pro/app</div>
+            </div>
+          </div>
+          <!-- App layout -->
+          <div class="flex" style="height:340px;">
+            <!-- Sidebar -->
+            <div class="w-44 bg-gray-950 border-r border-gray-800 p-3 flex-shrink-0 flex flex-col">
+              <div class="flex items-center gap-2 px-2 py-3 mb-3 border-b border-gray-800">
+                <div class="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center text-black font-bold text-xs flex-shrink-0">PI</div>
+                <div>
+                  <div class="text-xs font-bold">PhotoImmo</div>
+                  <div class="text-xs text-gray-600">Pro</div>
+                </div>
+              </div>
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-2 px-3 py-2.5 bg-amber-500/15 rounded-lg">
+                  <span class="text-sm">📊</span><span class="text-xs text-amber-400 font-medium">Dashboard</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-800">
+                  <span class="text-sm">👥</span><span class="text-xs text-gray-500">Clients</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-800">
+                  <span class="text-sm">📅</span><span class="text-xs text-gray-500">Missions</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-800">
+                  <span class="text-sm">📄</span><span class="text-xs text-gray-500">Devis</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-800">
+                  <span class="text-sm">🖼️</span><span class="text-xs text-gray-500">Livraisons</span>
+                </div>
+              </div>
+            </div>
+            <!-- Main content -->
+            <div class="flex-1 p-5 overflow-hidden">
+              <div class="mb-4">
+                <div class="text-base font-bold">Tableau de bord</div>
+                <div class="text-xs text-gray-500">vendredi 12 juin 2026</div>
+              </div>
+              <!-- Stats -->
+              <div class="grid grid-cols-4 gap-2.5 mb-4">
+                <div class="bg-gray-800 rounded-xl p-3">
+                  <div class="text-lg mb-1">📅</div>
+                  <div class="text-lg font-bold text-amber-400">12</div>
+                  <div class="text-xs text-gray-500">Missions ce mois</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-3">
+                  <div class="text-lg mb-1">💰</div>
+                  <div class="text-lg font-bold text-amber-400">4 320 €</div>
+                  <div class="text-xs text-gray-500">CA accepté</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-3">
+                  <div class="text-lg mb-1">📄</div>
+                  <div class="text-lg font-bold text-amber-400">3</div>
+                  <div class="text-xs text-gray-500">Devis en attente</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-3">
+                  <div class="text-lg mb-1">👥</div>
+                  <div class="text-lg font-bold text-amber-400">24</div>
+                  <div class="text-xs text-gray-500">Clients</div>
+                </div>
+              </div>
+              <!-- Widgets -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-gray-800 rounded-xl p-4">
+                  <div class="text-xs font-medium mb-3">📅 Prochaines missions</div>
+                  <div class="space-y-2.5">
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <div class="text-xs text-gray-300">12 rue des Lilas, Paris</div>
+                        <div class="text-xs text-gray-600">Martin Dupont</div>
+                      </div>
+                      <div class="text-right flex-shrink-0">
+                        <div class="text-xs text-amber-400">15/06</div>
+                        <span class="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Confirmé</span>
+                      </div>
+                    </div>
+                    <div class="flex justify-between items-start pt-2 border-t border-gray-700">
+                      <div>
+                        <div class="text-xs text-gray-300">45 av. Foch, Lyon</div>
+                        <div class="text-xs text-gray-600">Agence Prestige</div>
+                      </div>
+                      <div class="text-right flex-shrink-0">
+                        <div class="text-xs text-amber-400">18/06</div>
+                        <span class="text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">À confirmer</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-4">
+                  <div class="text-xs font-medium mb-3">📊 Statuts missions</div>
+                  <div class="space-y-2">
+                    <div>
+                      <div class="flex justify-between text-xs mb-1"><span class="text-gray-500">Confirmé</span><span>5</span></div>
+                      <div class="h-1.5 bg-gray-700 rounded-full"><div class="h-full bg-amber-500 rounded-full" style="width:60%"></div></div>
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-xs mb-1"><span class="text-gray-500">Réalisé</span><span>3</span></div>
+                      <div class="h-1.5 bg-gray-700 rounded-full"><div class="h-full bg-amber-500 rounded-full" style="width:30%"></div></div>
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-xs mb-1"><span class="text-gray-500">Livré</span><span>4</span></div>
+                      <div class="h-1.5 bg-gray-700 rounded-full"><div class="h-full bg-amber-500 rounded-full" style="width:80%"></div></div>
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-xs mb-1"><span class="text-gray-500">À confirmer</span><span>2</span></div>
+                      <div class="h-1.5 bg-gray-700 rounded-full"><div class="h-full bg-amber-500 rounded-full" style="width:20%"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="px-6 py-24 border-t border-gray-800">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Tout ce dont vous avez besoin</h2>
+        <p class="text-gray-400 text-lg">Conçu spécifiquement pour les photographes immobiliers indépendants</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">👥</div>
+          <h3 class="font-bold text-lg mb-2">Gestion clients</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Carnet d'adresses complet avec clients et agents immobiliers. Historique missions et devis par client.</p>
+        </div>
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">📅</div>
+          <h3 class="font-bold text-lg mb-2">Planning missions</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Planifiez et suivez vos shootings. Statuts en temps réel : À confirmer, Confirmé, Réalisé, Livré.</p>
+        </div>
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">📄</div>
+          <h3 class="font-bold text-lg mb-2">Devis PDF pro</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Devis en quelques clics avec calcul automatique HT/TVA/TTC. Export PDF élégant à envoyer au client.</p>
+        </div>
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">🖼️</div>
+          <h3 class="font-bold text-lg mb-2">Galeries de livraison</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Livrez via un lien privé. Le client visualise et sélectionne ses favoris. Intégration Google Drive.</p>
+        </div>
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">📧</div>
+          <h3 class="font-bold text-lg mb-2">Emails automatiques</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Notifications automatiques : galerie prête, rappel mission, envoi de devis. Emails à votre image.</p>
+        </div>
+        <div class="card rounded-2xl p-6 hover:border-gray-700 transition-colors">
+          <div class="text-3xl mb-4">📊</div>
+          <h3 class="font-bold text-lg mb-2">Tableau de bord</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">CA mensuel, missions à venir, devis en attente. Pilotez votre activité en un coup d'œil.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="px-6 py-24 border-t border-gray-800">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Tarifs simples et transparents</h2>
+        <p class="text-gray-400">Commencez gratuitement, sans carte bancaire. Passez à Pro quand vous êtes prêt.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Free trial -->
+        <div class="card rounded-2xl p-8">
+          <div class="text-xl font-bold mb-1">Essai gratuit</div>
+          <div class="text-gray-400 text-sm mb-6">14 jours, accès complet</div>
+          <div class="text-4xl font-bold mb-1">0 €</div>
+          <div class="text-gray-500 text-sm mb-6">Sans carte bancaire</div>
+          <a href="/app" class="block text-center border border-gray-600 hover:border-gray-400 text-gray-300 font-medium px-6 py-3 rounded-xl transition-all mb-8">
+            Commencer l'essai →
+          </a>
+          <ul class="space-y-2.5 text-sm text-gray-400">
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Toutes les fonctionnalités</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Clients illimités</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Missions et devis illimités</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Galeries de livraison</li>
+          </ul>
+        </div>
+        <!-- Pro -->
+        <div class="rounded-2xl p-8 bg-amber-500/10 border border-amber-500/30 relative">
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">RECOMMANDÉ</div>
+          <div class="text-xl font-bold mb-1">Pro</div>
+          <div class="text-gray-400 text-sm mb-6">Accès complet illimité</div>
+          <div class="flex items-end gap-2 mb-1">
+            <div class="text-4xl font-bold text-amber-400">29 €</div>
+            <div class="text-gray-400 mb-1.5">/mois</div>
+          </div>
+          <div class="text-sm mb-6">
+            <span class="text-gray-400">ou </span>
+            <span class="text-amber-400 font-medium">249 €/an</span>
+            <span class="ml-2 bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">économisez 99 €</span>
+          </div>
+          <a href="/app" class="block text-center bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-xl transition-all mb-8">
+            Commencer — 14 jours gratuits
+          </a>
+          <ul class="space-y-2.5 text-sm text-gray-300">
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Toutes les fonctionnalités</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Clients, missions, devis illimités</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Galeries + Google Drive</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Emails automatiques</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Support prioritaire</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="px-6 py-24 border-t border-gray-800">
+    <div class="max-w-2xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-12">Questions fréquentes</h2>
+      <div class="space-y-3">
+        <details class="card rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between px-5 py-4 cursor-pointer font-medium hover:bg-gray-800/50 transition-colors">
+            <span>Faut-il une carte bancaire pour l'essai ?</span>
+            <span class="chevron text-gray-500 text-sm">▼</span>
+          </summary>
+          <div class="px-5 pb-4 text-gray-400 text-sm leading-relaxed border-t border-gray-800 pt-3">
+            Non. L'essai de 14 jours est entièrement gratuit et ne requiert aucune carte bancaire. Vous ne serez facturé qu'après l'essai si vous choisissez de continuer.
+          </div>
+        </details>
+        <details class="card rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between px-5 py-4 cursor-pointer font-medium hover:bg-gray-800/50 transition-colors">
+            <span>Mes données sont-elles sécurisées ?</span>
+            <span class="chevron text-gray-500 text-sm">▼</span>
+          </summary>
+          <div class="px-5 pb-4 text-gray-400 text-sm leading-relaxed border-t border-gray-800 pt-3">
+            Oui. Chaque compte est isolé grâce à Supabase Row Level Security (RLS). Vos données ne sont jamais accessibles par d'autres utilisateurs. Les paiements sont gérés par Stripe.
+          </div>
+        </details>
+        <details class="card rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between px-5 py-4 cursor-pointer font-medium hover:bg-gray-800/50 transition-colors">
+            <span>Puis-je annuler à tout moment ?</span>
+            <span class="chevron text-gray-500 text-sm">▼</span>
+          </summary>
+          <div class="px-5 pb-4 text-gray-400 text-sm leading-relaxed border-t border-gray-800 pt-3">
+            Oui, sans engagement. Annulez depuis votre portail Stripe en un clic. Vous conservez l'accès jusqu'à la fin de la période payée. Vos données restent disponibles.
+          </div>
+        </details>
+        <details class="card rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between px-5 py-4 cursor-pointer font-medium hover:bg-gray-800/50 transition-colors">
+            <span>Plusieurs photographes peuvent-ils utiliser le même compte ?</span>
+            <span class="chevron text-gray-500 text-sm">▼</span>
+          </summary>
+          <div class="px-5 pb-4 text-gray-400 text-sm leading-relaxed border-t border-gray-800 pt-3">
+            Chaque abonnement est lié à un compte individuel. Chaque photographe de votre équipe peut créer son propre compte Pro. Les données de chaque compte sont totalement isolées.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <section class="px-6 py-24 border-t border-gray-800">
+    <div class="max-w-2xl mx-auto text-center">
+      <div class="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-black font-bold text-2xl mx-auto mb-6">PI</div>
+      <h2 class="text-3xl font-bold mb-4">Prêt à professionnaliser votre activité ?</h2>
+      <p class="text-gray-400 mb-8">Rejoignez les photographes immobiliers qui gèrent leur business avec PhotoImmo Pro.</p>
+      <a href="/app" class="inline-block bg-amber-500 hover:bg-amber-400 text-black font-bold px-10 py-4 rounded-xl text-lg transition-all glow-amber">
+        Démarrer l'essai gratuit →
+      </a>
+      <p class="text-xs text-gray-600 mt-4">Sans carte bancaire · 14 jours gratuits · Annulation à tout moment</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-gray-800 px-6 py-8">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 bg-amber-500 rounded flex items-center justify-center text-black font-bold text-xs">PI</div>
+        <span>PhotoImmo Pro © 2024</span>
+      </div>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-gray-400 transition-colors">Mentions légales</a>
+        <a href="#" class="hover:text-gray-400 transition-colors">CGV</a>
+        <a href="#" class="hover:text-gray-400 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
