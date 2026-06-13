@@ -825,7 +825,8 @@ function Login({onLogin}){
         else{onLogin(data.user);}
       }
     } else {
-      setTimeout(()=>{onLogin(null);},500);
+      // Demo mode: accept any credentials
+      setTimeout(()=>{onLogin({email,id:'demo-user'});},600);
     }
   };
 
@@ -838,12 +839,10 @@ function Login({onLogin}){
           <p className="text-gray-500 text-sm mt-1">Gestion photographe immobilier</p>
         </div>
         <Card>
-          {sb&&(
-            <div className="flex bg-gray-800 rounded-lg p-1 mb-4">
-              <button onClick={()=>setTab('login')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='login'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Connexion</button>
-              <button onClick={()=>setTab('signup')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='signup'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Créer un compte</button>
-            </div>
-          )}
+          <div className="flex bg-gray-800 rounded-lg p-1 mb-4">
+            <button onClick={()=>setTab('login')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='login'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Connexion</button>
+            <button onClick={()=>setTab('signup')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='signup'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Créer un compte</button>
+          </div>
           <form onSubmit={submit} className="space-y-4">
             <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="photo@studio.fr" required/>
             <Input label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
@@ -851,7 +850,7 @@ function Login({onLogin}){
             <Btn className="w-full justify-center" disabled={loading}>
               {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter'}
             </Btn>
-            {!sb&&<p className="text-xs text-center text-gray-600">Mode démonstration (Supabase non configuré)</p>}
+            {!sb&&<p className="text-xs text-center text-gray-600">Mode démo — entrez n'importe quel email/mot de passe</p>}
             {tab==='signup'&&<p className="text-xs text-center text-gray-600">Sans carte bancaire · Annulation à tout moment</p>}
           </form>
         </Card>
@@ -862,9 +861,9 @@ function Login({onLogin}){
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App(){
-  const [authed,setAuthed]=useState(!sb);
+  const [authed,setAuthed]=useState(false);
   const [user,setUser]=useState(null);
-  const [subscription,setSubscription]=useState(sb?null:{status:'demo'});
+  const [subscription,setSubscription]=useState(sb?null:{status:'trialing',trial_ends_at:new Date(Date.now()+14*86400000).toISOString()});
   const [page,setPage]=useState('dashboard');
   const [sideOpen,setSideOpen]=useState(false);
   const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
@@ -903,7 +902,8 @@ function App(){
 
   const isActive=()=>{
     if(!subscription)return false;
-    if(subscription.status==='demo'||subscription.status==='active')return true;
+    if(!sb)return true; // demo mode: always allow access
+    if(subscription.status==='active')return true;
     if(subscription.status==='trialing'){
       return !subscription.trial_ends_at||new Date(subscription.trial_ends_at)>new Date();
     }
