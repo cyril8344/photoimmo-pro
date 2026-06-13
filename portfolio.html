@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <title>Portfolio — PhotoImmo Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{accent:'#f59e0b'}}}}</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body{background:#f8fafc;color:#1e293b;font-family:'Inter',system-ui,sans-serif;}
+    .fade-in{animation:fadeIn .3s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .tab-active{border-bottom:2px solid #f59e0b;color:#f59e0b;}
+    ::-webkit-scrollbar{width:5px;}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+
+const SB_URL  = typeof __SUPABASE_URL__  !== 'undefined' ? __SUPABASE_URL__  : '';
+const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '';
+const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+
+const PHOTO_CATEGORIES = ['Appartements','Maisons','Villas','Commerces','Drone','Visite virtuelle'];
+const PROPERTY_TYPES = ['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
+
+// ─── STARS ────────────────────────────────────────────────────────────────────
+const Stars = ({rating}) => (
+  <span className="text-amber-400">
+    {'★'.repeat(Math.max(0, Math.min(5, rating||0)))}
+    <span className="text-gray-300">{'★'.repeat(5 - Math.max(0, Math.min(5, rating||0)))}</span>
+  </span>
+);
+
+// ─── CONTACT FORM ─────────────────────────────────────────────────────────────
+function ContactForm({slug, photographerName}) {
+  const [form, setForm] = useState({name:'',email:'',phone:'',address:'',type:'Appartement',message:''});
+  const [status, setStatus] = useState('idle'); // idle | sending | success | error
+  const [errMsg, setErrMsg] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email) return;
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({...form, photographer_slug: slug})
+      });
+      const r = await res.json();
+      if (r.success) { setStatus('success'); setForm({name:'',email:'',phone:'',address:'',type:'Appartement',message:''}); }
+      else { setErrMsg(r.error || 'Erreur'); setStatus('error'); }
+    } catch(err) {
+      setErrMsg(err.message);
+      setStatus('error');
+    }
+  };
+
+  if (status === 'success') {
+    return (
+      <div className="text-center py-12">
+        <div className="text-5xl mb-4">✅</div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Demande envoyée !</h3>
+        <p className="text-gray-500">{photographerName} vous contactera très prochainement.</p>
+        <button onClick={()=>setStatus('idle')} className="mt-4 text-amber-500 hover:underline text-sm">Envoyer une autre demande</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Nom complet *</label>
+          <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} required
+            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Email *</label>
+          <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} required
+            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Téléphone</label>
+          <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))}
+            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Type de bien</label>
+          <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
+            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400">
+            {PROPERTY_TYPES.map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">Adresse du bien</label>
+        <input value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="12 rue des Lilas, 75015 Paris"
+          className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">Message</label>
+        <textarea value={form.message} onChange={e=>setForm(f=>({...f,message:e.target.value}))} rows={4}
+          placeholder="Décrivez votre projet..."
+          className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 resize-none"/>
+      </div>
+      {status==='error' && <p className="text-red-500 text-sm">{errMsg}</p>}
+      <button type="submit" disabled={status==='sending'}
+        className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-black font-bold py-3 rounded-xl transition-all">
+        {status==='sending' ? 'Envoi en cours…' : 'Envoyer la demande de devis'}
+      </button>
+    </form>
+  );
+}
+
+// ─── PORTFOLIO APP ────────────────────────────────────────────────────────────
+function PortfolioApp() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [activePhotoTab, setActivePhotoTab] = useState('Tous');
+
+  // Extract slug from URL: /portfolio/[slug]
+  const slug = window.location.pathname.split('/portfolio/')[1]?.split('/')[0] || '';
+
+  useEffect(() => {
+    // Update meta tags dynamically
+    document.title = profile ? `${profile.company_name || 'Portfolio'} — PhotoImmo Pro` : 'Portfolio — PhotoImmo Pro';
+  }, [profile]);
+
+  useEffect(() => {
+    if (!slug) {
+      setError('Aucun portfolio trouvé pour cette URL.');
+      setLoading(false);
+      return;
+    }
+
+    if (sb) {
+      loadFromSupabase();
+    } else {
+      loadDemoData();
+    }
+  }, [slug]);
+
+  const loadFromSupabase = async () => {
+    try {
+      // Load profile
+      const { data: profileData, error: profileErr } = await sb
+        .from('user_profiles')
+        .select('*')
+        .eq('portfolio_slug', slug)
+        .eq('portfolio_enabled', true)
+        .single();
+
+      if (profileErr || !profileData) {
+        setError('Portfolio introuvable ou désactivé.');
+        setLoading(false);
+        return;
+      }
+      setProfile(profileData);
+
+      // Load photos
+      const { data: photosData } = await sb
+        .from('portfolio_photos')
+        .select('*')
+        .eq('user_id', profileData.user_id)
+        .order('display_order', {ascending: true});
+      setPhotos(photosData || []);
+
+      // Load testimonials
+      const { data: testimonialsData } = await sb
+        .from('testimonials')
+        .select('*')
+        .eq('user_id', profileData.user_id)
+        .order('date', {ascending: false});
+      setTestimonials(testimonialsData || []);
+
+      setLoading(false);
+    } catch(err) {
+      setError('Erreur lors du chargement du portfolio.');
+      setLoading(false);
+    }
+  };
+
+  const loadDemoData = () => {
+    // Try localStorage first (for testing own portfolio)
+    const localProfile = JSON.parse(localStorage.getItem('pii_profile') || '{}');
+    if (localProfile.portfolio_slug === slug || !slug) {
+      setProfile({
+        company_name: localProfile.company_name || 'Studio Photo Demo',
+        siret: localProfile.siret || '',
+        address: localProfile.address || 'Paris, France',
+        phone: localProfile.phone || '06 00 00 00 00',
+        bio: localProfile.bio || 'Photographe immobilier professionnel spécialisé dans la mise en valeur de biens immobiliers. Passionné par la lumière naturelle et les espaces de vie.',
+        zone: localProfile.zone || 'Paris et Île-de-France',
+        portfolio_enabled: true,
+      });
+      setPhotos(JSON.parse(localStorage.getItem('pii_portfolio_photos') || '[]'));
+      setTestimonials(JSON.parse(localStorage.getItem('pii_testimonials') || '[]'));
+    } else {
+      // Generic demo data
+      setProfile({
+        company_name: 'Studio Lumière Pro',
+        siret: '123 456 789 00012',
+        address: '12 rue des Arts, 75003 Paris',
+        phone: '06 12 34 56 78',
+        bio: 'Photographe immobilier professionnel avec 10 ans d\'expérience. Spécialisé dans la mise en valeur de tous types de biens : appartements, maisons, villas et locaux commerciaux.',
+        zone: 'Paris et Île-de-France',
+        portfolio_enabled: true,
+      });
+      setPhotos([
+        {id:'p1', url:'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600', category:'Appartements', caption:'Appartement lumineux 3 pièces'},
+        {id:'p2', url:'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600', category:'Maisons', caption:'Maison avec jardin'},
+        {id:'p3', url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', category:'Villas', caption:'Villa avec piscine'},
+        {id:'p4', url:'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600', category:'Commerces', caption:'Local commercial centre-ville'},
+        {id:'p5', url:'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600', category:'Appartements', caption:'Studio moderne'},
+        {id:'p6', url:'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600', category:'Maisons', caption:'Maison familiale'},
+      ]);
+      setTestimonials([
+        {id:'t1', client_name:'Martin Dupont', rating:5, comment:'Excellent travail, photos magnifiques qui ont grandement aidé à vendre rapidement notre appartement !', date:'2026-05-15'},
+        {id:'t2', client_name:'Sophie Bernard', rating:5, comment:'Professionnel et ponctuel. Les photos étaient livrées en 48h, avec des retouches impeccables.', date:'2026-04-20'},
+        {id:'t3', client_name:'Agence Prestige', rating:4, comment:'Très bon travail sur nos biens de luxe. Nous faisons régulièrement appel à ses services.', date:'2026-03-10'},
+      ]);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"/>
+          <p className="text-gray-500">Chargement du portfolio…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-4">🔍</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Portfolio introuvable</h1>
+          <p className="text-gray-500">{error || 'Ce portfolio n\'existe pas ou a été désactivé.'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = (profile.company_name || 'PI').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const filteredPhotos = activePhotoTab === 'Tous' ? photos : photos.filter(p => p.category === activePhotoTab);
+  const photoCategories = ['Tous', ...PHOTO_CATEGORIES.filter(cat => photos.some(p => p.category === cat))];
+
+  const PACKS_PUBLIC = [
+    {icon:'🏠', label:'Pack Essentiel', desc:'20 photos • 50-100 m²', price:'À partir de 380 €'},
+    {icon:'🏡', label:'Pack Confort', desc:'30 photos + visite virtuelle • 100-200 m²', price:'À partir de 800 €'},
+    {icon:'🏰', label:'Pack Premium', desc:'50 photos + visite + drone • >200 m²', price:'À partir de 1 200 €'},
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* HEADER */}
+      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-black font-bold text-sm">{initials}</div>
+            <div>
+              <div className="font-bold text-gray-900">{profile.company_name}</div>
+              {profile.zone && <div className="text-xs text-gray-500">📍 {profile.zone}</div>}
+            </div>
+          </div>
+          <a href="#contact" className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-5 py-2 rounded-lg text-sm transition-all">
+            Demander un devis
+          </a>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-10 space-y-16 fade-in">
+
+        {/* HERO / ABOUT */}
+        <section className="text-center py-12">
+          <div className="w-24 h-24 bg-amber-500 rounded-3xl flex items-center justify-center text-black font-bold text-3xl mx-auto mb-6">{initials}</div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">{profile.company_name}</h1>
+          {profile.zone && <p className="text-amber-500 font-medium mb-4">📍 {profile.zone}</p>}
+          {profile.bio && <p className="text-gray-600 max-w-2xl mx-auto text-lg leading-relaxed">{profile.bio}</p>}
+          <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
+            {profile.phone && <span>📞 {profile.phone}</span>}
+            {profile.siret && <span>SIRET : {profile.siret}</span>}
+          </div>
+        </section>
+
+        {/* PORTFOLIO PHOTOS */}
+        {photos.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Mes réalisations</h2>
+
+            {/* Category tabs */}
+            {photoCategories.length > 2 && (
+              <div className="flex gap-2 flex-wrap justify-center mb-6">
+                {photoCategories.map(cat => (
+                  <button key={cat} onClick={() => setActivePhotoTab(cat)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activePhotoTab===cat?'bg-amber-500 text-black':'bg-white text-gray-600 border border-gray-200 hover:border-amber-300'}`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {filteredPhotos.map(p => (
+                <div key={p.id} className="group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all aspect-[4/3]">
+                  <img src={p.url} alt={p.caption || p.category}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={e=>{e.target.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%23e2e8f0" width="400" height="300"/><text fill="%2394a3b8" x="200" y="150" text-anchor="middle" dy=".3em" font-size="16" font-family="sans-serif">Photo</text></svg>';}}/>
+                  {p.caption && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-white text-sm font-medium">{p.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* PRESTATIONS */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Mes prestations</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {PACKS_PUBLIC.map(pack => (
+              <div key={pack.label} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all text-center">
+                <div className="text-4xl mb-3">{pack.icon}</div>
+                <h3 className="font-bold text-gray-900 text-lg mb-2">{pack.label}</h3>
+                <p className="text-gray-500 text-sm mb-4">{pack.desc}</p>
+                <div className="text-amber-500 font-bold text-lg">{pack.price}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-gray-400 text-sm mt-4">Tarifs sur devis selon la surface et les prestations choisies.</p>
+        </section>
+
+        {/* TESTIMONIALS */}
+        {testimonials.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Avis clients</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {testimonials.map(t => (
+                <div key={t.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold text-sm">{t.client_name[0]}</div>
+                      <div className="font-semibold text-gray-900">{t.client_name}</div>
+                    </div>
+                    <Stars rating={t.rating}/>
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed">"{t.comment}"</p>
+                  {t.date && <p className="text-gray-400 text-xs mt-3">{new Date(t.date).toLocaleDateString('fr-FR', {month:'long',year:'numeric'})}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* CONTACT / DEVIS FORM */}
+        <section id="contact" className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Demander un devis gratuit</h2>
+            <p className="text-gray-500">Réponse sous 24 heures</p>
+          </div>
+          <div className="max-w-xl mx-auto">
+            <ContactForm slug={slug} photographerName={profile.company_name}/>
+          </div>
+        </section>
+
+      </main>
+
+      {/* FOOTER */}
+      <footer className="bg-gray-900 text-gray-400 mt-16 py-8">
+        <div className="max-w-5xl mx-auto px-4 text-center text-sm">
+          <div className="font-bold text-white text-lg mb-2">{profile.company_name}</div>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            {profile.phone && <span>📞 {profile.phone}</span>}
+            {profile.address && <span>📍 {profile.address}</span>}
+            {profile.siret && <span>SIRET : {profile.siret}</span>}
+          </div>
+          <div className="mt-4 text-gray-600 text-xs">
+            Propulsé par <a href="/" className="text-amber-400 hover:underline">PhotoImmo Pro</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PortfolioApp/>);
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@
     { "source": "/app", "destination": "/index.html" },
     { "source": "/app/(.*)", "destination": "/index.html" },
     { "source": "/gallery/:token*", "destination": "/index.html" },
+    { "source": "/portfolio/:slug*", "destination": "/portfolio.html" },
     { "source": "/", "destination": "/landing.html" }
   ]
 }

@@ -200,3 +200,74 @@ create policy if not exists "gdpr_consents_owner" on gdpr_consents for select us
 -- Colonne expiration token galerie
 alter table galleries add column if not exists expires_at timestamptz;
 alter table galleries add column if not exists signed_token text unique default gen_random_uuid()::text;
+
+-- Nouvelles tables pour la v3
+
+-- Table profils utilisateurs (SIRET, role, portfolio slug)
+create table if not exists user_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade unique,
+  company_name text,
+  siret text,
+  address text,
+  phone text,
+  invoice_prefix text default 'FAC',
+  role text default 'user', -- 'user' | 'admin'
+  portfolio_slug text unique,
+  portfolio_enabled boolean default false,
+  bio text,
+  zone text,
+  logo_url text,
+  micro_entrepreneur boolean default false,
+  created_at timestamptz default now()
+);
+alter table user_profiles enable row level security;
+create policy if not exists "profiles_select_own" on user_profiles for select using (auth.uid() = user_id);
+create policy if not exists "profiles_insert" on user_profiles for insert with check (auth.uid() = user_id);
+create policy if not exists "profiles_update" on user_profiles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- Admin can view all profiles (for admin panel)
+create policy if not exists "profiles_admin_select" on user_profiles for select using (
+  exists (select 1 from user_profiles p where p.user_id = auth.uid() and p.role = 'admin')
+);
+-- Public can read profiles for enabled portfolios (by slug lookup)
+create policy if not exists "profiles_public_portfolio_read" on user_profiles for select using (portfolio_enabled = true);
+
+-- Table témoignages portfolio
+create table if not exists testimonials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  client_name text not null,
+  rating int default 5,
+  comment text,
+  date date default current_date
+);
+alter table testimonials enable row level security;
+create policy if not exists "testimonials_select_own" on testimonials for select using (auth.uid() = user_id);
+create policy if not exists "testimonials_insert" on testimonials for insert with check (auth.uid() = user_id);
+create policy if not exists "testimonials_update" on testimonials for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy if not exists "testimonials_delete" on testimonials for delete using (auth.uid() = user_id);
+-- Public read for portfolio
+create policy if not exists "testimonials_public_read" on testimonials for select using (
+  exists (select 1 from user_profiles p where p.user_id = testimonials.user_id and p.portfolio_enabled = true)
+);
+
+-- Portfolio photos (séparées des missions)
+create table if not exists portfolio_photos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  mission_id uuid references missions(id),
+  url text,
+  category text default 'Appartements',
+  caption text,
+  display_order int default 0,
+  created_at date default current_date
+);
+alter table portfolio_photos enable row level security;
+create policy if not exists "portfolio_photos_select_own" on portfolio_photos for select using (auth.uid() = user_id);
+create policy if not exists "portfolio_photos_insert" on portfolio_photos for insert with check (auth.uid() = user_id);
+create policy if not exists "portfolio_photos_update" on portfolio_photos for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy if not exists "portfolio_photos_delete" on portfolio_photos for delete using (auth.uid() = user_id);
+-- Public read for enabled portfolios
+create policy if not exists "portfolio_photos_public_read" on portfolio_photos for select using (
+  exists (select 1 from user_profiles p where p.user_id = portfolio_photos.user_id and p.portfolio_enabled = true)
+);
