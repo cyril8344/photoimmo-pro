@@ -55,6 +55,56 @@ module.exports = async function handler(req, res) {
           <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
         </div>`,
     },
+    quote_followup: {
+      subject: '⏰ Votre devis est en attente de validation',
+      html: (d) => `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
+          <h2 style="color:#f59e0b;">Rappel : votre devis est en attente</h2>
+          <p>Bonjour ${d.client_name},</p>
+          <p>Nous n'avons pas encore reçu votre réponse concernant le devis <strong>${d.num}</strong> d'un montant de <strong>${d.ttc} € TTC</strong>.</p>
+          <p>Ce devis expire le <strong>${d.expires}</strong>.</p>
+          <p>N'hésitez pas à nous contacter pour toute question.</p>
+          <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
+        </div>`,
+    },
+    shooting_reminder: {
+      subject: '📷 Rappel : shooting demain à votre adresse',
+      html: (d) => `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
+          <h2 style="color:#f59e0b;">Votre shooting est demain</h2>
+          <p>Bonjour ${d.client_name},</p>
+          <p>Rappel : votre séance photo est prévue <strong>demain</strong> :</p>
+          <ul>
+            <li><strong>Adresse :</strong> ${d.address}</li>
+            <li><strong>Date :</strong> ${d.date}</li>
+          </ul>
+          <p>Merci de vous assurer que le bien est prêt pour la prise de vue.</p>
+        </div>`,
+    },
+    gallery_not_downloaded: {
+      subject: '🖼️ Vos photos vous attendent depuis 7 jours',
+      html: (d) => `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
+          <h2 style="color:#f59e0b;">Vos photos sont toujours disponibles</h2>
+          <p>Bonjour ${d.client_name},</p>
+          <p>Vos photos de <strong>${d.address}</strong> sont disponibles depuis 7 jours et n'ont pas encore été consultées.</p>
+          <div style="text-align:center;margin:30px 0;">
+            <a href="${d.gallery_url}" style="background:#f59e0b;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;">Accéder à mes photos</a>
+          </div>
+        </div>`,
+    },
+    invoice_reminder: {
+      subject: '📋 Rappel de paiement — Facture ${d.num}',
+      html: (d) => `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
+          <h2 style="color:#f59e0b;">Rappel de paiement</h2>
+          <p>Bonjour ${d.client_name},</p>
+          <p>Sauf erreur de notre part, la facture <strong>${d.num}</strong> d'un montant de <strong>${d.ttc} € TTC</strong> est toujours en attente de règlement.</p>
+          <p>Date d'échéance : <strong>${d.due_date}</strong></p>
+          <p>Merci de procéder au règlement dans les meilleurs délais.</p>
+          <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
+        </div>`,
+    },
   };
 
   const template = templates[type];

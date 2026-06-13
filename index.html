@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <title>PhotoImmo Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={theme:{extend:{colors:{accent:'#f59e0b'}}}}</script>
@@ -35,6 +37,11 @@ const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '
 const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 
 const TVA = 0.20;
+const PACKS = {
+  essentiel: { surface:'50-100', photos:20, visite:'non', drone:'non', retouche:'standard', label:'Pack Essentiel' },
+  confort:   { surface:'100-200', photos:30, visite:'oui', drone:'non', retouche:'standard', label:'Pack Confort' },
+  premium:   { surface:'>200', photos:50, visite:'oui', drone:'oui', retouche:'premium', label:'Pack Premium' },
+};
 const TARIFS = {
   surface: {'<50':200,'50-100':300,'100-200':450,'>200':600},
   photos:  {10:0,20:80,30:150,50:280},
@@ -43,16 +50,23 @@ const TARIFS = {
   retouche:{standard:0,premium:120},
 };
 const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
-const MISSION_STATUSES=['À confirmer','Confirmé','Réalisé','Livré'];
+const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Livraison','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
+  'Prospect':'bg-gray-500/20 text-gray-400',
+  'Devis envoyé':'bg-blue-500/20 text-blue-400',
+  'Accepté':'bg-green-500/20 text-green-400',
+  'Shooting':'bg-orange-500/20 text-orange-400',
+  'Retouche':'bg-purple-500/20 text-purple-400',
+  'Livraison':'bg-cyan-500/20 text-cyan-400',
+  'Facturé':'bg-yellow-500/20 text-yellow-400',
+  'Payé':'bg-emerald-500/20 text-emerald-400',
   'À confirmer':'bg-yellow-500/20 text-yellow-400',
   'Confirmé':'bg-blue-500/20 text-blue-400',
   'Réalisé':'bg-green-500/20 text-green-400',
   'Livré':'bg-purple-500/20 text-purple-400',
   'En attente':'bg-gray-500/20 text-gray-400',
   'Envoyé':'bg-blue-500/20 text-blue-400',
-  'Accepté':'bg-green-500/20 text-green-400',
   'Refusé':'bg-red-500/20 text-red-400',
 };
 
@@ -142,52 +156,206 @@ const StatCard=({label,value,sub,icon})=>(
 function Dashboard({clients,missions,quotes}){
   const now=new Date();
   const month=now.getMonth();const year=now.getFullYear();
+
+  // KPIs
+  const invoices=store.get('pii_invoices',[]);
   const monthMissions=missions.filter(m=>{const d=new Date(m.date);return d.getMonth()===month&&d.getFullYear()===year;});
+  const doneMissions=monthMissions.filter(m=>['Livraison','Facturé','Payé'].includes(m.status));
   const ca=quotes.filter(q=>q.status==='Accepté').reduce((s,q)=>s+q.ttc,0);
-  const pending=quotes.filter(q=>q.status==='En attente'||q.status==='Envoyé').length;
-  const upcoming=missions.filter(m=>new Date(m.date)>=now&&m.status!=='Livré').sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
+  const pendingQuotes=quotes.filter(q=>q.status==='En attente'||q.status==='Envoyé');
+  const totalQuoted=quotes.filter(q=>q.status!=='Refusé').length;
+  const accepted=quotes.filter(q=>q.status==='Accepté').length;
+  const convRate=totalQuoted>0?Math.round(accepted/totalQuoted*100):0;
+
+  // Prochaine mission
+  const upcoming=missions.filter(m=>new Date(m.date)>=now).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const nextMission=upcoming[0];
+
+  // Alertes
+  const unpaidInvoices=invoices.filter(i=>(i.status==='En attente'||i.status==='Envoyée')&&i.due_date&&new Date(i.due_date)<now);
+  const staleQuotes=quotes.filter(q=>(q.status==='En attente'||q.status==='Envoyé')&&q.created_at&&(now-new Date(q.created_at))>48*3600000);
+  const quotesWithoutInvoice=quotes.filter(q=>q.status==='Accepté'&&!invoices.find(i=>i.quote_id===q.id));
+
   const getClient=id=>clients.find(c=>c.id===id);
+
+  // Pipeline kanban simplifié
+  const PIPELINE_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Livraison'];
+  const pipelineGroups=PIPELINE_STATUSES.map(s=>({status:s,items:missions.filter(m=>m.status===s)}));
+
+  // CA 6 derniers mois
+  const monthLabels=[];const monthCA=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(year,month-i,1);
+    const mn=d.getMonth();const yr=d.getFullYear();
+    monthLabels.push(d.toLocaleDateString('fr-FR',{month:'short'}));
+    const mCA=quotes.filter(q=>{
+      if(q.status!=='Accepté')return false;
+      const qd=new Date(q.created_at);return qd.getMonth()===mn&&qd.getFullYear()===yr;
+    }).reduce((s,q)=>s+q.ttc,0);
+    monthCA.push(mCA);
+  }
+  const maxCA=Math.max(...monthCA,1);
+
+  // Top agences (par nombre de devis acceptés)
+  const agencyStats={};
+  quotes.filter(q=>q.status==='Accepté').forEach(q=>{
+    const cl=getClient(q.client_id);if(!cl)return;
+    const key=cl.agent||cl.name;
+    agencyStats[key]=(agencyStats[key]||0)+q.ttc;
+  });
+  const topAgencies=Object.entries(agencyStats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
   return(
     <div className="fade-in space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Tableau de bord</h1>
-        <p className="text-gray-500 text-sm mt-1">{new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Tableau de bord</h1>
+          <p className="text-gray-500 text-sm mt-1">{now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+        </div>
+        {nextMission&&(
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2 text-right">
+            <div className="text-xs text-amber-400">Prochaine mission</div>
+            <div className="text-sm font-medium text-white truncate max-w-48">{nextMission.address}</div>
+            <div className="text-xs text-amber-400">{fmt(nextMission.date)}</div>
+          </div>
+        )}
       </div>
+
+      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon="📅" label="Missions ce mois" value={monthMissions.length}/>
-        <StatCard icon="💰" label="CA (devis acceptés)" value={fmtMoney(ca)}/>
-        <StatCard icon="📄" label="Devis en attente" value={pending}/>
-        <StatCard icon="👥" label="Clients" value={clients.length}/>
+        <Card className="flex items-center gap-3">
+          <div className="text-2xl">💰</div>
+          <div><div className="text-xl font-bold text-amber-400">{fmtMoney(ca)}</div><div className="text-xs text-gray-400">CA (devis acceptés)</div></div>
+        </Card>
+        <Card className="flex items-center gap-3">
+          <div className="text-2xl">📅</div>
+          <div><div className="text-xl font-bold text-amber-400">{doneMissions.length}</div><div className="text-xs text-gray-400">Missions réalisées ce mois</div></div>
+        </Card>
+        <Card className="flex items-center gap-3">
+          <div className="text-2xl">📄</div>
+          <div><div className="text-xl font-bold text-amber-400">{pendingQuotes.length}</div><div className="text-xs text-gray-400">Devis en attente</div></div>
+        </Card>
+        <Card className="flex items-center gap-3">
+          <div className="text-2xl">🎯</div>
+          <div><div className="text-xl font-bold text-amber-400">{convRate}%</div><div className="text-xs text-gray-400">Taux de conversion</div></div>
+        </Card>
       </div>
+
+      {/* Alertes */}
+      {(unpaidInvoices.length>0||staleQuotes.length>0||quotesWithoutInvoice.length>0)&&(
+        <Card className="border-red-500/20 bg-red-500/5">
+          <h3 className="font-semibold text-red-400 mb-3">⚠ Actions requises</h3>
+          <div className="space-y-2">
+            {unpaidInvoices.map(i=>(
+              <div key={i.id} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300">Facture {i.num} en retard — {fmtMoney(i.ttc)}</span>
+                <span className="text-red-400 text-xs">Relancer</span>
+              </div>
+            ))}
+            {staleQuotes.map(q=>(
+              <div key={q.id} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300">Devis {q.num} sans réponse depuis +48h</span>
+                <span className="text-amber-400 text-xs">Relancer</span>
+              </div>
+            ))}
+            {quotesWithoutInvoice.slice(0,3).map(q=>(
+              <div key={q.id} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300">Devis {q.num} accepté — facture manquante</span>
+                <span className="text-blue-400 text-xs">Créer facture</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Pipeline */}
+        <Card className="lg:col-span-2">
+          <h3 className="font-semibold mb-4">🔄 Pipeline missions</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {pipelineGroups.map(({status,items})=>(
+              <div key={status} className="min-w-36 shrink-0">
+                <div className="text-xs text-gray-500 mb-2 font-medium">{status} <span className="text-gray-600">({items.length})</span></div>
+                <div className="space-y-2">
+                  {items.slice(0,4).map(m=>(
+                    <div key={m.id} className="bg-gray-800 rounded-lg p-2 text-xs">
+                      <div className="text-gray-300 truncate">{m.address.split(',')[0]}</div>
+                      <div className="text-gray-600">{fmt(m.date)}</div>
+                    </div>
+                  ))}
+                  {items.length===0&&<div className="bg-gray-800/50 rounded-lg p-3 text-xs text-gray-600 text-center border border-dashed border-gray-700">Vide</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* CA 6 mois */}
         <Card>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">📅 Prochaines missions</h3>
-          {upcoming.length===0?<p className="text-gray-500 text-sm">Aucune mission à venir</p>:
+          <h3 className="font-semibold mb-4">📈 CA 6 derniers mois</h3>
+          <div className="flex items-end gap-2 h-32">
+            {monthLabels.map((label,i)=>(
+              <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full bg-amber-500/80 rounded-t-md transition-all" style={{height:`${Math.max(4,(monthCA[i]/maxCA)*100)}%`}}/>
+                <div className="text-xs text-gray-500">{label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between text-xs text-gray-600 mt-2">
+            <span>0 €</span><span>{fmtMoney(maxCA)}</span>
+          </div>
+        </Card>
+
+        {/* Top agences */}
+        <Card>
+          <h3 className="font-semibold mb-4">🏆 Top agences / clients</h3>
+          {topAgencies.length===0?<p className="text-gray-500 text-sm">Pas encore de données</p>:(
             <div className="space-y-3">
-              {upcoming.map(m=>(
+              {topAgencies.map(([name,total],i)=>(
+                <div key={name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 font-bold text-sm w-4">{i+1}</span>
+                    <span className="text-sm truncate max-w-32">{name}</span>
+                  </div>
+                  <span className="text-sm font-medium text-amber-400">{fmtMoney(total)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Prochaines missions */}
+        <Card>
+          <h3 className="font-semibold mb-4">📅 Prochaines missions</h3>
+          {upcoming.length===0?<p className="text-gray-500 text-sm">Aucune mission à venir</p>:(
+            <div className="space-y-3">
+              {upcoming.slice(0,5).map(m=>(
                 <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
                   <div>
-                    <div className="text-sm font-medium">{m.address}</div>
+                    <div className="text-sm font-medium truncate max-w-40">{m.address}</div>
                     <div className="text-xs text-gray-500">{getClient(m.client_id)?.name} · {m.type}</div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className="text-xs text-amber-400 font-medium">{fmt(m.date)}</div>
-                    <Badge s={m.status}/>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[m.status]||'bg-gray-700 text-gray-300'}`}>{m.status}</span>
                   </div>
                 </div>
               ))}
             </div>
-          }
+          )}
         </Card>
+
+        {/* Missions par statut */}
         <Card>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">📊 Missions par statut</h3>
+          <h3 className="font-semibold mb-4">📊 Missions par statut</h3>
           {MISSION_STATUSES.map(s=>{
             const count=missions.filter(m=>m.status===s).length;
             const pct=missions.length?Math.round(count/missions.length*100):0;
             return(
-              <div key={s} className="mb-3">
-                <div className="flex justify-between text-sm mb-1"><span className="text-gray-400">{s}</span><span>{count}</span></div>
-                <div className="h-1.5 bg-gray-800 rounded-full"><div className="h-full bg-amber-500 rounded-full" style={{width:`${pct}%`}}/></div>
+              <div key={s} className="mb-2">
+                <div className="flex justify-between text-xs mb-1"><span className="text-gray-400">{s}</span><span>{count}</span></div>
+                <div className="h-1.5 bg-gray-800 rounded-full"><div className="h-full bg-amber-500 rounded-full transition-all" style={{width:`${pct}%`}}/></div>
               </div>
             );
           })}
@@ -205,7 +373,8 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
   const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase()));
 
   const save=()=>{
-    if(!form.name)return;
+    if(!form.name||form.name.trim().length<2)return;
+    if(form.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)){alert('Email invalide');return;}
     if(modal==='new'){
       const c={...form,id:uid(),created_at:today()};
       const updated=[...clients,c];setClients(updated);store.set('pii_clients',updated);
@@ -505,6 +674,18 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
                 <Select label="Mission liée" value={form.mission_id} onChange={v=>setForm(f=>({...f,mission_id:v}))}
                   options={[{value:'',label:'Aucune'},...clientMissions.map(m=>({value:m.id,label:m.address}))]}/>
               )}
+              {/* Packs pré-remplis */}
+              <div className="mb-2">
+                <div className="text-xs text-gray-400 mb-2">Charger un pack</div>
+                <div className="flex gap-2">
+                  {Object.entries(PACKS).map(([key,pack])=>(
+                    <button key={key} onClick={()=>setForm(f=>({...f,...pack}))}
+                      className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-amber-500/20 border border-gray-700 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 rounded-lg transition-all">
+                      {pack.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Select label="Surface du bien" value={form.surface} onChange={v=>setForm(f=>({...f,surface:v}))}
                 options={[{value:'<50',label:'Moins de 50 m²'},{value:'50-100',label:'50 à 100 m²'},{value:'100-200',label:'100 à 200 m²'},{value:'>200',label:'Plus de 200 m²'}]}/>
               <Select label="Nombre de photos" value={String(form.photos)} onChange={v=>setForm(f=>({...f,photos:+v}))}
@@ -765,6 +946,178 @@ function TrialBanner({daysLeft,user}){
   );
 }
 
+// ─── AGENCES ──────────────────────────────────────────────────────────────────
+function AgenciesPage({clients,missions,quotes}){
+  const [agencies,setAgencies]=useState(()=>store.get('pii_agencies',[]));
+  const [modal,setModal]=useState(null);
+  const [form,setForm]=useState({name:'',contacts:'',notes:''});
+
+  const save=()=>{
+    if(!form.name)return;
+    if(modal==='new'){
+      const a={...form,id:uid(),created_at:today()};
+      const u=[...agencies,a];setAgencies(u);store.set('pii_agencies',u);
+    } else {
+      const u=agencies.map(a=>a.id===modal?{...a,...form}:a);setAgencies(u);store.set('pii_agencies',u);
+    }
+    setModal(null);
+  };
+  const del=(id)=>{if(!confirm('Supprimer cette agence ?'))return;const u=agencies.filter(a=>a.id!==id);setAgencies(u);store.set('pii_agencies',u);};
+  const openEdit=(a)=>{setForm({name:a.name,contacts:a.contacts||'',notes:a.notes||''});setModal(a.id);};
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Agences</h1>
+        <Btn onClick={()=>{setForm({name:'',contacts:'',notes:''});setModal('new');}}>+ Nouvelle agence</Btn>
+      </div>
+      <div className="grid gap-3">
+        {agencies.length===0&&<p className="text-gray-500 text-sm">Aucune agence. Ajoutez vos partenaires immobiliers.</p>}
+        {agencies.map(a=>(
+          <Card key={a.id} className="hover:border-gray-700 transition-colors">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="font-medium text-lg">{a.name}</div>
+                {a.contacts&&<div className="text-sm text-gray-400 mt-1">{a.contacts}</div>}
+                {a.notes&&<div className="text-xs text-gray-500 mt-1 italic">{a.notes}</div>}
+              </div>
+              <div className="flex gap-1">
+                <Btn size="sm" variant="ghost" onClick={()=>openEdit(a)}>✏️</Btn>
+                <Btn size="sm" variant="ghost" onClick={()=>del(a.id)}>🗑️</Btn>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      {modal&&(
+        <Modal title={modal==='new'?'Nouvelle agence':'Modifier l\'agence'} onClose={()=>setModal(null)}>
+          <div className="space-y-3">
+            <Input label="Nom de l'agence" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} required/>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Contacts (un par ligne)</label>
+              <textarea value={form.contacts} onChange={e=>setForm(f=>({...f,contacts:e.target.value}))} rows={3}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500 resize-none"/>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Notes / tarifs préférentiels</label>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={2}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500 resize-none"/>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+              <Btn onClick={save}>Enregistrer</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── FACTURES ─────────────────────────────────────────────────────────────────
+function InvoicesPage({quotes,clients,missions}){
+  const [invoices,setInvoices]=useState(()=>store.get('pii_invoices',[]));
+  const [filter,setFilter]=useState('Tous');
+
+  const getClient=id=>clients.find(c=>c.id===id);
+  const getMission=id=>missions.find(m=>m.id===id);
+
+  const createFromQuote=(q)=>{
+    if(invoices.find(i=>i.quote_id===q.id)){alert('Une facture existe déjà pour ce devis.');return;}
+    const num=`FAC-${String(invoices.length+1).padStart(3,'0')}`;
+    const dueDate=new Date();dueDate.setDate(dueDate.getDate()+30);
+    const inv={
+      id:uid(),quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
+      num,ht:q.ht,tva:q.tva||Math.round(q.ht*0.20*100)/100,ttc:q.ttc,
+      status:'En attente',due_date:dueDate.toISOString().split('T')[0],
+      reminders_sent:0,created_at:today()
+    };
+    const u=[...invoices,inv];setInvoices(u);store.set('pii_invoices',u);
+  };
+
+  const setStatus=(id,status)=>{
+    const u=invoices.map(i=>i.id===id?{...i,status,paid_date:status==='Payée'?today():i.paid_date}:i);
+    setInvoices(u);store.set('pii_invoices',u);
+  };
+
+  const del=(id)=>{if(!confirm('Supprimer cette facture ?'))return;const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
+
+  const INVOICE_STATUSES=['En attente','Envoyée','Payée','Annulée'];
+  const INV_COLORS={'En attente':'bg-gray-500/20 text-gray-400','Envoyée':'bg-blue-500/20 text-blue-400','Payée':'bg-green-500/20 text-green-400','Annulée':'bg-red-500/20 text-red-400'};
+
+  const filtered=filter==='Tous'?invoices:invoices.filter(i=>i.status===filter);
+  const unpaid=invoices.filter(i=>i.status==='En attente'||i.status==='Envoyée');
+  const totalUnpaid=unpaid.reduce((s,i)=>s+i.ttc,0);
+
+  // Devis acceptés sans facture
+  const quotesWithoutInvoice=quotes.filter(q=>q.status==='Accepté'&&!invoices.find(i=>i.quote_id===q.id));
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Factures</h1>
+        {unpaid.length>0&&<div className="text-sm text-red-400 font-medium">{fmtMoney(totalUnpaid)} impayé{unpaid.length>1?'s':''}</div>}
+      </div>
+
+      {quotesWithoutInvoice.length>0&&(
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <div className="text-sm font-medium text-amber-400 mb-3">⚡ Devis acceptés sans facture</div>
+          <div className="space-y-2">
+            {quotesWithoutInvoice.map(q=>{
+              const cl=getClient(q.client_id);
+              return(
+                <div key={q.id} className="flex items-center justify-between">
+                  <span className="text-sm">{q.num} — {cl?.name} — {fmtMoney(q.ttc)}</span>
+                  <Btn size="sm" onClick={()=>createFromQuote(q)}>Créer facture</Btn>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        {['Tous',...INVOICE_STATUSES].map(s=>(
+          <button key={s} onClick={()=>setFilter(s)} className={`text-sm px-3 py-1.5 rounded-lg transition-all ${filter===s?'bg-amber-500 text-black':'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>{s}</button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {filtered.length===0&&<p className="text-gray-500 text-sm">Aucune facture</p>}
+        {filtered.map(inv=>{
+          const cl=getClient(inv.client_id);
+          const overdue=inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date();
+          return(
+            <Card key={inv.id} className={`hover:border-gray-700 transition-colors ${overdue?'border-red-500/30':''}`}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-sm font-bold text-amber-400">{inv.num}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${INV_COLORS[inv.status]||'bg-gray-700 text-gray-300'}`}>{inv.status}</span>
+                    {overdue&&<span className="text-xs text-red-400 font-medium">⚠ En retard</span>}
+                  </div>
+                  <div className="font-medium">{cl?.name||'—'}</div>
+                  <div className="text-xs text-gray-500">Échéance : {fmt(inv.due_date)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-amber-400">{fmtMoney(inv.ttc)}</div>
+                  <div className="flex gap-1 mt-2 justify-end">
+                    <select value={inv.status} onChange={e=>setStatus(inv.id,e.target.value)}
+                      className="text-xs rounded px-2 py-1 bg-gray-800 border border-gray-700 text-gray-300 focus:outline-none">
+                      {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                    <Btn size="sm" variant="ghost" onClick={()=>del(inv.id)}>🗑️</Btn>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:'📊',label:'Dashboard'},
@@ -772,6 +1125,8 @@ const NAV=[
   {id:'missions',icon:'📅',label:'Missions'},
   {id:'quotes',icon:'📄',label:'Devis'},
   {id:'delivery',icon:'🖼️',label:'Livraisons'},
+  {id:'agencies',icon:'🏢',label:'Agences'},
+  {id:'invoices',icon:'🧾',label:'Factures'},
 ];
 function Sidebar({page,setPage,sideOpen,setSideOpen}){
   return(
@@ -946,6 +1301,8 @@ function App(){
       case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients}/>;
       case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions}/>;
       case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries}/>;
+      case'agencies':  return <AgenciesPage clients={clients} missions={missions} quotes={quotes}/>;
+      case'invoices':  return <InvoicesPage quotes={quotes} clients={clients} missions={missions}/>;
       default:         return null;
     }
   };
