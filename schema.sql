@@ -12,7 +12,14 @@ create table clients (
   created_at date default current_date
 );
 alter table clients enable row level security;
-create policy "own" on clients using (auth.uid() = user_id);
+-- SELECT: only own rows
+create policy "clients_select" on clients for select using (auth.uid() = user_id);
+-- INSERT: can only insert rows belonging to yourself
+create policy "clients_insert" on clients for insert with check (auth.uid() = user_id);
+-- UPDATE: can only update own rows
+create policy "clients_update" on clients for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- DELETE: can only delete own rows
+create policy "clients_delete" on clients for delete using (auth.uid() = user_id);
 
 create table missions (
   id uuid primary key default gen_random_uuid(),
@@ -26,7 +33,10 @@ create table missions (
   created_at date default current_date
 );
 alter table missions enable row level security;
-create policy "own" on missions using (auth.uid() = user_id);
+create policy "missions_select" on missions for select using (auth.uid() = user_id);
+create policy "missions_insert" on missions for insert with check (auth.uid() = user_id);
+create policy "missions_update" on missions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "missions_delete" on missions for delete using (auth.uid() = user_id);
 
 create table quotes (
   id uuid primary key default gen_random_uuid(),
@@ -46,7 +56,10 @@ create table quotes (
   created_at date default current_date
 );
 alter table quotes enable row level security;
-create policy "own" on quotes using (auth.uid() = user_id);
+create policy "quotes_select" on quotes for select using (auth.uid() = user_id);
+create policy "quotes_insert" on quotes for insert with check (auth.uid() = user_id);
+create policy "quotes_update" on quotes for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "quotes_delete" on quotes for delete using (auth.uid() = user_id);
 
 create table galleries (
   id uuid primary key default gen_random_uuid(),
@@ -58,8 +71,13 @@ create table galleries (
   created_at date default current_date
 );
 alter table galleries enable row level security;
-create policy "own" on galleries using (auth.uid() = user_id);
-create policy "public_read" on galleries for select using (ready = true);
+-- Owner can do everything
+create policy "galleries_select_own" on galleries for select using (auth.uid() = user_id);
+create policy "galleries_insert" on galleries for insert with check (auth.uid() = user_id);
+create policy "galleries_update" on galleries for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "galleries_delete" on galleries for delete using (auth.uid() = user_id);
+-- Public can read published galleries (token-based access from client gallery page)
+create policy "galleries_public_read" on galleries for select using (ready = true);
 
 create table gallery_photos (
   id uuid primary key default gen_random_uuid(),
@@ -71,8 +89,24 @@ create table gallery_photos (
   selected boolean default false
 );
 alter table gallery_photos enable row level security;
-create policy "owner_all" on gallery_photos using (
+-- Owner can manage photos in their galleries
+create policy "gallery_photos_owner_select" on gallery_photos for select using (
   exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+create policy "gallery_photos_owner_insert" on gallery_photos for insert with check (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+create policy "gallery_photos_owner_update" on gallery_photos for update using (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+) with check (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+create policy "gallery_photos_owner_delete" on gallery_photos for delete using (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+-- Public can view photos in published galleries
+create policy "gallery_photos_public_read" on gallery_photos for select using (
+  exists (select 1 from galleries g where g.id = gallery_id and g.ready = true)
 );
 
 create table subscriptions (
@@ -86,4 +120,6 @@ create table subscriptions (
   created_at timestamptz default now()
 );
 alter table subscriptions enable row level security;
-create policy "own" on subscriptions using (auth.uid() = user_id);
+create policy "subscriptions_select" on subscriptions for select using (auth.uid() = user_id);
+create policy "subscriptions_insert" on subscriptions for insert with check (auth.uid() = user_id);
+create policy "subscriptions_update" on subscriptions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

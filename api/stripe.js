@@ -8,11 +8,17 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  if (!process.env.STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe not configured' });
+
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
   const { action, user_id, email, plan } = req.body || {};
 
   if (action === 'create_checkout') {
     if (!user_id || !email) return res.status(400).json({ error: 'Missing user_id or email' });
+    if (!process.env.STRIPE_PRICE_MONTHLY || !process.env.STRIPE_PRICE_YEARLY) {
+      return res.status(500).json({ error: 'Stripe price IDs not configured' });
+    }
+    if (!process.env.APP_URL) return res.status(500).json({ error: 'APP_URL not configured' });
     try {
       const priceId = plan === 'yearly'
         ? process.env.STRIPE_PRICE_YEARLY
@@ -21,7 +27,8 @@ module.exports = async function handler(req, res) {
         customer_email: email,
         line_items: [{ price: priceId, quantity: 1 }],
         mode: 'subscription',
-        metadata: { user_id },
+        // Pass plan in metadata so the webhook can record the correct plan
+        metadata: { user_id, plan: plan || 'monthly' },
         success_url: `${process.env.APP_URL}/app?subscribed=1`,
         cancel_url: `${process.env.APP_URL}/app`,
       });
@@ -33,6 +40,10 @@ module.exports = async function handler(req, res) {
 
   if (action === 'portal') {
     if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+    if (!process.env.APP_URL) return res.status(500).json({ error: 'APP_URL not configured' });
     try {
       const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
       const { data } = await sb.from('subscriptions').select('stripe_customer_id').eq('user_id', user_id).single();
