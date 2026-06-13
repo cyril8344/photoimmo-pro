@@ -105,6 +105,30 @@ module.exports = async function handler(req, res) {
           <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
         </div>`,
     },
+    invoice_sent: {
+      subject: `📋 Votre facture \${d.num} — PhotoImmo Pro`,
+      html: (d) => `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
+          <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
+            <h1 style="color:#000;margin:0;font-size:24px;">📋 PhotoImmo Pro</h1>
+          </div>
+          <h2 style="color:#f59e0b;">Votre facture est disponible</h2>
+          <p>Bonjour ${d.client_name},</p>
+          <p>Veuillez trouver ci-dessous votre facture <strong>${d.num}</strong>.</p>
+          <div style="background:#1a1d27;border-radius:12px;padding:20px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="color:#9ca3af;padding:6px 0;">Numéro de facture</td><td style="text-align:right;font-weight:bold;color:#f59e0b;">${d.num}</td></tr>
+              <tr><td style="color:#9ca3af;padding:6px 0;">Montant TTC</td><td style="text-align:right;font-weight:bold;font-size:18px;color:#e5e7eb;">${d.ttc}</td></tr>
+              <tr><td style="color:#9ca3af;padding:6px 0;">Date d'échéance</td><td style="text-align:right;color:#e5e7eb;">${d.due_date}</td></tr>
+            </table>
+          </div>
+          <p>Merci de procéder au règlement avant la date d'échéance indiquée.</p>
+          <p style="color:#6b7280;font-size:12px;margin-top:30px;border-top:1px solid #374151;padding-top:15px;">
+            PhotoImmo Pro — Photographie immobilière professionnelle<br/>
+            Pénalités de retard applicables en cas de retard de paiement.
+          </p>
+        </div>`,
+    },
   };
 
   const template = templates[type];
