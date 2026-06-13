@@ -124,3 +124,79 @@ create policy "subscriptions_select" on subscriptions for select using (auth.uid
 create policy "subscriptions_insert" on subscriptions for insert with check (auth.uid() = user_id);
 create policy "subscriptions_update" on subscriptions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "subscriptions_delete" on subscriptions for delete using (auth.uid() = user_id);
+
+-- Nouvelles tables et colonnes pour la v2
+
+-- Colonne checklist pré-mission sur missions
+alter table missions add column if not exists checklist jsonb default '[]';
+alter table missions add column if not exists agency_id uuid references agencies(id);
+
+-- Table agences
+create table if not exists agencies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  contacts jsonb default '[]',
+  preferred_rates jsonb default '{}',
+  notes text,
+  created_at date default current_date
+);
+alter table agencies enable row level security;
+create policy if not exists "agencies_select" on agencies for select using (auth.uid() = user_id);
+create policy if not exists "agencies_insert" on agencies for insert with check (auth.uid() = user_id);
+create policy if not exists "agencies_update" on agencies for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy if not exists "agencies_delete" on agencies for delete using (auth.uid() = user_id);
+
+-- Table factures
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  quote_id uuid references quotes(id),
+  client_id uuid references clients(id) on delete cascade,
+  mission_id uuid references missions(id),
+  num text not null,
+  ht numeric,
+  tva numeric,
+  ttc numeric,
+  status text default 'En attente',
+  due_date date,
+  paid_date date,
+  reminders_sent int default 0,
+  created_at date default current_date
+);
+alter table invoices enable row level security;
+create policy if not exists "invoices_select" on invoices for select using (auth.uid() = user_id);
+create policy if not exists "invoices_insert" on invoices for insert with check (auth.uid() = user_id);
+create policy if not exists "invoices_update" on invoices for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy if not exists "invoices_delete" on invoices for delete using (auth.uid() = user_id);
+
+-- Table logs d'accès galerie
+create table if not exists gallery_access_logs (
+  id uuid primary key default gen_random_uuid(),
+  gallery_id uuid references galleries(id) on delete cascade,
+  action text,
+  ip text,
+  user_agent text,
+  accessed_at timestamptz default now()
+);
+alter table gallery_access_logs enable row level security;
+create policy if not exists "gallery_access_logs_owner" on gallery_access_logs for select using (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+
+-- Table consentements RGPD
+create table if not exists gdpr_consents (
+  id uuid primary key default gen_random_uuid(),
+  gallery_id uuid references galleries(id) on delete cascade,
+  client_email text,
+  consented_at timestamptz default now(),
+  ip text
+);
+alter table gdpr_consents enable row level security;
+create policy if not exists "gdpr_consents_owner" on gdpr_consents for select using (
+  exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
+);
+
+-- Colonne expiration token galerie
+alter table galleries add column if not exists expires_at timestamptz;
+alter table galleries add column if not exists signed_token text unique default gen_random_uuid()::text;
