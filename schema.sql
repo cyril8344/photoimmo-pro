@@ -74,3 +74,16 @@ alter table gallery_photos enable row level security;
 create policy "owner_all" on gallery_photos using (
   exists (select 1 from galleries g where g.id = gallery_id and g.user_id = auth.uid())
 );
+
+create table subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade unique,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  status text default 'trialing',
+  plan text default 'monthly',
+  trial_ends_at timestamptz default now() + interval '14 days',
+  created_at timestamptz default now()
+);
+alter table subscriptions enable row level security;
+create policy "own" on subscriptions using (auth.uid() = user_id);

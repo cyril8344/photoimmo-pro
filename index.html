@@ -682,6 +682,89 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
   );
 }
 
+// ─── UPGRADE MODAL ───────────────────────────────────────────────────────────
+function UpgradeModal({user}){
+  const [loading,setLoading]=useState(null);
+  const [period,setPeriod]=useState('monthly');
+
+  const subscribe=async(plan)=>{
+    setLoading(plan);
+    if(!sb||!user){alert('Configurez Supabase et Stripe pour activer les abonnements.');setLoading(null);return;}
+    try{
+      const res=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'create_checkout',user_id:user.id,email:user.email,plan})});
+      const{url,error}=await res.json();
+      if(error)throw new Error(error);
+      window.location.href=url;
+    }catch(err){alert('Erreur : '+err.message);setLoading(null);}
+  };
+
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-950">
+      <div className="w-full max-w-xl">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-black font-bold text-2xl mx-auto mb-4">PI</div>
+          <h1 className="text-2xl font-bold">Votre essai est terminé</h1>
+          <p className="text-gray-400 mt-2 text-sm">Abonnez-vous pour continuer à utiliser PhotoImmo Pro et accéder à toutes vos données.</p>
+        </div>
+        <div className="flex justify-center mb-6">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-1 flex gap-1">
+            <button onClick={()=>setPeriod('monthly')} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${period==='monthly'?'bg-gray-700 text-white':'text-gray-500'}`}>Mensuel</button>
+            <button onClick={()=>setPeriod('yearly')} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${period==='yearly'?'bg-gray-700 text-white':'text-gray-500'}`}>
+              Annuel <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">-28%</span>
+            </button>
+          </div>
+        </div>
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <div className="flex items-end gap-2 mb-1">
+            <div className="text-4xl font-bold text-amber-400">{period==='yearly'?'249 €':'29 €'}</div>
+            <div className="text-gray-400 mb-1">{period==='yearly'?'/an':'/mois'}</div>
+          </div>
+          {period==='yearly'&&<div className="text-xs text-green-400 mb-4">Économisez 99 € vs mensuel</div>}
+          <Btn onClick={()=>subscribe(period)} disabled={!!loading} className="w-full justify-center mb-5">
+            {loading?'Redirection vers Stripe…':`S'abonner — ${period==='yearly'?'249 €/an':'29 €/mois'}`}
+          </Btn>
+          <ul className="grid grid-cols-2 gap-2 text-sm text-gray-400">
+            {['Accès complet illimité','Clients & missions','Devis PDF','Galeries de livraison','Emails automatiques','Support prioritaire'].map(f=>(
+              <li key={f} className="flex items-center gap-1.5"><span className="text-amber-400 text-xs">✓</span>{f}</li>
+            ))}
+          </ul>
+        </Card>
+        <p className="text-center text-xs text-gray-600 mt-4">Paiement sécurisé par Stripe · Annulation à tout moment</p>
+        {user&&<p className="text-center text-xs text-gray-600 mt-1">{user.email}</p>}
+        {sb&&<button onClick={()=>sb.auth.signOut()} className="block mx-auto mt-3 text-xs text-gray-700 hover:text-gray-500">Déconnexion</button>}
+      </div>
+    </div>
+  );
+}
+
+// ─── TRIAL BANNER ─────────────────────────────────────────────────────────────
+function TrialBanner({daysLeft,user}){
+  const [busy,setBusy]=useState(false);
+  const upgrade=async()=>{
+    setBusy(true);
+    if(!sb||!user){alert('Configurez Stripe pour activer les abonnements.');setBusy(false);return;}
+    try{
+      const res=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'create_checkout',user_id:user.id,email:user.email,plan:'monthly'})});
+      const{url,error}=await res.json();
+      if(error)throw new Error(error);
+      window.location.href=url;
+    }catch(err){alert('Erreur : '+err.message);setBusy(false);}
+  };
+  return(
+    <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-4">
+      <span className="text-xs text-amber-400">
+        {daysLeft>0?`⏱ Essai gratuit — ${daysLeft} jour${daysLeft!==1?'s':''} restant${daysLeft!==1?'s':''}`:'⚠️ Votre essai se termine aujourd\'hui'}
+      </span>
+      <button onClick={upgrade} disabled={busy}
+        className="text-xs bg-amber-500 hover:bg-amber-400 text-black font-medium px-3 py-1 rounded-lg transition-all disabled:opacity-50 shrink-0">
+        {busy?'…':'Passer à Pro →'}
+      </button>
+    </div>
+  );
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:'📊',label:'Dashboard'},
@@ -717,18 +800,32 @@ function Sidebar({page,setPage,sideOpen,setSideOpen}){
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({onLogin}){
+  const [tab,setTab]=useState('login');
   const [email,setEmail]=useState('');
   const [password,setPassword]=useState('');
-  const [error,setError]=useState('');
+  const [msg,setMsg]=useState({text:'',type:'error'});
   const [loading,setLoading]=useState(false);
 
   const submit=async(e)=>{
-    e.preventDefault();setError('');setLoading(true);
+    e.preventDefault();setMsg({text:'',type:'error'});setLoading(true);
     if(sb){
-      const{error:err}=await sb.auth.signInWithPassword({email,password});
-      if(err){setError(err.message);setLoading(false);}else{onLogin();}
+      if(tab==='signup'){
+        const{data,error:err}=await sb.auth.signUp({email,password});
+        if(err){setMsg({text:err.message,type:'error'});setLoading(false);}
+        else{
+          if(data.user){
+            await sb.from('subscriptions').insert({user_id:data.user.id,status:'trialing'}).select();
+          }
+          setMsg({text:'Vérifiez votre email pour confirmer votre compte.',type:'success'});
+          setLoading(false);
+        }
+      } else {
+        const{data,error:err}=await sb.auth.signInWithPassword({email,password});
+        if(err){setMsg({text:err.message,type:'error'});setLoading(false);}
+        else{onLogin(data.user);}
+      }
     } else {
-      setTimeout(()=>{onLogin();},500);
+      setTimeout(()=>{onLogin(null);},500);
     }
   };
 
@@ -741,12 +838,21 @@ function Login({onLogin}){
           <p className="text-gray-500 text-sm mt-1">Gestion photographe immobilier</p>
         </div>
         <Card>
+          {sb&&(
+            <div className="flex bg-gray-800 rounded-lg p-1 mb-4">
+              <button onClick={()=>setTab('login')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='login'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Connexion</button>
+              <button onClick={()=>setTab('signup')} className={`flex-1 text-sm py-1.5 rounded-md transition-all ${tab==='signup'?'bg-gray-700 text-white font-medium':'text-gray-400'}`}>Créer un compte</button>
+            </div>
+          )}
           <form onSubmit={submit} className="space-y-4">
             <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="photo@studio.fr" required/>
             <Input label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
-            {error&&<p className="text-red-400 text-sm">{error}</p>}
-            <Btn className="w-full justify-center" disabled={loading}>{loading?'Connexion…':'Se connecter'}</Btn>
+            {msg.text&&<p className={`text-sm ${msg.type==='success'?'text-green-400':'text-red-400'}`}>{msg.text}</p>}
+            <Btn className="w-full justify-center" disabled={loading}>
+              {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter'}
+            </Btn>
             {!sb&&<p className="text-xs text-center text-gray-600">Mode démonstration (Supabase non configuré)</p>}
+            {tab==='signup'&&<p className="text-xs text-center text-gray-600">Sans carte bancaire · Annulation à tout moment</p>}
           </form>
         </Card>
       </div>
@@ -757,6 +863,8 @@ function Login({onLogin}){
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App(){
   const [authed,setAuthed]=useState(!sb);
+  const [user,setUser]=useState(null);
+  const [subscription,setSubscription]=useState(sb?null:{status:'demo'});
   const [page,setPage]=useState('dashboard');
   const [sideOpen,setSideOpen]=useState(false);
   const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
@@ -771,12 +879,62 @@ function App(){
     setGalleries(store.get('pii_galleries',[]));
   },[]);
 
+  const loadSubscription=async(userId)=>{
+    const{data}=await sb.from('subscriptions').select('*').eq('user_id',userId).single();
+    if(!data){
+      const{data:newSub}=await sb.from('subscriptions').insert({user_id:userId,status:'trialing'}).select().single();
+      setSubscription(newSub||{status:'trialing'});
+    } else {
+      setSubscription(data);
+    }
+  };
+
   useEffect(()=>{
     if(!sb)return;
-    sb.auth.getSession().then(({data:{session}})=>{if(session)setAuthed(true);});
+    sb.auth.getSession().then(async({data:{session}})=>{
+      if(session){setUser(session.user);setAuthed(true);await loadSubscription(session.user.id);}
+    });
+    const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
+      if(session){setUser(session.user);setAuthed(true);}
+      else{setUser(null);setAuthed(false);setSubscription(null);}
+    });
+    return()=>authSub.unsubscribe();
   },[]);
 
-  if(!authed)return <Login onLogin={()=>setAuthed(true)}/>;
+  const isActive=()=>{
+    if(!subscription)return false;
+    if(subscription.status==='demo'||subscription.status==='active')return true;
+    if(subscription.status==='trialing'){
+      return !subscription.trial_ends_at||new Date(subscription.trial_ends_at)>new Date();
+    }
+    return false;
+  };
+
+  const trialDaysLeft=()=>{
+    if(!subscription||subscription.status!=='trialing'||!subscription.trial_ends_at)return null;
+    return Math.max(0,Math.ceil((new Date(subscription.trial_ends_at)-new Date())/86400000));
+  };
+
+  const manageSubscription=async()=>{
+    if(!sb||!user)return;
+    try{
+      const res=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'portal',user_id:user.id})});
+      const{url,error}=await res.json();
+      if(url)window.location.href=url;
+      else alert('Aucun abonnement actif trouvé.');
+    }catch{alert('Erreur lors de l\'ouverture du portail.');}
+  };
+
+  if(!authed)return <Login onLogin={(u)=>{setAuthed(true);if(u){setUser(u);loadSubscription&&sb&&loadSubscription(u.id);}}}/>;
+  if(sb&&subscription===null)return(
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
+    </div>
+  );
+  if(sb&&!isActive())return <UpgradeModal user={user}/>;
+
+  const days=trialDaysLeft();
 
   const renderPage=()=>{
     switch(page){
@@ -793,11 +951,18 @@ function App(){
     <div className="min-h-screen">
       <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen}/>
       <div className="lg:ml-56">
+        {days!==null&&<TrialBanner daysLeft={days} user={user}/>}
         <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center gap-3">
           <button onClick={()=>setSideOpen(true)} className="lg:hidden text-gray-400 hover:text-white p-1">☰</button>
           <span className="text-sm text-gray-400">{NAV.find(n=>n.id===page)?.icon} {NAV.find(n=>n.id===page)?.label}</span>
           {sb&&(
-            <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="ml-auto text-xs text-gray-600 hover:text-gray-400">Déconnexion</button>
+            <div className="ml-auto flex items-center gap-3">
+              {subscription?.status==='active'&&(
+                <button onClick={manageSubscription} className="text-xs text-gray-600 hover:text-gray-400">Abonnement</button>
+              )}
+              <span className="text-xs text-gray-700 hidden sm:block">{user?.email}</span>
+              <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="text-xs text-gray-600 hover:text-gray-400">Déconnexion</button>
+            </div>
           )}
         </header>
         <main className="p-4 lg:p-8 max-w-5xl mx-auto">{renderPage()}</main>
