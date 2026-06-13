@@ -1,6 +1,14 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 
+// Disable Vercel's automatic body parsing so we receive the raw body.
+// Stripe webhook signature verification requires the raw, unparsed body.
+module.exports.config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
