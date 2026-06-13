@@ -1,14 +1,6 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 
-// Disable Vercel's automatic body parsing so we receive the raw body.
-// Stripe webhook signature verification requires the raw, unparsed body.
-module.exports.config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -18,7 +10,11 @@ function getRawBody(req) {
   });
 }
 
-module.exports = async function handler(req, res) {
+// Disable Vercel's automatic body parsing so we receive the raw body.
+// Stripe webhook signature verification requires the raw, unparsed body.
+// IMPORTANT: the config must be a property of the exported handler function,
+// not set before the function is assigned (that would be overwritten).
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   if (!process.env.STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe not configured' });
@@ -82,4 +78,14 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+}
+
+// Attach Vercel body-parser config to the handler function so it is not
+// overwritten when we do `module.exports = handler`.
+handler.config = {
+  api: {
+    bodyParser: false,
+  },
 };
+
+module.exports = handler;

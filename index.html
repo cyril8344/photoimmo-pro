@@ -895,7 +895,7 @@ function App(){
       if(session){setUser(session.user);setAuthed(true);await loadSubscription(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(session){setUser(session.user);setAuthed(true);}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN')await loadSubscription(session.user.id);}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();

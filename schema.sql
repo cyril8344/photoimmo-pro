@@ -123,3 +123,4 @@ alter table subscriptions enable row level security;
 create policy "subscriptions_select" on subscriptions for select using (auth.uid() = user_id);
 create policy "subscriptions_insert" on subscriptions for insert with check (auth.uid() = user_id);
 create policy "subscriptions_update" on subscriptions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "subscriptions_delete" on subscriptions for delete using (auth.uid() = user_id);

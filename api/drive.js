@@ -51,8 +51,9 @@ module.exports = async function handler(req, res) {
     if (action === 'list_files') {
       const folder_id = req.query.folder_id || (req.body && req.body.folder_id);
       if (!folder_id) return res.status(400).json({ error: 'Missing folder_id' });
+      const query = encodeURIComponent(`'${folder_id}' in parents`);
       const r = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q='${encodeURIComponent(folder_id)}'+in+parents&fields=files(id,name,thumbnailLink,webViewLink,size)`,
+        `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,thumbnailLink,webViewLink,size)`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       const data = await r.json();
