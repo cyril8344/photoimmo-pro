@@ -79,6 +79,6 @@ module.exports = async function handler(req, res) {
     if (!response.ok) return res.status(response.status).json({ error: result.message });
     return res.status(200).json({ success: true, id: result.id });
   } catch (err) {
-    return res.status(500).json({ error: 'Erreur envoi email' });
+    return res.status(500).json({ error: err.message || 'Erreur envoi email' });
   }
 };

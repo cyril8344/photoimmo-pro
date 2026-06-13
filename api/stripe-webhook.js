@@ -10,8 +10,16 @@ function getRawBody(req) {
   });
 }
 
-module.exports = async function handler(req, res) {
+// Disable Vercel's automatic body parsing so we receive the raw body.
+// Stripe webhook signature verification requires the raw, unparsed body.
+// IMPORTANT: the config must be a property of the exported handler function,
+// not set before the function is assigned (that would be overwritten).
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  if (!process.env.STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe not configured' });
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return res.status(500).json({ error: 'Supabase not configured' });
+  if (!process.env.STRIPE_WEBHOOK_SECRET) return res.status(500).json({ error: 'Webhook secret not configured' });
 
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -20,6 +28,7 @@ module.exports = async function handler(req, res) {
   try {
     const rawBody = await getRawBody(req);
     const sig = req.headers['stripe-signature'];
+    if (!sig) return res.status(400).json({ error: 'Missing stripe-signature header' });
     event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     return res.status(400).json({ error: err.message });
@@ -28,12 +37,19 @@ module.exports = async function handler(req, res) {
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
+      const userId = session.metadata?.user_id;
+      if (!userId) {
+        console.error('checkout.session.completed: missing user_id in metadata');
+        return res.status(200).json({ received: true });
+      }
+      // Detect plan from the price id in the line items (best effort via interval)
+      const plan = session.metadata?.plan || 'monthly';
       await sb.from('subscriptions').upsert({
-        user_id: session.metadata.user_id,
+        user_id: userId,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
         status: 'active',
-        plan: 'monthly',
+        plan,
       }, { onConflict: 'user_id' });
     }
 
@@ -62,4 +78,14 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+}
+
+// Attach Vercel body-parser config to the handler function so it is not
+// overwritten when we do `module.exports = handler`.
+handler.config = {
+  api: {
+    bodyParser: false,
+  },
 };
+
+module.exports = handler;

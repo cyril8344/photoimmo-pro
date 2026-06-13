@@ -895,7 +895,7 @@ function App(){
       if(session){setUser(session.user);setAuthed(true);await loadSubscription(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(session){setUser(session.user);setAuthed(true);}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN')await loadSubscription(session.user.id);}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();
@@ -926,7 +926,10 @@ function App(){
     }catch{alert('Erreur lors de l\'ouverture du portail.');}
   };
 
-  if(!authed)return <Login onLogin={(u)=>{setAuthed(true);if(u){setUser(u);loadSubscription&&sb&&loadSubscription(u.id);}}}/>;
+  // NOTE: loadSubscription is defined above (as const) so it is in scope here.
+  // The onLogin callback is only invoked after the component has fully rendered,
+  // so loadSubscription is accessible via closure at call time.
+  if(!authed)return <Login onLogin={(u)=>{setAuthed(true);if(u&&sb){setUser(u);loadSubscription(u.id);}}}/>;
   if(sb&&subscription===null)return(
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
