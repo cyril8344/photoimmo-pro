@@ -21,7 +21,7 @@
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
     { "source": "/app/(.*)", "destination": "/app.html" },
-    { "source": "/gallery/:token*", "destination": "/app.html" },
+    { "source": "/gallery/:token*", "destination": "/gallery.html" },
     { "source": "/portfolio/:slug*", "destination": "/portfolio.html" },
     { "source": "/", "destination": "/landing.html" }
   ]

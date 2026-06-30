@@ -1063,66 +1063,129 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
 }
 
 // ─── LIVRAISONS ───────────────────────────────────────────────────────────────
-function DeliveryPage({missions,clients,galleries,setGalleries}){
-  const [modal,setModal]=useState(null);
+function DeliveryPage({missions,clients,galleries,setGalleries,user}){
   const [viewGallery,setViewGallery]=useState(null);
   const [photos,setPhotos]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [loadingPhotos,setLoadingPhotos]=useState(false);
+  const [toast,setToast]=useState('');
+  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),3000);};
+
   const getClient=id=>clients.find(c=>c.id===id);
   const done=missions.filter(m=>m.status==='Réalisé'||m.status==='Livré');
-
   const getGallery=mId=>galleries.find(g=>g.mission_id===mId);
 
-  const createGallery=(mId)=>{
-    const token=uid();
-    const g={id:uid(),mission_id:mId,token,photos:[],ready:false,created_at:today()};
-    const u=[...galleries,g];setGalleries(u);store.set('pii_galleries',u);
-  };
-  const toggleReady=(gId)=>{
-    const u=galleries.map(g=>g.id===gId?{...g,ready:!g.ready}:g);setGalleries(u);store.set('pii_galleries',u);
-  };
-  const openGallery=(g)=>{setViewGallery(g);setPhotos(g.photos||[]);};
+  useEffect(()=>{
+    if(!sb||!user)return;
+    (async()=>{
+      const{data}=await sb.from('galleries').select('*, gallery_photos(id)').eq('user_id',user.id).order('created_at',{ascending:false});
+      if(data){
+        const normalized=data.map(g=>({...g,photos_count:g.gallery_photos?.length||0}));
+        setGalleries(normalized);store.set('pii_galleries',normalized);
+      }
+    })();
+  },[user]);
 
-  const handleUpload=(e)=>{
+  const createGallery=async(m)=>{
+    if(sb&&user){
+      const{data,error}=await sb.from('galleries').insert({user_id:user.id,mission_id:m.id,property_address:m.address}).select().single();
+      if(error){showToast('Erreur lors de la création');return;}
+      const updated=[...galleries,{...data,photos_count:0}];
+      setGalleries(updated);store.set('pii_galleries',updated);
+    }else{
+      const g={id:uid(),mission_id:m.id,token:uid(),ready:false,photos_count:0,created_at:today(),property_address:m.address};
+      const updated=[...galleries,g];setGalleries(updated);store.set('pii_galleries',updated);
+    }
+  };
+
+  const toggleReady=async(gId)=>{
+    const g=galleries.find(x=>x.id===gId);
+    const newReady=!g.ready;
+    if(sb&&user)await sb.from('galleries').update({ready:newReady}).eq('id',gId);
+    const updated=galleries.map(g=>g.id===gId?{...g,ready:newReady}:g);
+    setGalleries(updated);store.set('pii_galleries',updated);
+    if(viewGallery?.id===gId)setViewGallery(prev=>({...prev,ready:newReady}));
+  };
+
+  const openGallery=async(g)=>{
+    setViewGallery(g);setPhotos([]);setLoadingPhotos(true);
+    if(sb){
+      const{data}=await sb.from('gallery_photos').select('*').eq('gallery_id',g.id).order('created_at',{ascending:true});
+      setPhotos(data||[]);
+    }
+    setLoadingPhotos(false);
+  };
+
+  const handleUpload=async(e)=>{
+    if(!viewGallery)return;
     const files=Array.from(e.target.files);
-    files.forEach(file=>{
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        const p={id:uid(),name:file.name,url:ev.target.result,selected:false};
-        setPhotos(prev=>{
-          const u=[...prev,p];
-          const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
-          store.set('pii_galleries',gu);setGalleries(gu);
-          return u;
+    e.target.value='';
+    if(!files.length)return;
+    setUploading(true);let added=0;
+    for(const file of files){
+      if(sb&&user){
+        const ext=file.name.split('.').pop().toLowerCase();
+        const path=`${user.id}/${viewGallery.id}/${uid()}.${ext}`;
+        const{error:upErr}=await sb.storage.from('gallery-photos').upload(path,file);
+        if(upErr){showToast('Erreur upload : '+upErr.message);continue;}
+        const{data:{publicUrl}}=sb.storage.from('gallery-photos').getPublicUrl(path);
+        const{data:photo,error:dbErr}=await sb.from('gallery_photos').insert({gallery_id:viewGallery.id,name:file.name,full_url:publicUrl,thumb_url:publicUrl,selected:false}).select().single();
+        if(dbErr){showToast('Erreur base de données');continue;}
+        if(photo){setPhotos(prev=>[...prev,photo]);added++;}
+      }else{
+        await new Promise(resolve=>{
+          const reader=new FileReader();
+          reader.onload=ev=>{
+            setPhotos(prev=>[...prev,{id:uid(),name:file.name,full_url:ev.target.result,thumb_url:ev.target.result,selected:false}]);
+            added++;resolve();
+          };
+          reader.readAsDataURL(file);
         });
-      };
-      reader.readAsDataURL(file);
-    });
+      }
+    }
+    if(added>0){
+      const updated=galleries.map(g=>g.id===viewGallery.id?{...g,photos_count:(g.photos_count||0)+added}:g);
+      setGalleries(updated);store.set('pii_galleries',updated);
+      showToast(`${added} photo${added>1?'s':''} ajoutée${added>1?'s':''}`);
+    }
+    setUploading(false);
   };
 
-  const toggleSelect=(pid)=>{
-    setPhotos(prev=>{
-      const u=prev.map(p=>p.id===pid?{...p,selected:!p.selected}:p);
-      const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
-      store.set('pii_galleries',gu);setGalleries(gu);return u;
-    });
+  const deletePhoto=async(pid,url)=>{
+    if(sb&&user){
+      if(url&&url.includes('/gallery-photos/')){
+        try{
+          const pathPart=url.split('/gallery-photos/')[1];
+          if(pathPart)await sb.storage.from('gallery-photos').remove([decodeURIComponent(pathPart)]);
+        }catch(_){}
+      }
+      await sb.from('gallery_photos').delete().eq('id',pid);
+    }
+    setPhotos(prev=>prev.filter(p=>p.id!==pid));
+    const updated=galleries.map(g=>g.id===viewGallery.id?{...g,photos_count:Math.max(0,(g.photos_count||1)-1)}:g);
+    setGalleries(updated);store.set('pii_galleries',updated);
   };
 
   const copyLink=(token)=>{
     navigator.clipboard.writeText(`${location.origin}/gallery/${token}`);
-    alert('Lien copié !');
+    showToast('Lien copié !');
   };
+
+  const currentMission=viewGallery?missions.find(m=>m.id===viewGallery.mission_id):null;
+  const selCount=photos.filter(p=>p.selected).length;
 
   return(
     <div className="fade-in space-y-5">
+      {toast&&<div className="fixed top-4 right-4 z-50 bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium shadow-lg">{toast}</div>}
       <h1 className="text-2xl font-bold">Livraisons</h1>
       <div className="space-y-3">
-        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée</p>}
+        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée — passez une mission en statut "Réalisé" pour créer sa galerie.</p>}
         {done.map(m=>{
           const cl=getClient(m.client_id);
           const g=getGallery(m.id);
           return(
             <Card key={m.id} className="hover:border-gray-700 transition-colors">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <div className="flex items-center gap-2 mb-1"><Badge s={m.status}/><span className="text-xs text-gray-500">{m.type}</span></div>
                   <div className="font-medium">{m.address}</div>
@@ -1131,16 +1194,16 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   {!g?(
-                    <Btn size="sm" onClick={()=>createGallery(m.id)}>🖼️ Créer galerie</Btn>
+                    <Btn size="sm" onClick={()=>createGallery(m)}>🖼️ Créer galerie</Btn>
                   ):(
                     <>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${g.ready?'bg-green-500/20 text-green-400':'bg-gray-700 text-gray-400'}`}>
                           {g.ready?'✓ Publiée':'Brouillon'}
                         </span>
-                        <span className="text-xs text-gray-500">{g.photos?.length||0} photos</span>
+                        <span className="text-xs text-gray-500">{g.photos_count||0} photo{(g.photos_count||0)!==1?'s':''}</span>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap justify-end">
                         <Btn size="sm" variant="ghost" onClick={()=>openGallery(g)}>✏️ Gérer</Btn>
                         <Btn size="sm" variant="ghost" onClick={()=>copyLink(g.token)}>🔗 Lien</Btn>
                         <Btn size="sm" variant={g.ready?'secondary':'primary'} onClick={()=>toggleReady(g.id)}>
@@ -1157,16 +1220,21 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
       </div>
 
       {viewGallery&&(
-        <Modal title={`Galerie – ${missions.find(m=>m.id===viewGallery.mission_id)?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
+        <Modal title={`Galerie — ${currentMission?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer">
-                <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload}/>
-                <span className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-medium px-4 py-2 rounded-lg transition-all">+ Ajouter des photos</span>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className={`cursor-pointer ${uploading?'opacity-50 pointer-events-none':''}`}>
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading}/>
+                <span className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-medium px-4 py-2 rounded-lg transition-all inline-block">
+                  {uploading?'⏳ Upload en cours…':'+ Ajouter des photos'}
+                </span>
               </label>
-              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {photos.filter(p=>p.selected).length} sélectionnée{photos.filter(p=>p.selected).length!==1?'s':''}</span>
+              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {selCount} sélectionnée{selCount!==1?'s':''} par le client</span>
             </div>
-            {photos.length===0?(
+
+            {loadingPhotos?(
+              <div className="text-center py-12 text-gray-600">Chargement…</div>
+            ):photos.length===0?(
               <div className="text-center py-16 text-gray-600">
                 <div className="text-5xl mb-3">🖼️</div>
                 <p>Aucune photo encore. Cliquez pour en ajouter.</p>
@@ -1174,11 +1242,11 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
             ):(
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
                 {photos.map(p=>(
-                  <div key={p.id} className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${p.selected?'border-amber-500':'border-transparent'}`} onClick={()=>toggleSelect(p.id)}>
-                    <img src={p.url} alt={p.name} className="w-full h-24 object-cover"/>
-                    <div className={`absolute inset-0 flex items-center justify-center transition-all ${p.selected?'bg-amber-500/30':'bg-black/0 group-hover:bg-black/30'}`}>
-                      {p.selected&&<span className="text-2xl">⭐</span>}
-                    </div>
+                  <div key={p.id} className="relative group rounded-lg overflow-hidden border border-gray-700">
+                    <img src={p.thumb_url||p.full_url} alt={p.name} className="w-full h-24 object-cover"/>
+                    {p.selected&&<div className="absolute top-1 left-1 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center text-xs text-black font-bold">✓</div>}
+                    <button onClick={()=>deletePhoto(p.id,p.full_url)}
+                      className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all">×</button>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 p-1">
                       <p className="text-xs text-white truncate">{p.name}</p>
                     </div>
@@ -1186,7 +1254,17 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-500">Cliquez sur une photo pour la marquer comme favorite (⭐). Le client pourra sélectionner ses photos depuis le lien de livraison.</p>
+
+            <p className="text-xs text-gray-500">Les photos avec ✓ ont été sélectionnées par votre client depuis son lien de livraison.</p>
+            <div className="flex items-center gap-2 pt-2 border-t border-gray-800 flex-wrap">
+              <Btn size="sm" variant="ghost" onClick={()=>copyLink(viewGallery.token)}>🔗 Copier le lien client</Btn>
+              {!viewGallery.ready&&(
+                <Btn size="sm" onClick={()=>toggleReady(viewGallery.id)}>Publier la galerie</Btn>
+              )}
+              {viewGallery.ready&&(
+                <span className="text-xs text-green-400 ml-auto">✓ Galerie publiée — le lien est actif</span>
+              )}
+            </div>
           </div>
         </Modal>
       )}
@@ -2333,7 +2411,7 @@ function App(){
       case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes}/>;
       case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients}/>;
       case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions}/>;
-      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries}/>;
+      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user}/>;
       case'agencies':    return <AgenciesPage clients={clients} missions={missions} quotes={quotes}/>;
       case'invoices':    return <InvoicesPage quotes={quotes} clients={clients} missions={missions}/>;
       case'accounting':  return <AccountingPage quotes={quotes} clients={clients} missions={missions}/>;
