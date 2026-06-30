@@ -725,27 +725,45 @@ function exportPDF(q,client,mission){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const amber=[245,158,11];
-  const gray=[55,65,81];
+  const gray=[107,114,128];
+  const profile=store.get('pii_profile',{});
+  const companyName=profile.company_name||'PhotoImmo Pro';
+  const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 
-  doc.setFillColor(...amber);doc.rect(0,0,210,35,'F');
-  doc.setTextColor(0,0,0);doc.setFontSize(22);doc.setFont('helvetica','bold');
-  doc.text('DEVIS PHOTOGRAPHIE IMMOBILIÈRE',105,18,{align:'center'});
+  // Header band
+  doc.setFillColor(...amber);doc.rect(0,0,210,40,'F');
+  doc.setTextColor(0,0,0);doc.setFontSize(20);doc.setFont('helvetica','bold');
+  doc.text('DEVIS',14,18);
   doc.setFontSize(11);doc.setFont('helvetica','normal');
-  doc.text(`N° ${q.num} · ${fmt(q.created_at)}`,105,27,{align:'center'});
+  doc.text(`N° ${q.num}`,14,27);doc.text(`Date : ${fmt(q.created_at)}`,14,33);
 
-  doc.setTextColor(...gray);doc.setFontSize(10);
-  doc.text('CLIENT',14,48);doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text(client?.name||'—',14,55);doc.setFont('helvetica','normal');doc.setTextColor(...gray);
-  doc.text(client?.email||'',14,61);doc.text(client?.phone||'',14,67);
+  // Logo circle
+  doc.setFillColor(0,0,0);doc.circle(185,20,12,'F');
+  doc.setTextColor(245,158,11);doc.setFontSize(10);doc.setFont('helvetica','bold');
+  doc.text(initials,185,23,{align:'center'});
 
+  // Emetteur (photographe)
+  doc.setTextColor(...gray);doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.text(companyName,130,48);doc.setFont('helvetica','normal');
+  if(profile.siret)doc.text('SIRET : '+profile.siret,130,54);
+  if(profile.address)doc.text(profile.address,130,60,{maxWidth:70});
+  if(profile.phone)doc.text(profile.phone,130,66);
+
+  // Client block
+  doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('CLIENT',14,48);
+  doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+  doc.text(client?.name||'—',14,55);doc.setTextColor(...gray);
+  if(client?.email)doc.text(client.email,14,61);if(client?.phone)doc.text(client.phone,14,67);
+
+  // Mission block
   if(mission){
-    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',130,48);
+    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',14,78);
     doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-    doc.text(mission.address||'',130,55,{maxWidth:65});
-    doc.text(mission.type||'',130,61);doc.text(fmt(mission.date),130,67);
+    doc.text(mission.address||'',14,84,{maxWidth:90});
+    doc.text(mission.type||'',14,90);doc.text(fmt(mission.date),14,96);
   }
 
-  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,75,196,75);
+  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,104,196,104);
 
   const rows=[
     ['Forfait de base (surface '+q.surface+'m²)',TARIFS.surface[q.surface]],
@@ -755,29 +773,66 @@ function exportPDF(q,client,mission){
     ['Retouches '+q.retouche,TARIFS.retouche[q.retouche]],
   ].filter(r=>r[1]>0);
 
-  let y=85;
+  let y=114;
   doc.setFontSize(9);doc.setTextColor(...gray);
-  doc.text('PRESTATION',14,y);doc.text('MONTANT HT',175,y,{align:'right'});
-  y+=5;doc.setDrawColor(200,200,200);doc.line(14,y,196,y);y+=6;
+  doc.setFillColor(240,240,240);doc.rect(14,y-5,182,8,'F');
+  doc.setFont('helvetica','bold');
+  doc.text('PRESTATION',16,y);doc.text('MONTANT HT',175,y,{align:'right'});
+  y+=8;doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
 
-  doc.setTextColor(0,0,0);
   rows.forEach(([label,val])=>{
-    doc.text(label,14,y);doc.text(fmtMoney(val),175,y,{align:'right'});y+=8;
+    doc.text(label,16,y);doc.text(fmtMoney(val),175,y,{align:'right'});
+    doc.setDrawColor(220,220,220);doc.line(14,y+3,196,y+3);y+=10;
   });
 
-  doc.line(14,y,196,y);y+=6;
-  doc.setFont('helvetica','bold');
+  y+=4;doc.setFont('helvetica','normal');doc.setTextColor(...gray);
   doc.text('Total HT',130,y);doc.text(fmtMoney(q.ht),175,y,{align:'right'});y+=7;
-  doc.setFont('helvetica','normal');doc.setTextColor(...gray);
   doc.text('TVA 20%',130,y);doc.text(fmtMoney(q.tva),175,y,{align:'right'});y+=7;
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...amber);
-  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=12;
+  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=15;
 
-  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');
-  doc.text('Devis valable 30 jours. Acompte de 30% à la commande.',14,y);
-  doc.text(`Généré le ${fmt(today())} par PhotoImmo Pro`,196,y,{align:'right'});
+  doc.setFontSize(7.5);doc.setTextColor(...gray);doc.setFont('helvetica','normal');
+  doc.setDrawColor(220,220,220);doc.line(14,y,196,y);y+=5;
+  ['Devis valable 30 jours à compter de sa date d\'émission.','Acompte de 30% à la commande. Solde à la livraison des fichiers.',
+   'En cas de litige, application du droit français.'].forEach(l=>{doc.text(l,14,y);y+=5;});
+  if(profile.micro_entrepreneur)doc.text('TVA non applicable — article 293 B du CGI (micro-entrepreneur)',14,y);
 
   doc.save(`devis-${q.num}.pdf`);
+}
+
+async function sendQuoteEmail(q, client) {
+  try {
+    const dueDate=new Date(q.created_at);dueDate.setDate(dueDate.getDate()+30);
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'quote_sent',to:client.email,
+        data:{client_name:client.name,num:q.num,ttc:fmtMoney(q.ttc),expires:fmt(dueDate.toISOString().split('T')[0])}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
+}
+
+async function sendGalleryEmail(gallery, client, address) {
+  try {
+    const galleryUrl=`${location.origin}/gallery/${gallery.token}`;
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'gallery_ready',to:client.email,
+        data:{client_name:client.name,address:address||'',gallery_url:galleryUrl}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
+}
+
+async function sendInvoiceReminder(inv, client) {
+  try {
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'invoice_reminder',to:client.email,
+        data:{client_name:client.name,num:inv.num,ttc:fmtMoney(inv.ttc),due_date:fmt(inv.due_date)}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
 }
 
 function exportInvoicePDF(inv, client, mission, quote) {
@@ -1003,6 +1058,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
                       {QUOTE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
+                    {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl);alert(r.success?'Devis envoyé par email !':'Erreur : '+r.error);}}>📧 Email</Btn>}
                     <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
                   </div>
                 </div>
@@ -1223,6 +1279,9 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user}){
                       <div className="flex gap-1 flex-wrap justify-end">
                         <Btn size="sm" variant="ghost" onClick={()=>openGallery(g)}>✏️ Gérer</Btn>
                         <Btn size="sm" variant="ghost" onClick={()=>copyLink(g.token)}>🔗 Lien</Btn>
+                        {g.ready&&cl?.email&&(
+                          <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendGalleryEmail(g,cl,m.address);showToast(r.success?'Email envoyé à '+cl.email:'Erreur : '+r.error);}}>📧</Btn>
+                        )}
                         <Btn size="sm" variant={g.ready?'secondary':'primary'} onClick={()=>toggleReady(g.id)}>
                           {g.ready?'Dépublier':'Publier'}
                         </Btn>
@@ -1541,11 +1600,11 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
                       {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
-                    {cl?.email && (
-                      <Btn size="sm" variant="ghost" onClick={async()=>{
-                        const r = await sendInvoiceEmail(inv, cl);
-                        alert(r.success ? 'Email envoyé !' : 'Erreur : ' + r.error);
-                      }}>📧 Email</Btn>
+                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceEmail(inv,cl);alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
+                    )}
+                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceReminder(inv,cl);alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
                     )}
                     {inv.status !== 'Payée' && (
                       <Btn size="sm" variant="secondary" onClick={()=>setStatus(inv.id, 'Payée')}>✓ Payée</Btn>
