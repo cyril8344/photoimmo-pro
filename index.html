@@ -1578,7 +1578,7 @@ function AccountingPage({quotes, clients, missions}) {
 function AdminPage({user}) {
   // In demo mode, user.role is checked from localStorage profile
   const profile = store.get('pii_profile', {});
-  const isAdmin = profile.role === 'admin' || (user && user.email === 'admin@photoimmo.pro');
+  const isAdmin = profile.role === 'admin' || (user && (user.email === 'admin@photoimmo.pro' || user.email === 'cyrilleduc2000@gmail.com'));
 
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
