@@ -1596,9 +1596,11 @@ function AdminPage({user}) {
   const handleInvite = async () => {
     if (!inviteEmail) return;
     try {
+      const {data:{session}} = await sb.auth.getSession();
+      const token = session?.access_token || '';
       const res = await fetch('/api/invite', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
         body: JSON.stringify({email: inviteEmail})
       });
       const r = await res.json();
