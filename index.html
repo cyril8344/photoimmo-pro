@@ -2005,6 +2005,11 @@ function App(){
     setGalleries(store.get('pii_galleries',[]));
   },[]);
 
+  const loadProfile=async(userId)=>{
+    const{data}=await sb.from('user_profiles').select('*').eq('user_id',userId).single();
+    if(data){store.set('pii_profile',data);}
+  };
+
   const loadSubscription=async(userId)=>{
     const{data}=await sb.from('subscriptions').select('*').eq('user_id',userId).single();
     if(!data){
@@ -2018,10 +2023,10 @@ function App(){
   useEffect(()=>{
     if(!sb)return;
     sb.auth.getSession().then(async({data:{session}})=>{
-      if(session){setUser(session.user);setAuthed(true);await loadSubscription(session.user.id);}
+      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN')await loadSubscription(session.user.id);}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);}}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();
