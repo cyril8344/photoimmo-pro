@@ -253,12 +253,9 @@ const StatCard=({label,value,sub,icon})=>(
 );
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({clients,missions,quotes}){
+function Dashboard({clients,missions,quotes,invoices}){
   const now=new Date();
   const month=now.getMonth();const year=now.getFullYear();
-
-  // KPIs
-  const invoices=store.get('pii_invoices',[]);
   const monthMissions=missions.filter(m=>{const d=new Date(m.date);return d.getMonth()===month&&d.getFullYear()===year;});
   const doneMissions=monthMissions.filter(m=>['Livraison','Facturé','Payé'].includes(m.status));
   const ca=quotes.filter(q=>q.status==='Accepté').reduce((s,q)=>s+q.ttc,0);
@@ -466,28 +463,35 @@ function Dashboard({clients,missions,quotes}){
 }
 
 // ─── CLIENTS ─────────────────────────────────────────────────────────────────
-function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
+function ClientsPage({clients,setClients,missions,quotes,user}){
   const [search,setSearch]=useState('');
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',email:'',phone:'',agent:'',agent_email:''});
-  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase()));
+  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||(c.email||'').toLowerCase().includes(search.toLowerCase()));
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.name||form.name.trim().length<2)return;
     if(form.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)){alert('Email invalide');return;}
     if(modal==='new'){
-      const c={...form,id:uid(),created_at:today()};
-      const updated=[...clients,c];setClients(updated);store.set('pii_clients',updated);
+      if(sb&&user){
+        const{data,error}=await sb.from('clients').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const updated=[...clients,data];setClients(updated);store.set('pii_clients',updated);
+      } else {
+        const updated=[...clients,{...form,id:uid(),created_at:today()}];setClients(updated);store.set('pii_clients',updated);
+      }
     } else {
+      if(sb&&user)await sb.from('clients').update(form).eq('id',modal);
       const updated=clients.map(c=>c.id===modal?{...c,...form}:c);setClients(updated);store.set('pii_clients',updated);
     }
     setModal(null);
   };
-  const del=(id)=>{
+  const del=async(id)=>{
     if(!confirm('Supprimer ce client ?'))return;
+    if(sb&&user)await sb.from('clients').delete().eq('id',id);
     const updated=clients.filter(c=>c.id!==id);setClients(updated);store.set('pii_clients',updated);
   };
-  const openEdit=(c)=>{setForm({name:c.name,email:c.email,phone:c.phone,agent:c.agent,agent_email:c.agent_email});setModal(c.id);};
+  const openEdit=(c)=>{setForm({name:c.name,email:c.email||'',phone:c.phone||'',agent:c.agent||'',agent_email:c.agent_email||''});setModal(c.id);};
   const openNew=()=>{setForm({name:'',email:'',phone:'',agent:'',agent_email:''});setModal('new');};
 
   const exportCSV=()=>{
@@ -499,16 +503,17 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
   const importCSV=(e)=>{
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       const rows=parseCSV(ev.target.result);
       if(rows.length<2){alert('Fichier vide ou invalide');return;}
-      const newClients=rows.slice(1).filter(r=>r[0]).map(r=>({
-        id:uid(),created_at:today(),
-        name:r[0]||'',email:r[1]||'',phone:r[2]||'',agent:r[3]||'',agent_email:r[4]||''
-      }));
-      const updated=[...clients,...newClients];
-      setClients(updated);store.set('pii_clients',updated);
-      alert(`${newClients.length} client(s) importé(s) !`);
+      const objs=rows.slice(1).filter(r=>r[0]).map(r=>({name:r[0]||'',email:r[1]||'',phone:r[2]||'',agent:r[3]||'',agent_email:r[4]||''}));
+      if(sb&&user){
+        const{data}=await sb.from('clients').insert(objs.map(o=>({...o,user_id:user.id}))).select();
+        if(data){const u=[...clients,...data];setClients(u);store.set('pii_clients',u);}
+      } else {
+        const u=[...clients,...objs.map(o=>({...o,id:uid(),created_at:today()}))];setClients(u);store.set('pii_clients',u);
+      }
+      alert(`${objs.length} client(s) importé(s) !`);
     };
     reader.readAsText(file,'UTF-8');
     e.target.value='';
@@ -576,7 +581,7 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
 }
 
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
-function MissionsPage({missions,setMissions,clients}){
+function MissionsPage({missions,setMissions,clients,user}){
   const [modal,setModal]=useState(null);
   const [filter,setFilter]=useState('Tous');
   const [form,setForm]=useState({client_id:'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});
@@ -585,20 +590,26 @@ function MissionsPage({missions,setMissions,clients}){
   const sorted=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const getClient=id=>clients.find(c=>c.id===id);
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.client_id||!form.address||!form.date)return;
     if(modal==='new'){
-      const m={...form,id:uid(),created_at:today()};
-      const u=[...missions,m];setMissions(u);store.set('pii_missions',u);
+      if(sb&&user){
+        const{data,error}=await sb.from('missions').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const u=[...missions,data];setMissions(u);store.set('pii_missions',u);
+      } else {
+        const u=[...missions,{...form,id:uid(),created_at:today()}];setMissions(u);store.set('pii_missions',u);
+      }
     } else {
+      if(sb&&user)await sb.from('missions').update(form).eq('id',modal);
       const u=missions.map(m=>m.id===modal?{...m,...form}:m);setMissions(u);store.set('pii_missions',u);
     }
     setModal(null);
   };
-  const del=(id)=>{if(!confirm('Supprimer cette mission ?'))return;const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette mission ?'))return;if(sb&&user)await sb.from('missions').delete().eq('id',id);const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
   const openEdit=(m)=>{setForm({client_id:m.client_id,address:m.address,type:m.type,date:m.date,status:m.status,notes:m.notes||''});setModal(m.id);};
   const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});setModal('new');};
-  const setStatus=(id,status)=>{const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
+  const setStatus=async(id,status)=>{if(sb&&user)await sb.from('missions').update({status}).eq('id',id);const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
 
   const exportCSV=()=>{
     downloadCSV('missions.csv',
@@ -609,21 +620,20 @@ function MissionsPage({missions,setMissions,clients}){
   const importCSV=(e)=>{
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       const rows=parseCSV(ev.target.result);
       if(rows.length<2){alert('Fichier vide ou invalide');return;}
-      const newMissions=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
-        const clientName=r[4]||'';
-        const client=clients.find(c=>c.name.toLowerCase()===clientName.toLowerCase());
-        return {
-          id:uid(),created_at:today(),
-          date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',
-          status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''
-        };
+      const objs=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
+        const client=clients.find(c=>c.name.toLowerCase()===(r[4]||'').toLowerCase());
+        return {date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''};
       });
-      const updated=[...missions,...newMissions];
-      setMissions(updated);store.set('pii_missions',updated);
-      alert(`${newMissions.length} mission(s) importée(s) !`);
+      if(sb&&user){
+        const{data}=await sb.from('missions').insert(objs.map(o=>({...o,user_id:user.id}))).select();
+        if(data){const u=[...missions,...data];setMissions(u);store.set('pii_missions',u);}
+      } else {
+        const u=[...missions,...objs.map(o=>({...o,id:uid(),created_at:today()}))];setMissions(u);store.set('pii_missions',u);
+      }
+      alert(`${objs.length} mission(s) importée(s) !`);
     };
     reader.readAsText(file,'UTF-8');
     e.target.value='';
@@ -936,7 +946,7 @@ async function sendInvoiceEmail(inv, client) {
   }
 }
 
-function QuotesPage({quotes,setQuotes,clients,missions}){
+function QuotesPage({quotes,setQuotes,clients,missions,user}){
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard'});
   const getClient=id=>clients.find(c=>c.id===id);
@@ -944,14 +954,21 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
   const calc=useMemo(()=>calcDevis(form),[form]);
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.client_id)return;
     const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
-    const q={...form,...calc,id:uid(),num,status:'En attente',created_at:today()};
-    const u=[...quotes,q];setQuotes(u);store.set('pii_quotes',u);setModal(null);
+    const payload={...form,...calc,num,status:'En attente'};
+    if(sb&&user){
+      const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
+      if(error){alert('Erreur : '+error.message);return;}
+      const u=[...quotes,data];setQuotes(u);store.set('pii_quotes',u);
+    } else {
+      const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
+    }
+    setModal(null);
   };
-  const setStatus=(id,status)=>{const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
-  const del=(id)=>{if(!confirm('Supprimer ce devis ?'))return;const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
+  const setStatus=async(id,status)=>{if(sb&&user)await sb.from('quotes').update({status}).eq('id',id);const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
+  const del=async(id)=>{if(!confirm('Supprimer ce devis ?'))return;if(sb&&user)await sb.from('quotes').delete().eq('id',id);const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
   const sorted=[...quotes].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
   return(
@@ -1356,22 +1373,27 @@ function TrialBanner({daysLeft,user}){
 }
 
 // ─── AGENCES ──────────────────────────────────────────────────────────────────
-function AgenciesPage({clients,missions,quotes}){
-  const [agencies,setAgencies]=useState(()=>store.get('pii_agencies',[]));
+function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user}){
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',contacts:'',notes:''});
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.name)return;
     if(modal==='new'){
-      const a={...form,id:uid(),created_at:today()};
-      const u=[...agencies,a];setAgencies(u);store.set('pii_agencies',u);
+      if(sb&&user){
+        const{data,error}=await sb.from('agencies').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const u=[...agencies,data];setAgencies(u);store.set('pii_agencies',u);
+      } else {
+        const u=[...agencies,{...form,id:uid(),created_at:today()}];setAgencies(u);store.set('pii_agencies',u);
+      }
     } else {
+      if(sb&&user)await sb.from('agencies').update(form).eq('id',modal);
       const u=agencies.map(a=>a.id===modal?{...a,...form}:a);setAgencies(u);store.set('pii_agencies',u);
     }
     setModal(null);
   };
-  const del=(id)=>{if(!confirm('Supprimer cette agence ?'))return;const u=agencies.filter(a=>a.id!==id);setAgencies(u);store.set('pii_agencies',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette agence ?'))return;if(sb&&user)await sb.from('agencies').delete().eq('id',id);const u=agencies.filter(a=>a.id!==id);setAgencies(u);store.set('pii_agencies',u);};
   const openEdit=(a)=>{setForm({name:a.name,contacts:a.contacts||'',notes:a.notes||''});setModal(a.id);};
 
   return(
@@ -1424,32 +1446,35 @@ function AgenciesPage({clients,missions,quotes}){
 }
 
 // ─── FACTURES ─────────────────────────────────────────────────────────────────
-function InvoicesPage({quotes,clients,missions}){
-  const [invoices,setInvoices]=useState(()=>store.get('pii_invoices',[]));
+function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
   const [filter,setFilter]=useState('Tous');
 
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
 
-  const createFromQuote=(q)=>{
+  const createFromQuote=async(q)=>{
     if(invoices.find(i=>i.quote_id===q.id)){alert('Une facture existe déjà pour ce devis.');return;}
     const num=`FAC-${String(invoices.length+1).padStart(3,'0')}`;
     const dueDate=new Date();dueDate.setDate(dueDate.getDate()+30);
-    const inv={
-      id:uid(),quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
+    const payload={quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
       num,ht:q.ht,tva:q.tva||Math.round(q.ht*0.20*100)/100,ttc:q.ttc,
-      status:'En attente',due_date:dueDate.toISOString().split('T')[0],
-      reminders_sent:0,created_at:today()
-    };
-    const u=[...invoices,inv];setInvoices(u);store.set('pii_invoices',u);
+      status:'En attente',due_date:dueDate.toISOString().split('T')[0],reminders_sent:0};
+    if(sb&&user){
+      const{data,error}=await sb.from('invoices').insert({...payload,user_id:user.id}).select().single();
+      if(error){alert('Erreur : '+error.message);return;}
+      const u=[...invoices,data];setInvoices(u);store.set('pii_invoices',u);
+    } else {
+      const u=[...invoices,{...payload,id:uid(),created_at:today()}];setInvoices(u);store.set('pii_invoices',u);
+    }
   };
 
-  const setStatus=(id,status)=>{
-    const u=invoices.map(i=>i.id===id?{...i,status,paid_date:status==='Payée'?today():i.paid_date}:i);
-    setInvoices(u);store.set('pii_invoices',u);
+  const setStatus=async(id,status)=>{
+    const updates={status,paid_date:status==='Payée'?today():undefined};
+    if(sb&&user)await sb.from('invoices').update(updates).eq('id',id);
+    const u=invoices.map(i=>i.id===id?{...i,...updates}:i);setInvoices(u);store.set('pii_invoices',u);
   };
 
-  const del=(id)=>{if(!confirm('Supprimer cette facture ?'))return;const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette facture ?'))return;if(sb&&user)await sb.from('invoices').delete().eq('id',id);const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
 
   const INVOICE_STATUSES=['En attente','Envoyée','Payée','Annulée'];
   const INV_COLORS={'En attente':'bg-gray-500/20 text-gray-400','Envoyée':'bg-blue-500/20 text-blue-400','Payée':'bg-green-500/20 text-green-400','Annulée':'bg-red-500/20 text-red-400'};
@@ -1538,8 +1563,7 @@ function InvoicesPage({quotes,clients,missions}){
 }
 
 // ─── ACCOUNTING ───────────────────────────────────────────────────────────────
-function AccountingPage({quotes, clients, missions}) {
-  const [invoices, setInvoices] = useState(() => store.get('pii_invoices', []));
+function AccountingPage({invoices, quotes, clients, missions}) {
   const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'annual'
   const now = new Date();
   const [selMonth, setSelMonth] = useState(now.getMonth());
@@ -2329,6 +2353,8 @@ function App(){
   const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
   const [missions,setMissions]=useState(()=>store.get('pii_missions',[]));
   const [quotes,setQuotes]=useState(()=>store.get('pii_quotes',[]));
+  const [invoices,setInvoices]=useState(()=>store.get('pii_invoices',[]));
+  const [agencies,setAgencies]=useState(()=>store.get('pii_agencies',[]));
   const [galleries,setGalleries]=useState(()=>store.get('pii_galleries',[]));
   const [profile,setProfile]=useState(()=>store.get('pii_profile',{}));
 
@@ -2336,12 +2362,30 @@ function App(){
     setClients(store.get('pii_clients',[]));
     setMissions(store.get('pii_missions',[]));
     setQuotes(store.get('pii_quotes',[]));
+    setInvoices(store.get('pii_invoices',[]));
+    setAgencies(store.get('pii_agencies',[]));
     setGalleries(store.get('pii_galleries',[]));
   },[]);
 
   const loadProfile=async(userId)=>{
     const{data}=await sb.from('user_profiles').select('*').eq('user_id',userId).single();
     if(data){store.set('pii_profile',data);setProfile(data);}
+  };
+
+  const loadAllData=async(userId)=>{
+    if(!sb)return;
+    const[{data:cd},{data:md},{data:qd},{data:ind},{data:ad}]=await Promise.all([
+      sb.from('clients').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('missions').select('*').eq('user_id',userId).order('date',{ascending:false}),
+      sb.from('quotes').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('invoices').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('agencies').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+    ]);
+    if(cd){setClients(cd);store.set('pii_clients',cd);}
+    if(md){setMissions(md);store.set('pii_missions',md);}
+    if(qd){setQuotes(qd);store.set('pii_quotes',qd);}
+    if(ind){setInvoices(ind);store.set('pii_invoices',ind);}
+    if(ad){setAgencies(ad);store.set('pii_agencies',ad);}
   };
 
   const loadSubscription=async(userId)=>{
@@ -2357,10 +2401,10 @@ function App(){
   useEffect(()=>{
     if(!sb)return;
     sb.auth.getSession().then(async({data:{session}})=>{
-      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);}
+      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);}}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();
@@ -2395,7 +2439,7 @@ function App(){
   // NOTE: loadSubscription is defined above (as const) so it is in scope here.
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
-  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);}}}/>;
+  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);loadAllData(u.id);}}}/>;
   if(sb&&subscription===null)return(
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
@@ -2407,14 +2451,14 @@ function App(){
 
   const renderPage=()=>{
     switch(page){
-      case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes}/>;
-      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes}/>;
-      case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients}/>;
-      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions}/>;
+      case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes} invoices={invoices}/>;
+      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} user={user}/>;
+      case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients} user={user}/>;
+      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user}/>;
       case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user}/>;
-      case'agencies':    return <AgenciesPage clients={clients} missions={missions} quotes={quotes}/>;
-      case'invoices':    return <InvoicesPage quotes={quotes} clients={clients} missions={missions}/>;
-      case'accounting':  return <AccountingPage quotes={quotes} clients={clients} missions={missions}/>;
+      case'agencies':    return <AgenciesPage agencies={agencies} setAgencies={setAgencies} clients={clients} missions={missions} quotes={quotes} user={user}/>;
+      case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user}/>;
+      case'accounting':  return <AccountingPage invoices={invoices} quotes={quotes} clients={clients} missions={missions}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
       case'admin':       return <AdminPage user={user}/>;
       default:           return null;
