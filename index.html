@@ -1897,7 +1897,7 @@ const NAV=[
   {id:'portfolio',icon:'🌐',label:'Mon Portfolio'},
   {id:'admin',icon:'⚙️',label:'Admin',adminOnly:true},
 ];
-function Sidebar({page,setPage,sideOpen,setSideOpen,profile}){
+function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
   return(
     <>
       {sideOpen&&<div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={()=>setSideOpen(false)}/>}
@@ -1910,7 +1910,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile}){
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {NAV.filter(n=>{
-            if(n.adminOnly){return (profile||{}).role==='admin';}
+            if(n.adminOnly){return (profile||{}).role==='admin'||(user&&user.email==='cyrilleduc2000@gmail.com');}
             return true;
           }).map(n=>(
             <button key={n.id} onClick={()=>{setPage(n.id);setSideOpen(false);}}
@@ -2062,7 +2062,7 @@ function App(){
   // NOTE: loadSubscription is defined above (as const) so it is in scope here.
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
-  if(!authed)return <Login onLogin={(u)=>{setAuthed(true);if(u&&sb){setUser(u);loadSubscription(u.id);}}}/>;
+  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);}}}/>;
   if(sb&&subscription===null)return(
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
@@ -2090,7 +2090,7 @@ function App(){
 
   return(
     <div className="min-h-screen">
-      <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen} profile={profile}/>
+      <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen} profile={profile} user={user}/>
       <div className="lg:ml-56">
         {days!==null&&<TrialBanner daysLeft={days} user={user}/>}
         <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center gap-3">
