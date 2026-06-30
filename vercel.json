@@ -13,9 +13,9 @@
     }
   ],
   "rewrites": [
-    { "source": "/app", "destination": "/index.html" },
-    { "source": "/app/(.*)", "destination": "/index.html" },
-    { "source": "/gallery/:token*", "destination": "/index.html" },
+    { "source": "/app", "destination": "/api/serve-app" },
+    { "source": "/app/(.*)", "destination": "/api/serve-app" },
+    { "source": "/gallery/:token*", "destination": "/api/serve-app" },
     { "source": "/portfolio/:slug*", "destination": "/portfolio.html" },
     { "source": "/", "destination": "/landing.html" }
   ]
