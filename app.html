@@ -1871,44 +1871,105 @@ function PortfolioPage({user}) {
   const [photoForm, setPhotoForm] = useState({url:'', category:'Appartements', caption:''});
   const [testimonialForm, setTestimonialForm] = useState({client_name:'', rating:5, comment:'', date:today()});
   const [toast, setToast] = useState('');
+  const syncTimer = useRef(null);
 
   const PHOTO_CATEGORIES = ['Appartements','Maisons','Villas','Commerces','Drone','Visite virtuelle'];
+  const SOCIAL_NETWORKS = [
+    {key:'instagram', label:'Instagram', placeholder:'https://instagram.com/votre-compte'},
+    {key:'facebook', label:'Facebook', placeholder:'https://facebook.com/votre-page'},
+    {key:'linkedin', label:'LinkedIn', placeholder:'https://linkedin.com/in/votre-profil'},
+    {key:'tiktok', label:'TikTok', placeholder:'https://tiktok.com/@votre-compte'},
+    {key:'website', label:'Site web', placeholder:'https://votre-site.fr'},
+  ];
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  // Le profil/les photos/les témoignages affichés sur la page publique viennent de Supabase :
+  // on charge depuis la base (et on crée la ligne user_profiles si elle n'existe pas encore).
+  useEffect(() => {
+    if (!sb || !user) return;
+    (async () => {
+      let { data: profileData } = await sb.from('user_profiles').select('*').eq('user_id', user.id).single();
+      if (!profileData) {
+        const { data: created } = await sb.from('user_profiles').insert({user_id: user.id}).select().single();
+        profileData = created;
+      }
+      if (profileData) { setProfile(profileData); store.set('pii_profile', profileData); }
+
+      const { data: photosData } = await sb.from('portfolio_photos').select('*').eq('user_id', user.id).order('display_order', {ascending: true});
+      if (photosData) { setPhotos(photosData); store.set('pii_portfolio_photos', photosData); }
+
+      const { data: testimonialsData } = await sb.from('testimonials').select('*').eq('user_id', user.id).order('date', {ascending: false});
+      if (testimonialsData) { setTestimonials(testimonialsData); store.set('pii_testimonials', testimonialsData); }
+    })();
+  }, [user]);
 
   const saveProfile = (p) => {
     const updated = {...profile, ...p};
     setProfile(updated);
     store.set('pii_profile', updated);
+    if (sb && user) {
+      clearTimeout(syncTimer.current);
+      syncTimer.current = setTimeout(() => {
+        sb.from('user_profiles').upsert({...updated, user_id: user.id}, {onConflict: 'user_id'})
+          .then(({error}) => { if (error) showToast('Erreur de sauvegarde'); });
+      }, 600);
+    }
   };
 
-  const addPhoto = () => {
+  const saveSocial = (key, value) => {
+    saveProfile({social_links: {...(profile.social_links||{}), [key]: value}});
+  };
+
+  const addPhoto = async () => {
     if (!photoForm.url) return;
-    const p = {...photoForm, id: uid(), created_at: today()};
-    const u = [...photos, p];
-    setPhotos(u);
-    store.set('pii_portfolio_photos', u);
+    if (sb && user) {
+      const { data, error } = await sb.from('portfolio_photos')
+        .insert({user_id: user.id, url: photoForm.url, category: photoForm.category, caption: photoForm.caption, display_order: photos.length})
+        .select().single();
+      if (error || !data) { showToast('Erreur lors de l\'ajout'); return; }
+      const u = [...photos, data];
+      setPhotos(u);
+      store.set('pii_portfolio_photos', u);
+    } else {
+      const p = {...photoForm, id: uid(), created_at: today()};
+      const u = [...photos, p];
+      setPhotos(u);
+      store.set('pii_portfolio_photos', u);
+    }
     setPhotoModal(false);
     setPhotoForm({url:'', category:'Appartements', caption:''});
   };
 
-  const deletePhoto = id => {
+  const deletePhoto = async id => {
+    if (sb && user) await sb.from('portfolio_photos').delete().eq('id', id);
     const u = photos.filter(p => p.id !== id);
     setPhotos(u);
     store.set('pii_portfolio_photos', u);
   };
 
-  const addTestimonial = () => {
+  const addTestimonial = async () => {
     if (!testimonialForm.client_name) return;
-    const t = {...testimonialForm, id: uid()};
-    const u = [...testimonials, t];
-    setTestimonials(u);
-    store.set('pii_testimonials', u);
+    if (sb && user) {
+      const { data, error } = await sb.from('testimonials')
+        .insert({user_id: user.id, client_name: testimonialForm.client_name, rating: testimonialForm.rating, comment: testimonialForm.comment, date: testimonialForm.date})
+        .select().single();
+      if (error || !data) { showToast('Erreur lors de l\'ajout'); return; }
+      const u = [...testimonials, data];
+      setTestimonials(u);
+      store.set('pii_testimonials', u);
+    } else {
+      const t = {...testimonialForm, id: uid()};
+      const u = [...testimonials, t];
+      setTestimonials(u);
+      store.set('pii_testimonials', u);
+    }
     setTestimonialModal(false);
     setTestimonialForm({client_name:'', rating:5, comment:'', date:today()});
   };
 
-  const deleteTestimonial = id => {
+  const deleteTestimonial = async id => {
+    if (sb && user) await sb.from('testimonials').delete().eq('id', id);
     const u = testimonials.filter(t => t.id !== id);
     setTestimonials(u);
     store.set('pii_testimonials', u);
@@ -1959,6 +2020,18 @@ function PortfolioPage({user}) {
             <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>🔗 Voir ma page</Btn>
           )}
         </div>
+      </Card>
+
+      {/* Réseaux sociaux */}
+      <Card>
+        <h3 className="font-semibold mb-4">Réseaux sociaux</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {SOCIAL_NETWORKS.map(net => (
+            <Input key={net.key} label={net.label} value={(profile.social_links||{})[net.key]||''}
+              onChange={v=>saveSocial(net.key, v)} placeholder={net.placeholder}/>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-3">Ces liens apparaîtront sur votre page portfolio publique.</p>
       </Card>
 
       {/* Portfolio Photos */}

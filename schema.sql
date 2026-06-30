@@ -200,8 +200,10 @@ create table if not exists user_profiles (
   zone text,
   logo_url text,
   micro_entrepreneur boolean default false,
+  social_links jsonb default '{}',
   created_at timestamptz default now()
 );
+alter table user_profiles add column if not exists social_links jsonb default '{}';
 alter table user_profiles enable row level security;
 create policy "profiles_select_own" on user_profiles for select using (auth.uid() = user_id);
 create policy "profiles_insert" on user_profiles for insert with check (auth.uid() = user_id);
