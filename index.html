@@ -1979,11 +1979,6 @@ function Login({onLogin}){
             </Btn>
             {!sb&&<p className="text-xs text-center text-gray-600">Mode démo — entrez n'importe quel email/mot de passe</p>}
             {tab==='signup'&&<p className="text-xs text-center text-gray-600">Sans carte bancaire · Annulation à tout moment</p>}
-            <div className="mt-3 p-2 bg-gray-900 rounded text-xs text-gray-500 font-mono break-all">
-              {SB_URL ? <span className="text-green-500">✓ URL: {SB_URL}</span> : <span className="text-red-500">✗ SUPABASE_URL manquante</span>}
-              <br/>
-              {SB_KEY ? <span className="text-green-500">✓ Clé: {SB_KEY.slice(0,12)}…{SB_KEY.slice(-6)} ({SB_KEY.length} car.)</span> : <span className="text-red-500">✗ SUPABASE_ANON_KEY manquante</span>}
-            </div>
           </form>
         </Card>
       </div>
