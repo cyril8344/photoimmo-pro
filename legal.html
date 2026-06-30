@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mentions légales & CGV — PhotoImmo Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --gold: #c9963c;
+      --gold-light: #e8b96e;
+      --bg: #08080f;
+      --surface: #0f0f1a;
+      --surface2: #16162a;
+      --border: #1e1e35;
+      --text: #f0ede8;
+      --muted: #7a7a9a;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.7; }
+    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .nav-blur { background: rgba(8,8,15,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .aperture { position: relative; background: var(--gold); display: flex; align-items: center; justify-content: center; }
+    .aperture::before { content: ''; position: absolute; border-radius: 50%; border: 2px solid rgba(0,0,0,0.7); box-shadow: inset 0 0 0 3px rgba(0,0,0,0.3); }
+
+    .tab-btn { padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; border: 1px solid var(--border); color: var(--muted); background: var(--surface2); cursor: pointer; transition: all .2s; }
+    .tab-btn.active { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: #08080f; border-color: transparent; font-weight: 600; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+    h2.title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    h3.sub { font-size: 16px; font-weight: 600; color: var(--gold-light); margin: 24px 0 8px; }
+    p, li { color: var(--muted); font-size: 14px; }
+    li { margin-bottom: 4px; }
+    ul { list-style: disc; padding-left: 20px; margin-bottom: 12px; }
+    strong { color: var(--text); }
+    .placeholder { color: var(--gold-light); font-style: italic; }
+    .divider { height: 1px; background: linear-gradient(to right, transparent, var(--border), transparent); margin: 28px 0; }
+    a { color: var(--gold-light); text-decoration: underline; }
+
+    .update-notice { background: rgba(201,150,60,0.08); border: 1px solid rgba(201,150,60,0.2); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--gold-light); margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<header class="nav-blur sticky top-0 z-30">
+  <div style="max-width:900px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px;">
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <div class="aperture" style="width:32px;height:32px;border-radius:9px;flex-shrink:0;">
+        <span style="position:relative;z-index:1;color:#08080f;font-weight:700;font-size:11px;font-family:'Playfair Display',serif;">PI</span>
+      </div>
+      <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:var(--text);">PhotoImmo Pro</span>
+    </a>
+    <span style="color:var(--border);margin-left:4px;">·</span>
+    <span style="font-size:13px;color:var(--muted);">Informations légales</span>
+  </div>
+</header>
+
+<main style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+
+  <h1 style="font-size:clamp(24px,4vw,36px);font-weight:700;margin-bottom:6px;">Informations légales</h1>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:32px;">Mentions légales et Conditions Générales de Vente de PhotoImmo Pro.</p>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:32px;">
+    <button class="tab-btn active" onclick="showTab('mentions')">Mentions légales</button>
+    <button class="tab-btn" onclick="showTab('cgv')">CGV</button>
+    <button class="tab-btn" onclick="showTab('privacy')">Données personnelles</button>
+  </div>
+
+  <!-- ─── MENTIONS LÉGALES ─── -->
+  <div id="tab-mentions" class="section active">
+    <div class="update-notice">⚠️ Ces mentions légales sont à compléter avec vos informations réelles avant mise en ligne.</div>
+
+    <div class="card">
+      <h2 class="title">Mentions légales</h2>
+      <p style="font-size:13px;color:var(--muted);">Conformément aux dispositions de la loi n° 2004-575 du 21 juin 2004 pour la Confiance dans l'Économie Numérique (LCEN).</p>
+
+      <div class="divider"></div>
+
+      <h3 class="sub">1. Éditeur du site</h3>
+      <p>
+        <strong>Raison sociale :</strong> <span class="placeholder">[À COMPLÉTER — votre nom ou raison sociale]</span><br/>
+        <strong>Forme juridique :</strong> <span class="placeholder">[Auto-entrepreneur / SASU / EURL / …]</span><br/>
+        <strong>SIRET :</strong> <span class="placeholder">[À COMPLÉTER]</span><br/>
+        <strong>RCS :</strong> <span class="placeholder">[Ville d'immatriculation + numéro, ou N/A si AE]</span><br/>
+        <strong>Adresse du siège :</strong> <span class="placeholder">[À COMPLÉTER]</span><br/>
+        <strong>Email :</strong> <span class="placeholder">[À COMPLÉTER]</span><br/>
+        <strong>Téléphone :</strong> <span class="placeholder">[À COMPLÉTER]</span>
+      </p>
+
+      <h3 class="sub">2. Directeur de la publication</h3>
+      <p><span class="placeholder">[Prénom Nom]</span>, en qualité de <span class="placeholder">[gérant / auto-entrepreneur]</span>.</p>
+
+      <h3 class="sub">3. Hébergement</h3>
+      <p>
+        Le site est hébergé par :<br/>
+        <strong>Vercel Inc.</strong><br/>
+        340 Pine Street, Suite 701<br/>
+        San Francisco, CA 94104, États-Unis<br/>
+        <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a>
+      </p>
+
+      <h3 class="sub">4. Propriété intellectuelle</h3>
+      <p>L'ensemble du contenu de ce site (textes, images, interface, code) est la propriété exclusive de <span class="placeholder">[Raison sociale]</span>, sauf mention contraire. Toute reproduction, même partielle, est interdite sans autorisation écrite préalable.</p>
+
+      <h3 class="sub">5. Responsabilité</h3>
+      <p>PhotoImmo Pro s'efforce d'assurer l'exactitude des informations diffusées sur ce site. Toutefois, il ne peut garantir l'exhaustivité ni l'absence d'erreurs. Il se réserve le droit de modifier les contenus à tout moment sans préavis.</p>
+
+      <h3 class="sub">6. Cookies</h3>
+      <p>Ce site utilise uniquement des cookies techniques strictement nécessaires au fonctionnement de l'application (authentification, session). Aucun cookie de suivi publicitaire n'est utilisé.</p>
+    </div>
+  </div>
+
+  <!-- ─── CGV ─── -->
+  <div id="tab-cgv" class="section">
+    <div class="update-notice">⚠️ Ces CGV sont à adapter à votre situation (tarifs exacts, informations de l'entreprise) avant mise en ligne.</div>
+
+    <div class="card">
+      <h2 class="title">Conditions Générales de Vente</h2>
+      <p style="font-size:13px;color:var(--muted);">Dernière mise à jour : <span class="placeholder">[date]</span></p>
+
+      <div class="divider"></div>
+
+      <h3 class="sub">1. Objet</h3>
+      <p>Les présentes Conditions Générales de Vente (CGV) régissent l'accès et l'utilisation du logiciel en ligne <strong>PhotoImmo Pro</strong>, outil de gestion destiné aux photographes immobiliers professionnels, édité par <span class="placeholder">[Raison sociale]</span>, ci-après dénommé « l'Éditeur ».</p>
+      <p>Tout accès ou utilisation du service implique l'acceptation pleine et entière des présentes CGV.</p>
+
+      <h3 class="sub">2. Description du service</h3>
+      <p>PhotoImmo Pro est un logiciel SaaS (Software as a Service) proposant les fonctionnalités suivantes :</p>
+      <ul>
+        <li>Gestion des clients, missions, devis et factures</li>
+        <li>Génération de PDFs (devis, factures)</li>
+        <li>Livraison de galeries photos aux clients</li>
+        <li>Portfolio public personnalisable</li>
+        <li>Envoi de notifications par email</li>
+      </ul>
+
+      <h3 class="sub">3. Tarifs et facturation</h3>
+      <p>L'accès au service est proposé selon les formules suivantes (TTC) :</p>
+      <ul>
+        <li><strong>Mensuel :</strong> 29 € TTC / mois, sans engagement</li>
+        <li><strong>Annuel :</strong> 249 € TTC / an (soit ~20,75 €/mois)</li>
+        <li><strong>Essai gratuit :</strong> 14 jours sans carte bancaire à l'inscription</li>
+      </ul>
+      <p>Les paiements sont traités par <strong>Stripe Inc.</strong> Les coordonnées bancaires ne sont jamais transmises à l'Éditeur.</p>
+      <p>En cas de non-renouvellement, l'accès au service cesse à la fin de la période payée. Les données restent accessibles pendant 30 jours supplémentaires pour permettre leur export.</p>
+
+      <h3 class="sub">4. Droit de rétractation</h3>
+      <p>Conformément à l'article L.221-18 du Code de la consommation, le Client dispose d'un délai de <strong>14 jours</strong> à compter de la souscription pour exercer son droit de rétractation, sans justification.</p>
+      <p>En cas d'accès immédiat au service (compte activé), le Client reconnaît expressément renoncer à son droit de rétractation (art. L.221-28 13° du Code de la consommation).</p>
+
+      <h3 class="sub">5. Obligations du Client</h3>
+      <ul>
+        <li>Fournir des informations exactes lors de l'inscription</li>
+        <li>Ne pas utiliser le service à des fins illicites</li>
+        <li>Ne pas tenter de contourner les mécanismes de sécurité</li>
+        <li>Rester le seul responsable des contenus (photos, données clients) uploadés</li>
+      </ul>
+
+      <h3 class="sub">6. Disponibilité et maintenance</h3>
+      <p>L'Éditeur s'engage à faire ses meilleurs efforts pour assurer la disponibilité du service (objectif : 99 %). Des interruptions ponctuelles peuvent survenir pour maintenance. L'Éditeur n'est pas responsable des interruptions causées par des tiers (hébergeur, opérateurs).</p>
+
+      <h3 class="sub">7. Limitation de responsabilité</h3>
+      <p>L'Éditeur ne peut être tenu responsable de la perte de données, des conséquences d'une interruption de service, ni de l'utilisation faite par le Client des documents générés (devis, factures). Il appartient au Client de vérifier leur conformité avec sa situation fiscale et juridique.</p>
+
+      <h3 class="sub">8. Résiliation</h3>
+      <p>Le Client peut résilier son abonnement à tout moment depuis son espace personnel (Abonnement → Portail Stripe). La résiliation prend effet à la fin de la période en cours. Aucun remboursement n'est accordé pour la période déjà payée.</p>
+      <p>L'Éditeur se réserve le droit de suspendre ou résilier un compte en cas de violation des présentes CGV.</p>
+
+      <h3 class="sub">9. Propriété des données</h3>
+      <p>Le Client reste propriétaire de l'ensemble de ses données (clients, photos, documents). L'Éditeur n'exploite pas ces données à des fins commerciales. En cas de fermeture de compte, les données sont supprimées dans un délai de 90 jours.</p>
+
+      <h3 class="sub">10. Droit applicable et juridiction</h3>
+      <p>Les présentes CGV sont soumises au droit français. En cas de litige, les parties s'engagent à rechercher une solution amiable. À défaut, le tribunal compétent sera celui du siège de l'Éditeur.</p>
+    </div>
+  </div>
+
+  <!-- ─── DONNÉES PERSONNELLES ─── -->
+  <div id="tab-privacy" class="section">
+    <div class="card">
+      <h2 class="title">Politique de confidentialité</h2>
+      <p style="font-size:13px;color:var(--muted);">Conformément au Règlement Général sur la Protection des Données (RGPD — UE 2016/679).</p>
+
+      <div class="divider"></div>
+
+      <h3 class="sub">1. Responsable du traitement</h3>
+      <p><span class="placeholder">[Raison sociale]</span>, <span class="placeholder">[adresse]</span>, <span class="placeholder">[email]</span>.</p>
+
+      <h3 class="sub">2. Données collectées</h3>
+      <ul>
+        <li><strong>À l'inscription :</strong> adresse email, mot de passe (hashé)</li>
+        <li><strong>Dans l'application :</strong> informations professionnelles (raison sociale, SIRET, adresse), données clients, missions, devis, factures, photos uploadées</li>
+        <li><strong>Automatiquement :</strong> adresse IP, logs de connexion (via Supabase)</li>
+      </ul>
+
+      <h3 class="sub">3. Finalités du traitement</h3>
+      <ul>
+        <li>Fourniture du service (gestion des données métier)</li>
+        <li>Authentification et sécurité du compte</li>
+        <li>Facturation et gestion des abonnements</li>
+        <li>Support client</li>
+      </ul>
+
+      <h3 class="sub">4. Sous-traitants</h3>
+      <ul>
+        <li><strong>Supabase Inc.</strong> (base de données, authentification, stockage fichiers) — États-Unis, hébergement EU disponible</li>
+        <li><strong>Vercel Inc.</strong> (hébergement de l'application) — États-Unis</li>
+        <li><strong>Stripe Inc.</strong> (paiement) — États-Unis, certifié PCI-DSS</li>
+        <li><strong>Resend Inc.</strong> (envoi d'emails transactionnels) — États-Unis</li>
+      </ul>
+
+      <h3 class="sub">5. Durée de conservation</h3>
+      <ul>
+        <li>Données de compte : pendant toute la durée de l'abonnement + 90 jours après clôture</li>
+        <li>Données de facturation : 10 ans (obligation légale)</li>
+        <li>Logs de connexion : 1 an</li>
+      </ul>
+
+      <h3 class="sub">6. Vos droits</h3>
+      <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+      <ul>
+        <li>Droit d'accès à vos données</li>
+        <li>Droit de rectification</li>
+        <li>Droit à l'effacement (« droit à l'oubli »)</li>
+        <li>Droit à la portabilité</li>
+        <li>Droit d'opposition au traitement</li>
+      </ul>
+      <p>Pour exercer ces droits, contactez : <span class="placeholder">[email de contact]</span>.<br/>
+      Vous pouvez également introduire une réclamation auprès de la <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>
+
+      <h3 class="sub">7. Sécurité</h3>
+      <p>Les données sont chiffrées en transit (HTTPS/TLS) et au repos. Les mots de passe sont hachés et jamais stockés en clair. L'accès aux données est limité par des politiques de sécurité au niveau base de données (Row Level Security).</p>
+    </div>
+  </div>
+
+</main>
+
+<footer style="border-top:1px solid var(--border);padding:24px 20px;text-align:center;">
+  <p style="color:var(--muted);font-size:13px;">
+    <a href="/" style="color:var(--gold-light);text-decoration:none;">← Retour à PhotoImmo Pro</a>
+  </p>
+</footer>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -2394,7 +2394,13 @@ function Login({onLogin}){
               {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter →'}
             </button>
             {!sb&&<p className="text-xs text-center" style={{color:'#3a3a55'}}>Mode démo — entrez n'importe quel email/mot de passe</p>}
-            {tab==='signup'&&<p className="text-xs text-center" style={{color:'var(--muted)'}}>Sans carte bancaire · Annulation à tout moment</p>}
+            {tab==='signup'&&(
+              <p className="text-xs text-center" style={{color:'var(--muted)'}}>
+                Sans carte bancaire · Annulation à tout moment<br/>
+                <span>En créant un compte, vous acceptez nos </span>
+                <a href="/legal" target="_blank" style={{color:'var(--gold-light)'}}>CGV et mentions légales</a>
+              </p>
+            )}
           </form>
         </div>
       </div>
