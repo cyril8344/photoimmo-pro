@@ -1,5 +1,5 @@
 module.exports = function handler(req, res) {
-  const url = process.env.SUPABASE_URL || '';
+  const url = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || '';
 
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
