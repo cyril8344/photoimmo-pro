@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = function handler(req, res) {
   const url = process.env.SUPABASE_URL || '';
-  const key = process.env.SUPABASE_ANON_KEY || '';
+  const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || '';
 
   let html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
 
