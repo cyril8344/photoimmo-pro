@@ -81,6 +81,32 @@ const today=()=>new Date().toISOString().split('T')[0];
 const fmt=(d)=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
 const fmtMoney=(n)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n||0);
 
+// ─── CSV UTILS ────────────────────────────────────────────────────────────────
+const csvEscape=v=>`"${(v||'').toString().replace(/"/g,'""')}"`;
+const downloadCSV=(filename,headers,rows)=>{
+  const csv=[headers,...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+};
+const parseCSV=(text)=>{
+  const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  return lines.map(line=>{
+    const cols=[];let cur='';let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+      else{cur+=ch;}
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+};
+
 // ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
 function seedDemo(){
   if(store.get('pii_seeded',false))return;
@@ -391,11 +417,41 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
   const openEdit=(c)=>{setForm({name:c.name,email:c.email,phone:c.phone,agent:c.agent,agent_email:c.agent_email});setModal(c.id);};
   const openNew=()=>{setForm({name:'',email:'',phone:'',agent:'',agent_email:''});setModal('new');};
 
+  const exportCSV=()=>{
+    downloadCSV('clients.csv',
+      ['Nom','Email','Téléphone','Agence','Email agence'],
+      clients.map(c=>[c.name,c.email,c.phone,c.agent,c.agent_email])
+    );
+  };
+  const importCSV=(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const rows=parseCSV(ev.target.result);
+      if(rows.length<2){alert('Fichier vide ou invalide');return;}
+      const newClients=rows.slice(1).filter(r=>r[0]).map(r=>({
+        id:uid(),created_at:today(),
+        name:r[0]||'',email:r[1]||'',phone:r[2]||'',agent:r[3]||'',agent_email:r[4]||''
+      }));
+      const updated=[...clients,...newClients];
+      setClients(updated);store.set('pii_clients',updated);
+      alert(`${newClients.length} client(s) importé(s) !`);
+    };
+    reader.readAsText(file,'UTF-8');
+    e.target.value='';
+  };
+
   return(
     <div className="fade-in space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Clients</h1>
-        <Btn onClick={openNew}>+ Nouveau client</Btn>
+        <div className="flex gap-2 flex-wrap">
+          <label className="cursor-pointer px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">
+            📥 Importer CSV<input type="file" accept=".csv" className="hidden" onChange={importCSV}/>
+          </label>
+          <button onClick={exportCSV} className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">📤 Exporter CSV</button>
+          <Btn onClick={openNew}>+ Nouveau client</Btn>
+        </div>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un client…"
         className="w-full max-w-sm rounded-lg border border-gray-700 bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
@@ -471,11 +527,46 @@ function MissionsPage({missions,setMissions,clients}){
   const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});setModal('new');};
   const setStatus=(id,status)=>{const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
 
+  const exportCSV=()=>{
+    downloadCSV('missions.csv',
+      ['Date','Adresse','Type','Statut','Client','Notes'],
+      missions.map(m=>[m.date,m.address,m.type,m.status,getClient(m.client_id)?.name||'',m.notes||''])
+    );
+  };
+  const importCSV=(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const rows=parseCSV(ev.target.result);
+      if(rows.length<2){alert('Fichier vide ou invalide');return;}
+      const newMissions=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
+        const clientName=r[4]||'';
+        const client=clients.find(c=>c.name.toLowerCase()===clientName.toLowerCase());
+        return {
+          id:uid(),created_at:today(),
+          date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',
+          status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''
+        };
+      });
+      const updated=[...missions,...newMissions];
+      setMissions(updated);store.set('pii_missions',updated);
+      alert(`${newMissions.length} mission(s) importée(s) !`);
+    };
+    reader.readAsText(file,'UTF-8');
+    e.target.value='';
+  };
+
   return(
     <div className="fade-in space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Missions</h1>
-        <Btn onClick={openNew}>+ Nouvelle mission</Btn>
+        <div className="flex gap-2 flex-wrap">
+          <label className="cursor-pointer px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">
+            📥 Importer CSV<input type="file" accept=".csv" className="hidden" onChange={importCSV}/>
+          </label>
+          <button onClick={exportCSV} className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">📤 Exporter CSV</button>
+          <Btn onClick={openNew}>+ Nouvelle mission</Btn>
+        </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         {['Tous',...MISSION_STATUSES].map(s=>(
