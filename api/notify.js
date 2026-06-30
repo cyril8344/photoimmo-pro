@@ -142,7 +142,7 @@ module.exports = async function handler(req, res) {
         'Authorization': `Bearer ${RESEND_KEY}`,
       },
       body: JSON.stringify({
-        from: 'PhotoImmo Pro <notifications@photoimmo.pro>',
+        from: process.env.EMAIL_FROM || 'PhotoImmo Pro <onboarding@resend.dev>',
         to: [to],
         subject: template.subject,
         html: template.html(data || {}),
