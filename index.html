@@ -1897,7 +1897,7 @@ const NAV=[
   {id:'portfolio',icon:'🌐',label:'Mon Portfolio'},
   {id:'admin',icon:'⚙️',label:'Admin',adminOnly:true},
 ];
-function Sidebar({page,setPage,sideOpen,setSideOpen}){
+function Sidebar({page,setPage,sideOpen,setSideOpen,profile}){
   return(
     <>
       {sideOpen&&<div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={()=>setSideOpen(false)}/>}
@@ -1910,7 +1910,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen}){
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {NAV.filter(n=>{
-            if(n.adminOnly){const p=store.get('pii_profile',{});return p.role==='admin';}
+            if(n.adminOnly){return (profile||{}).role==='admin';}
             return true;
           }).map(n=>(
             <button key={n.id} onClick={()=>{setPage(n.id);setSideOpen(false);}}
@@ -1997,6 +1997,7 @@ function App(){
   const [missions,setMissions]=useState(()=>store.get('pii_missions',[]));
   const [quotes,setQuotes]=useState(()=>store.get('pii_quotes',[]));
   const [galleries,setGalleries]=useState(()=>store.get('pii_galleries',[]));
+  const [profile,setProfile]=useState(()=>store.get('pii_profile',{}));
 
   useEffect(()=>{seedDemo();
     setClients(store.get('pii_clients',[]));
@@ -2007,7 +2008,7 @@ function App(){
 
   const loadProfile=async(userId)=>{
     const{data}=await sb.from('user_profiles').select('*').eq('user_id',userId).single();
-    if(data){store.set('pii_profile',data);}
+    if(data){store.set('pii_profile',data);setProfile(data);}
   };
 
   const loadSubscription=async(userId)=>{
@@ -2089,7 +2090,7 @@ function App(){
 
   return(
     <div className="min-h-screen">
-      <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen}/>
+      <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen} profile={profile}/>
       <div className="lg:ml-56">
         {days!==null&&<TrialBanner daysLeft={days} user={user}/>}
         <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center gap-3">
