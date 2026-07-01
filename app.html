@@ -2338,6 +2338,49 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
   );
 }
 
+// ─── RESET PASSWORD ───────────────────────────────────────────────────────────
+function ResetPasswordPage({onDone}){
+  const [password,setPassword]=useState('');
+  const [confirm,setConfirm]=useState('');
+  const [msg,setMsg]=useState({text:'',type:'error'});
+  const [loading,setLoading]=useState(false);
+
+  const submit=async(e)=>{
+    e.preventDefault();
+    if(password.length<8){setMsg({text:'Le mot de passe doit faire au moins 8 caractères.',type:'error'});return;}
+    if(password!==confirm){setMsg({text:'Les mots de passe ne correspondent pas.',type:'error'});return;}
+    setLoading(true);
+    const{error}=await sb.auth.updateUser({password});
+    setLoading(false);
+    if(error)setMsg({text:error.message,type:'error'});
+    else{setMsg({text:'Mot de passe mis à jour !',type:'success'});setTimeout(()=>onDone(),1500);}
+  };
+
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'var(--bg)'}}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px'}}>
+            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
+          </div>
+          <h1 className="font-display text-2xl font-bold mb-1" style={{color:'var(--text)'}}>Nouveau mot de passe</h1>
+          <p className="text-sm" style={{color:'var(--muted)'}}>Choisissez un mot de passe sécurisé</p>
+        </div>
+        <div className="rounded-2xl p-6" style={{background:'var(--surface)',border:'1px solid var(--border)',boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
+          <form onSubmit={submit} className="space-y-4">
+            <Input label="Nouveau mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
+            <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" required/>
+            {msg.text&&<p className={`text-sm ${msg.type==='success'?'text-green-400':'text-red-400'}`}>{msg.text}</p>}
+            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
+              {loading?'Mise à jour…':'Enregistrer le mot de passe'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [tab,setTab]=useState('login');
@@ -2425,6 +2468,7 @@ function App(){
   const [user,setUser]=useState(null);
   const [subscription,setSubscription]=useState(sb?null:{status:'trialing',trial_ends_at:new Date(Date.now()+14*86400000).toISOString()});
   const [page,setPage]=useState('dashboard');
+  const [resetMode,setResetMode]=useState(false);
   const [sideOpen,setSideOpen]=useState(false);
   const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
   const [missions,setMissions]=useState(()=>store.get('pii_missions',[]));
@@ -2480,6 +2524,7 @@ function App(){
       if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){setResetMode(true);return;}
       if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
@@ -2515,6 +2560,7 @@ function App(){
   // NOTE: loadSubscription is defined above (as const) so it is in scope here.
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
+  if(resetMode)return <ResetPasswordPage onDone={()=>setResetMode(false)}/>;
   if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);loadAllData(u.id);}}}/>;
   if(sb&&subscription===null)return(
     <div className="min-h-screen flex items-center justify-center">
