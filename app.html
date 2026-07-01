@@ -2446,7 +2446,7 @@ function Login({onLogin}){
             <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
               {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter →'}
             </button>
-            {tab==='login'&&sb&&<button type="button" onClick={forgotPassword} className="text-xs w-full text-center transition-colors" style={{color:'var(--muted)'}}>Mot de passe oublié ?</button>}
+            {tab==='login'&&sb&&<button type="button" onClick={forgotPassword} className="text-xs w-full text-center transition-colors hover:opacity-80" style={{color:'var(--gold-light)'}}>Mot de passe oublié ?</button>}
             {!sb&&<p className="text-xs text-center" style={{color:'#3a3a55'}}>Mode démo — entrez n'importe quel email/mot de passe</p>}
             {tab==='signup'&&(
               <p className="text-xs text-center" style={{color:'var(--muted)'}}>
