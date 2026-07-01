@@ -724,46 +724,77 @@ function calcDevis(form){
 function exportPDF(q,client,mission){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
-  const amber=[245,158,11];
-  const gray=[107,114,128];
+  const dark=[15,17,23];
+  const amber=[201,150,60];
+  const amberLight=[245,190,100];
+  const white=[255,255,255];
+  const lightGray=[180,180,190];
+  const veryLightGray=[240,240,245];
   const profile=store.get('pii_profile',{});
   const companyName=profile.company_name||'PhotoImmo Pro';
   const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const validUntil=new Date(q.created_at);validUntil.setDate(validUntil.getDate()+30);
 
-  // Header band
-  doc.setFillColor(...amber);doc.rect(0,0,210,40,'F');
-  doc.setTextColor(0,0,0);doc.setFontSize(20);doc.setFont('helvetica','bold');
-  doc.text('DEVIS',14,18);
-  doc.setFontSize(11);doc.setFont('helvetica','normal');
-  doc.text(`N° ${q.num}`,14,27);doc.text(`Date : ${fmt(q.created_at)}`,14,33);
+  // ── Header sombre
+  doc.setFillColor(...dark);doc.rect(0,0,210,50,'F');
+  // Bande dorée en bas du header
+  doc.setFillColor(...amber);doc.rect(0,48,210,2,'F');
 
-  // Logo circle
-  doc.setFillColor(0,0,0);doc.circle(185,20,12,'F');
-  doc.setTextColor(245,158,11);doc.setFontSize(10);doc.setFont('helvetica','bold');
-  doc.text(initials,185,23,{align:'center'});
+  // Titre DEVIS
+  doc.setTextColor(...white);doc.setFontSize(24);doc.setFont('helvetica','bold');
+  doc.text('DEVIS',14,22);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(...lightGray);
+  doc.text(`N° ${q.num}`,14,31);
+  doc.text(`Date : ${fmt(q.created_at)}`,14,38);
+  doc.text(`Valable jusqu'au : ${fmt(validUntil.toISOString())}`,14,44);
 
-  // Emetteur (photographe)
-  doc.setTextColor(...gray);doc.setFontSize(9);doc.setFont('helvetica','bold');
-  doc.text(companyName,130,48);doc.setFont('helvetica','normal');
-  if(profile.siret)doc.text('SIRET : '+profile.siret,130,54);
-  if(profile.address)doc.text(profile.address,130,60,{maxWidth:70});
-  if(profile.phone)doc.text(profile.phone,130,66);
+  // Logo cercle doré
+  doc.setFillColor(...amber);doc.circle(190,25,13,'F');
+  doc.setTextColor(...dark);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(initials,190,28,{align:'center'});
 
-  // Client block
-  doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('CLIENT',14,48);
-  doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-  doc.text(client?.name||'—',14,55);doc.setTextColor(...gray);
-  if(client?.email)doc.text(client.email,14,61);if(client?.phone)doc.text(client.phone,14,67);
+  // ── Bloc émetteur (droite)
+  let ey=62;
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...amber);
+  doc.text('PRESTATAIRE',130,ey);ey+=6;
+  doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);
+  doc.text(companyName,130,ey);ey+=5;
+  doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
+  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:72});ey+=10;}
+  if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
 
-  // Mission block
+  // ── Bloc client (gauche)
+  let cy=62;
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...amber);
+  doc.text('CLIENT',14,cy);cy+=6;
+  doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);
+  doc.text(client?.name||'—',14,cy);cy+=5;
+  doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  if(client?.email){doc.text(client.email,14,cy);cy+=5;}
+  if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
+
+  // ── Bloc bien immobilier
   if(mission){
-    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',14,78);
-    doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-    doc.text(mission.address||'',14,84,{maxWidth:90});
-    doc.text(mission.type||'',14,90);doc.text(fmt(mission.date),14,96);
+    cy+=3;
+    doc.setFont('helvetica','bold');doc.setTextColor(...amber);doc.setFontSize(8);
+    doc.text('BIEN IMMOBILIER',14,cy);cy+=6;
+    doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);
+    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
+    doc.setTextColor(80,80,80);
+    doc.text(`Type : ${mission.type||'—'}  |  Date : ${fmt(mission.date)}`,14,cy);
   }
 
-  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,104,196,104);
+  // ── Séparateur doré
+  const tableY=Math.max(cy||0,ey||0)+10;
+  doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
+
+  // ── Tableau prestations
+  let y=tableY+8;
+  doc.setFillColor(...dark);doc.rect(14,y-5,182,9,'F');
+  doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(...amberLight);
+  doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
+  y+=8;
 
   const rows=[
     ['Forfait de base (surface '+q.surface+'m²)',TARIFS.surface[q.surface]],
@@ -773,29 +804,54 @@ function exportPDF(q,client,mission){
     ['Retouches '+q.retouche,TARIFS.retouche[q.retouche]],
   ].filter(r=>r[1]>0);
 
-  let y=114;
-  doc.setFontSize(9);doc.setTextColor(...gray);
-  doc.setFillColor(240,240,240);doc.rect(14,y-5,182,8,'F');
-  doc.setFont('helvetica','bold');
-  doc.text('PRESTATION',16,y);doc.text('MONTANT HT',175,y,{align:'right'});
-  y+=8;doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-
-  rows.forEach(([label,val])=>{
-    doc.text(label,16,y);doc.text(fmtMoney(val),175,y,{align:'right'});
-    doc.setDrawColor(220,220,220);doc.line(14,y+3,196,y+3);y+=10;
+  doc.setFont('helvetica','normal');
+  rows.forEach(([label,val],i)=>{
+    if(i%2===0){doc.setFillColor(...veryLightGray);doc.rect(14,y-4,182,8,'F');}
+    doc.setTextColor(30,30,30);doc.text(label,17,y);
+    doc.setTextColor(50,50,50);doc.text(fmtMoney(val),192,y,{align:'right'});
+    y+=9;
   });
 
-  y+=4;doc.setFont('helvetica','normal');doc.setTextColor(...gray);
-  doc.text('Total HT',130,y);doc.text(fmtMoney(q.ht),175,y,{align:'right'});y+=7;
-  doc.text('TVA 20%',130,y);doc.text(fmtMoney(q.tva),175,y,{align:'right'});y+=7;
-  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...amber);
-  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=15;
+  // ── Totaux
+  y+=4;
+  doc.setDrawColor(...amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6;
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  doc.text('Total HT',130,y);doc.text(fmtMoney(q.ht),192,y,{align:'right'});y+=7;
+  doc.text('TVA 20%',130,y);doc.text(fmtMoney(q.tva),192,y,{align:'right'});y+=3;
+  doc.setDrawColor(...amber);doc.line(120,y,196,y);y+=6;
+  doc.setFillColor(...dark);doc.rect(120,y-4,76,10,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...amberLight);
+  doc.text('TOTAL TTC',124,y+3);doc.text(fmtMoney(q.ttc),192,y+3,{align:'right'});
+  y+=16;
 
-  doc.setFontSize(7.5);doc.setTextColor(...gray);doc.setFont('helvetica','normal');
-  doc.setDrawColor(220,220,220);doc.line(14,y,196,y);y+=5;
-  ['Devis valable 30 jours à compter de sa date d\'émission.','Acompte de 30% à la commande. Solde à la livraison des fichiers.',
-   'En cas de litige, application du droit français.'].forEach(l=>{doc.text(l,14,y);y+=5;});
-  if(profile.micro_entrepreneur)doc.text('TVA non applicable — article 293 B du CGI (micro-entrepreneur)',14,y);
+  // ── Zone signature
+  doc.setDrawColor(200,200,200);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=7;
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...amber);
+  doc.text('BON POUR ACCORD',14,y);y+=5;
+  doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  doc.text('Lu et approuvé — Signature du client précédée de la mention "Bon pour accord" :',14,y);y+=12;
+  doc.setDrawColor(180,180,180);doc.line(14,y,100,y);
+  doc.setFontSize(7.5);doc.setTextColor(150,150,150);
+  doc.text('Signature',14,y+4);doc.text(`Date : ___/___/______`,65,y+4);
+  y+=14;
+
+  // ── Mentions légales
+  doc.setDrawColor(200,200,200);doc.line(14,y,196,y);y+=5;
+  doc.setFontSize(7);doc.setTextColor(120,120,130);doc.setFont('helvetica','normal');
+  const mentions=[
+    `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
+    'Conditions de paiement : acompte de 30% à la commande, solde à la livraison des fichiers.',
+    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
+    'Clause de propriété intellectuelle : les fichiers restent la propriété du photographe jusqu\'au paiement intégral.',
+    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
+  ];
+  if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
+  mentions.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
+
+  // ── Pied de page
+  doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
+  doc.setFontSize(7);doc.setTextColor(...lightGray);
+  doc.text(companyName+(profile.siret?' — SIRET '+profile.siret:''),105,292,{align:'center'});
 
   doc.save(`devis-${q.num}.pdf`);
 }
@@ -836,144 +892,137 @@ async function sendInvoiceReminder(inv, client) {
 }
 
 function exportInvoicePDF(inv, client, mission, quote) {
-  const {jsPDF} = window.jspdf;
-  const doc = new jsPDF();
-  const amber = [245,158,11];
-  const dark = [15,17,23];
-  const gray = [107,114,128];
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  const dark=[15,17,23];
+  const amber=[201,150,60];
+  const amberLight=[245,190,100];
+  const white=[255,255,255];
+  const lightGray=[180,180,190];
+  const veryLightGray=[240,240,245];
+  const profile=store.get('pii_profile',{});
+  const companyName=profile.company_name||'PhotoImmo Pro';
+  const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const isPaid=inv.status==='Payée'||inv.status==='Payé';
 
-  // Get profile from localStorage
-  const profile = store.get('pii_profile', {});
-  const companyName = profile.company_name || 'PhotoImmo Pro';
-  const initials = companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  const prefix = profile.invoice_prefix || 'FAC';
+  // ── Header sombre
+  doc.setFillColor(...dark);doc.rect(0,0,210,50,'F');
+  doc.setFillColor(...amber);doc.rect(0,48,210,2,'F');
 
-  // Header band
-  doc.setFillColor(...amber);
-  doc.rect(0, 0, 210, 40, 'F');
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FACTURE', 14, 18);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`N° ${inv.num}`, 14, 27);
-  doc.text(`Date : ${fmt(inv.created_at)}`, 14, 33);
+  doc.setTextColor(...white);doc.setFontSize(24);doc.setFont('helvetica','bold');
+  doc.text('FACTURE',14,22);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(...lightGray);
+  doc.text(`N° ${inv.num}`,14,31);
+  doc.text(`Date : ${fmt(inv.created_at)}`,14,38);
+  doc.text(`Échéance : ${fmt(inv.due_date)}`,14,44);
 
-  // Logo / initials circle
-  doc.setFillColor(0, 0, 0);
-  doc.circle(185, 20, 12, 'F');
-  doc.setTextColor(245, 158, 11);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(initials, 185, 23, {align: 'center'});
+  // Logo cercle doré
+  doc.setFillColor(...amber);doc.circle(190,25,13,'F');
+  doc.setTextColor(...dark);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(initials,190,28,{align:'center'});
 
-  // Emetteur (top right)
-  doc.setTextColor(...gray);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, 130, 48);
-  doc.setFont('helvetica', 'normal');
-  if (profile.siret) doc.text('SIRET : ' + profile.siret, 130, 54);
-  if (profile.address) doc.text(profile.address, 130, 60, {maxWidth: 70});
-  if (profile.phone) doc.text(profile.phone, 130, 66);
+  // ── Bloc prestataire (droite)
+  let ey=62;
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...amber);
+  doc.text('PRESTATAIRE',130,ey);ey+=6;
+  doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);
+  doc.text(companyName,130,ey);ey+=5;
+  doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
+  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:72});ey+=10;}
+  if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
 
-  // Client block
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...gray);
-  doc.text('FACTURÉ À', 14, 48);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(client?.name || '—', 14, 55);
-  if (client?.email) doc.text(client.email, 14, 61);
-  if (client?.phone) doc.text(client.phone, 14, 67);
+  // ── Bloc client (gauche)
+  let cy=62;
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...amber);
+  doc.text('FACTURÉ À',14,cy);cy+=6;
+  doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);
+  doc.text(client?.name||'—',14,cy);cy+=5;
+  doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  if(client?.email){doc.text(client.email,14,cy);cy+=5;}
+  if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
+  if(client?.agent){doc.text('Agent : '+client.agent,14,cy);cy+=5;}
 
-  // Mission info
-  if (mission) {
-    doc.setTextColor(...gray);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BIEN', 14, 78);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(mission.address || '', 14, 84, {maxWidth: 90});
-    doc.text(mission.type || '', 14, 90);
+  // ── Bloc bien immobilier
+  if(mission){
+    cy+=3;
+    doc.setFont('helvetica','bold');doc.setTextColor(...amber);doc.setFontSize(8);
+    doc.text('BIEN IMMOBILIER',14,cy);cy+=6;
+    doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);
+    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
+    doc.setTextColor(80,80,80);
+    doc.text(`Type : ${mission.type||'—'}  |  Date : ${fmt(mission.date)}`,14,cy);
   }
 
-  // Due date
-  doc.setTextColor(...gray);
-  doc.text('Échéance : ' + fmt(inv.due_date), 130, 78);
+  // ── Séparateur doré
+  const tableY=Math.max(cy||0,ey||0)+10;
+  doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
-  // Separator
-  doc.setDrawColor(...amber);
-  doc.setLineWidth(0.5);
-  doc.line(14, 98, 196, 98);
+  // ── Tableau prestations
+  let y=tableY+8;
+  doc.setFillColor(...dark);doc.rect(14,y-5,182,9,'F');
+  doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(...amberLight);
+  doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
+  y+=8;
 
-  // Table header
-  let y = 106;
-  doc.setFillColor(240, 240, 240);
-  doc.rect(14, y-5, 182, 8, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...gray);
-  doc.text('PRESTATION', 16, y);
-  doc.text('MONTANT HT', 175, y, {align: 'right'});
-  y += 8;
-
-  // Rows from quote
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  const rows = [];
-  if (quote) {
-    if (TARIFS.surface[quote.surface] > 0) rows.push(['Forfait de base (surface ' + quote.surface + 'm²)', TARIFS.surface[quote.surface]]);
-    if (TARIFS.photos[+quote.photos] > 0) rows.push(['Photos (' + quote.photos + ' prises de vue)', TARIFS.photos[+quote.photos]]);
-    if (TARIFS.visite[quote.visite] > 0) rows.push(['Visite virtuelle 360°', TARIFS.visite[quote.visite]]);
-    if (TARIFS.drone[quote.drone] > 0) rows.push(['Prise de vue drone', TARIFS.drone[quote.drone]]);
-    if (TARIFS.retouche[quote.retouche] > 0) rows.push(['Retouches ' + quote.retouche, TARIFS.retouche[quote.retouche]]);
+  const rows=[];
+  if(quote){
+    if(TARIFS.surface[quote.surface]>0)rows.push(['Forfait de base (surface '+quote.surface+'m²)',TARIFS.surface[quote.surface]]);
+    if(TARIFS.photos[+quote.photos]>0)rows.push(['Photos ('+quote.photos+' prises de vue)',TARIFS.photos[+quote.photos]]);
+    if(TARIFS.visite[quote.visite]>0)rows.push(['Visite virtuelle 360°',TARIFS.visite[quote.visite]]);
+    if(TARIFS.drone[quote.drone]>0)rows.push(['Prise de vue drone',TARIFS.drone[quote.drone]]);
+    if(TARIFS.retouche[quote.retouche]>0)rows.push(['Retouches '+quote.retouche,TARIFS.retouche[quote.retouche]]);
   }
-  if (rows.length === 0) rows.push(['Prestation de photographie immobilière', inv.ht]);
+  if(rows.length===0)rows.push(['Prestation de photographie immobilière',inv.ht]);
 
-  rows.forEach(([label, val]) => {
-    doc.text(label, 16, y);
-    doc.text(fmtMoney(val), 175, y, {align: 'right'});
-    doc.setDrawColor(220, 220, 220);
-    doc.line(14, y + 3, 196, y + 3);
-    y += 10;
+  doc.setFont('helvetica','normal');
+  rows.forEach(([label,val],i)=>{
+    if(i%2===0){doc.setFillColor(...veryLightGray);doc.rect(14,y-4,182,8,'F');}
+    doc.setTextColor(30,30,30);doc.text(label,17,y);
+    doc.setTextColor(50,50,50);doc.text(fmtMoney(val),192,y,{align:'right'});
+    y+=9;
   });
 
-  y += 4;
-  // Totals
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...gray);
-  doc.text('Total HT', 130, y);
-  doc.text(fmtMoney(inv.ht), 175, y, {align: 'right'});
-  y += 7;
-  doc.text('TVA 20%', 130, y);
-  doc.text(fmtMoney(inv.tva || Math.round(inv.ht * 0.20 * 100) / 100), 175, y, {align: 'right'});
-  y += 7;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(...amber);
-  doc.text('TOTAL TTC', 130, y);
-  doc.text(fmtMoney(inv.ttc), 175, y, {align: 'right'});
-  y += 15;
+  // ── Totaux
+  y+=4;
+  doc.setDrawColor(...amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6;
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  doc.text('Total HT',130,y);doc.text(fmtMoney(inv.ht),192,y,{align:'right'});y+=7;
+  doc.text('TVA 20%',130,y);doc.text(fmtMoney(inv.tva||Math.round(inv.ht*0.20*100)/100),192,y,{align:'right'});y+=3;
+  doc.setDrawColor(...amber);doc.line(120,y,196,y);y+=6;
+  doc.setFillColor(...dark);doc.rect(120,y-4,76,10,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...amberLight);
+  doc.text('TOTAL TTC',124,y+3);doc.text(fmtMoney(inv.ttc),192,y+3,{align:'right'});
+  y+=16;
 
-  // Legal mentions
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...gray);
-  const legal = [
-    'Pénalités de retard : taux légal en vigueur × 3 appliqué à partir du lendemain de la date d\'échéance.',
-    'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.)',
-    'Délai de paiement : 30 jours date de facture',
+  // ── Tampon ACQUITTÉ si payée
+  if(isPaid){
+    doc.setFillColor(34,197,94);doc.roundedRect(14,y-4,60,12,2,2,'F');
+    doc.setTextColor(...white);doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.text('ACQUITTÉ',44,y+4,{align:'center'});
+    if(inv.paid_date){doc.setFontSize(7.5);doc.text(fmt(inv.paid_date),44,y+9,{align:'center'});}
+    y+=18;
+  }
+
+  // ── Mentions légales
+  doc.setDrawColor(200,200,200);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=5;
+  doc.setFontSize(7);doc.setTextColor(120,120,130);doc.setFont('helvetica','normal');
+  const legal=[
+    `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
+    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
+    'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
+    'Clause de propriété intellectuelle : les fichiers restent la propriété du photographe jusqu\'au paiement intégral.',
+    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
-  if (profile.micro_entrepreneur) legal.push('TVA non applicable — article 293 B du CGI (micro-entrepreneur)');
+  if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
+  legal.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
 
-  doc.setDrawColor(220, 220, 220);
-  doc.line(14, y, 196, y);
-  y += 5;
-  legal.forEach(line => { doc.text(line, 14, y); y += 5; });
+  // ── Pied de page
+  doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
+  doc.setFontSize(7);doc.setTextColor(...lightGray);
+  doc.text(companyName+(profile.siret?' — SIRET '+profile.siret:''),105,292,{align:'center'});
 
-  doc.save('facture-' + inv.num + '.pdf');
+  doc.save('facture-'+inv.num+'.pdf');
 }
 
 async function sendInvoiceEmail(inv, client) {
