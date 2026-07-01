@@ -721,7 +721,7 @@ function calcDevis(form){
   return {ht, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
 }
 
-function exportPDF(q,client,mission){
+function exportPDF(q,client,mission,{returnBase64=false}={}){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const dark=[15,17,23];
@@ -853,15 +853,26 @@ function exportPDF(q,client,mission){
   doc.setFontSize(7);doc.setTextColor(...lightGray);
   doc.text(companyName+(profile.siret?' — SIRET '+profile.siret:''),105,292,{align:'center'});
 
+  if(returnBase64)return doc.output('datauristring').split(',')[1];
   doc.save(`devis-${q.num}.pdf`);
 }
 
-async function sendQuoteEmail(q, client) {
+async function sendQuoteEmail(q, client, mission) {
   try {
     const dueDate=new Date(q.created_at);dueDate.setDate(dueDate.getDate()+30);
+    let pdfBase64=null;
+    try{pdfBase64=exportPDF(q,client,mission,{returnBase64:true});}catch(e){}
     const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({type:'quote_sent',to:client.email,
-        data:{client_name:client.name,num:q.num,ttc:fmtMoney(q.ttc),expires:fmt(dueDate.toISOString().split('T')[0])}})});
+        data:{
+          client_name:client.name,
+          num:q.num,
+          ttc:fmtMoney(q.ttc),
+          expires:fmt(dueDate.toISOString().split('T')[0]),
+          address:mission?.address||'',
+          pdf_base64:pdfBase64,
+          pdf_filename:`devis-${q.num}.pdf`
+        }})});
     const result=await res.json();
     if(!res.ok)throw new Error(result.error||'Erreur envoi');
     return {success:true};
@@ -1107,7 +1118,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
                       {QUOTE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
-                    {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl);alert(r.success?'Devis envoyé par email !':'Erreur : '+r.error);}}>📧 Email</Btn>}
+                    {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl,mi);alert(r.success?'Devis envoyé par email !':'Erreur : '+r.error);}}>📧 Email</Btn>}
                     <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
                   </div>
                 </div>
