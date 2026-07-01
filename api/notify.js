@@ -45,14 +45,27 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     quote_sent: {
-      subject: '📄 Votre devis - PhotoImmo Pro',
+      subject: (d) => `📄 Devis ${d.num} — PhotoImmo Pro`,
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
-          <h2 style="color:#f59e0b;">Votre devis est disponible</h2>
+          <div style="background:#c9963c;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
+            <h1 style="color:#0f1117;margin:0;font-size:22px;font-weight:bold;">📸 PhotoImmo Pro</h1>
+          </div>
+          <h2 style="color:#f5be64;margin-top:0;">Votre devis est disponible</h2>
           <p>Bonjour ${d.client_name},</p>
-          <p>Veuillez trouver ci-joint votre devis <strong>${d.num}</strong> d'un montant de <strong>${d.ttc} € TTC</strong>.</p>
-          <p>Ce devis est valable 30 jours.</p>
-          <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
+          <p>Veuillez trouver en pièce jointe votre devis <strong style="color:#f5be64;">${d.num}</strong>${d.address ? ' pour le bien situé au <strong>' + d.address + '</strong>' : ''}.</p>
+          <div style="background:#1a1d27;border-radius:12px;padding:20px;margin:20px 0;border:1px solid #2d3148;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="color:#9ca3af;padding:6px 0;">Numéro de devis</td><td style="text-align:right;font-weight:bold;color:#f5be64;">${d.num}</td></tr>
+              <tr><td style="color:#9ca3af;padding:6px 0;">Montant TTC</td><td style="text-align:right;font-weight:bold;font-size:18px;color:#e5e7eb;">${d.ttc}</td></tr>
+              <tr><td style="color:#9ca3af;padding:6px 0;">Valable jusqu'au</td><td style="text-align:right;color:#e5e7eb;">${d.expires}</td></tr>
+            </table>
+          </div>
+          <p>Pour l'accepter, retournez-le signé avec la mention <em>"Bon pour accord"</em> accompagné d'un acompte de 30 %.</p>
+          <p style="color:#6b7280;font-size:12px;margin-top:30px;border-top:1px solid #374151;padding-top:15px;">
+            PhotoImmo Pro — Photographie immobilière professionnelle<br/>
+            Ce devis a été généré automatiquement, ne pas répondre directement à cet email.
+          </p>
         </div>`,
     },
     quote_followup: {
@@ -135,18 +148,25 @@ module.exports = async function handler(req, res) {
   if (!template) return res.status(400).json({ error: 'Unknown notification type' });
 
   try {
+    const emailPayload = {
+      from: process.env.EMAIL_FROM || 'PhotoImmo Pro <onboarding@resend.dev>',
+      to: [to],
+      subject: typeof template.subject === 'function' ? template.subject(data || {}) : template.subject,
+      html: template.html(data || {}),
+    };
+    if (data?.pdf_base64) {
+      emailPayload.attachments = [{
+        filename: data.pdf_filename || 'document.pdf',
+        content: data.pdf_base64,
+      }];
+    }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${RESEND_KEY}`,
       },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'PhotoImmo Pro <onboarding@resend.dev>',
-        to: [to],
-        subject: typeof template.subject === 'function' ? template.subject(data || {}) : template.subject,
-        html: template.html(data || {}),
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     const result = await response.json();
