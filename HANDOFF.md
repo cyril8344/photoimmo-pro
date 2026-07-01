@@ -247,6 +247,49 @@ Appel : `POST /api/notify` → body `{ type, to, data }`
 
 ---
 
+## 12b. Étapes manuelles restantes (à faire dans cet ordre)
+
+### 1. Supabase Storage — bucket gallery-photos
+**Où :** Supabase → Storage → "New bucket"
+- Nom : `gallery-photos` · Public : ✓
+- Puis dans Supabase → SQL Editor, décommenter et exécuter les 4 lignes de policies Storage à la fin de `schema.sql` :
+  ```sql
+  insert into storage.buckets (id, name, public) values ('gallery-photos', 'gallery-photos', true) on conflict (id) do nothing;
+  create policy "gallery_photos_storage_upload" on storage.objects for insert to authenticated with check (bucket_id = 'gallery-photos' and name like (auth.uid()::text || '/%'));
+  create policy "gallery_photos_storage_read"   on storage.objects for select using (bucket_id = 'gallery-photos');
+  create policy "gallery_photos_storage_delete" on storage.objects for delete to authenticated using (bucket_id = 'gallery-photos' and name like (auth.uid()::text || '/%'));
+  ```
+
+### 2. Migration SQL — adresse du bien sur les galeries
+**Où :** Supabase → SQL Editor (déjà inclus dans `schema.sql`) :
+```sql
+alter table galleries add column if not exists property_address text;
+```
+
+### 3. Stripe — passer en mode live
+**Où :** [dashboard.stripe.com](https://dashboard.stripe.com) → basculer sur "Live"
+1. Copier `sk_live_xxx` → Vercel → `STRIPE_SECRET_KEY`
+2. Créer 2 produits live : "PhotoImmo Pro Mensuel" 29€ + "PhotoImmo Pro Annuel" 249€
+3. Copier les 2 `price_live_xxx` → Vercel → `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY`
+4. Webhook : ajouter l'endpoint `https://votre-domaine.fr/api/stripe-webhook` → copier `whsec_xxx` → Vercel → `STRIPE_WEBHOOK_SECRET`
+
+### 4. Resend — domaine custom pour les emails
+**Où :** [resend.com](https://resend.com) → Domains → "Add domain"
+1. Entrer votre domaine (ex: `photoimmo.pro`)
+2. Ajouter les enregistrements DNS indiqués (TXT + DKIM) chez votre registrar
+3. Cliquer "Verify" dans Resend
+4. Mettre `EMAIL_FROM` dans Vercel → ex: `hello@photoimmo.pro`
+
+### 5. Domaine custom — achat + pointage vers Vercel
+**Où acheter :** OVH / Namecheap / Gandi (~10–15€/an pour un `.fr`)
+**Pointage :**
+1. Chez le registrar : ajouter un enregistrement `CNAME` → `cname.vercel-dns.com`
+2. Dans Vercel → Settings → Domains → "Add domain" → entrer votre domaine
+3. Vercel vérifie le DNS (quelques minutes à 24h)
+4. Mettre à jour `APP_URL` + `PORTFOLIO_BASE_URL` dans Vercel avec le vrai domaine → redéployer
+
+---
+
 ## 13. Coûts réels
 
 | Service | Plan gratuit | Limite | Payant si dépassé |
