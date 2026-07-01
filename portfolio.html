@@ -5,19 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <title>Portfolio — PhotoImmo Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config={theme:{extend:{colors:{accent:'#f59e0b'}}}}</script>
+  <script>tailwind.config={theme:{extend:{colors:{accent:'#c9963c',gold:'#c9963c','gold-light':'#e8b96e'}}}}</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    body{background:#f8fafc;color:#1e293b;font-family:'Inter',system-ui,sans-serif;}
-    .fade-in{animation:fadeIn .3s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-    .tab-active{border-bottom:2px solid #f59e0b;color:#f59e0b;}
-    ::-webkit-scrollbar{width:5px;}
-    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+    :root {
+      --gold: #c9963c;
+      --gold-light: #e8b96e;
+      --bg: #08080f;
+      --surface: #0f0f1a;
+      --surface2: #16162a;
+      --border: #1e1e35;
+      --text: #f0ede8;
+      --muted: #7a7a9a;
+    }
+    * { box-sizing: border-box; }
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+    h1,h2,h3,.font-display{font-family:'Playfair Display',Georgia,serif;}
+    .fade-in{animation:fadeIn .5s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    ::-webkit-scrollbar{width:6px;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+    .aperture{width:44px;height:44px;position:relative;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+    .aperture::before{content:'';position:absolute;width:20px;height:20px;border-radius:50%;border:2px solid rgba(0,0,0,0.7);box-shadow:inset 0 0 0 4px rgba(0,0,0,0.3);}
+
+    .nav-blur{background:rgba(8,8,15,0.75);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,0.06);}
+
+    .card-premium{background:var(--surface);border:1px solid var(--border);transition:border-color .3s, transform .3s;}
+    .card-premium:hover{border-color:rgba(201,150,60,0.3);transform:translateY(-2px);}
+
+    .btn-gold{background:linear-gradient(135deg,#c9963c 0%,#e8b96e 50%,#c9963c 100%);background-size:200% 100%;color:#08080f;font-weight:600;transition:background-position .4s, box-shadow .3s;box-shadow:0 0 30px rgba(201,150,60,0.2);}
+    .btn-gold:hover{background-position:100% 0;box-shadow:0 0 45px rgba(201,150,60,0.35);}
+
+    .gradient-text{background:linear-gradient(135deg,#e8b96e 0%,#c9963c 50%,#f0c070 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+    .feature-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,rgba(201,150,60,0.15),rgba(201,150,60,0.05));border:1px solid rgba(201,150,60,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;}
+
+    .testimonial-card{background:var(--surface);border:1px solid var(--border);position:relative;}
+    .testimonial-card::before{content:'"';font-family:'Playfair Display',serif;position:absolute;top:8px;left:18px;font-size:56px;color:rgba(201,150,60,0.15);line-height:1;}
+
+    .line-deco{width:48px;height:2px;background:linear-gradient(to right,var(--gold),transparent);}
+    .divider{height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);}
+
+    .tab-pill{border:1px solid var(--border);color:var(--muted);background:var(--surface2);}
+    .tab-pill.active{background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);color:#08080f;border-color:transparent;font-weight:600;}
+
+    input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+    input::placeholder,textarea::placeholder{color:var(--muted);}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,150,60,0.15);}
   </style>
 </head>
 <body>
@@ -34,11 +76,39 @@ const PROPERTY_TYPES = ['Appartement','Maison','Villa','Commerce','Bureau','Terr
 
 // ─── STARS ────────────────────────────────────────────────────────────────────
 const Stars = ({rating}) => (
-  <span className="text-amber-400">
+  <span style={{color:'var(--gold-light)'}}>
     {'★'.repeat(Math.max(0, Math.min(5, rating||0)))}
-    <span className="text-gray-300">{'★'.repeat(5 - Math.max(0, Math.min(5, rating||0)))}</span>
+    <span style={{color:'var(--border)'}}>{'★'.repeat(5 - Math.max(0, Math.min(5, rating||0)))}</span>
   </span>
 );
+
+// ─── SOCIAL LINKS ─────────────────────────────────────────────────────────────
+const SOCIAL_META = {
+  instagram: {label:'Instagram', path:'M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7z M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z M17 6.7a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z'},
+  facebook: {label:'Facebook', path:'M12 2a10 10 0 1 0 1.5 19.9v-7h-2v-2.7h2v-2c0-2 1.2-3.1 3-3.1.9 0 1.7.07 2 .1v2.3h-1.4c-1.1 0-1.3.5-1.3 1.3v1.7h2.6l-.4 2.7h-2.2v7A10 10 0 0 0 12 2z'},
+  linkedin: {label:'LinkedIn', path:'M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05c.53-1 1.84-2.05 3.78-2.05 4.05 0 4.8 2.6 4.8 6V21h-4v-5.7c0-1.36-.02-3.1-1.9-3.1-1.9 0-2.2 1.48-2.2 3v5.8h-4z'},
+  tiktok: {label:'TikTok', path:'M14 3h3a5.5 5.5 0 0 0 5 5v3a8.5 8.5 0 0 1-5-1.6V15a6 6 0 1 1-6-6c.34 0 .67.03 1 .08V12.2a3 3 0 1 0 2 2.83z'},
+  website: {label:'Site web', path:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z'},
+};
+function SocialLinks({social}) {
+  const entries = Object.entries(social || {}).filter(([key, url]) => url && SOCIAL_META[key]);
+  if (!entries.length) return null;
+  return (
+    <div className="flex items-center justify-center gap-3">
+      {entries.map(([key, url]) => (
+        <a key={key} href={url} target="_blank" rel="noopener noreferrer" title={SOCIAL_META[key].label}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+          style={{background:'var(--surface2)', border:'1px solid var(--border)', color:'var(--gold-light)'}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--gold)';e.currentTarget.style.background='rgba(201,150,60,0.1)';}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='var(--surface2)';}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d={SOCIAL_META[key].path}/>
+          </svg>
+        </a>
+      ))}
+    </div>
+  );
+}
 
 // ─── CONTACT FORM ─────────────────────────────────────────────────────────────
 function ContactForm({slug, photographerName}) {
@@ -69,9 +139,9 @@ function ContactForm({slug, photographerName}) {
     return (
       <div className="text-center py-12">
         <div className="text-5xl mb-4">✅</div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Demande envoyée !</h3>
-        <p className="text-gray-500">{photographerName} vous contactera très prochainement.</p>
-        <button onClick={()=>setStatus('idle')} className="mt-4 text-amber-500 hover:underline text-sm">Envoyer une autre demande</button>
+        <h3 className="text-xl font-bold mb-2" style={{color:'var(--text)'}}>Demande envoyée !</h3>
+        <p style={{color:'var(--muted)'}}>{photographerName} vous contactera très prochainement.</p>
+        <button onClick={()=>setStatus('idle')} className="mt-4 text-sm hover:underline" style={{color:'var(--gold-light)'}}>Envoyer une autre demande</button>
       </div>
     );
   }
@@ -80,42 +150,42 @@ function ContactForm({slug, photographerName}) {
     <form onSubmit={submit} className="space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Nom complet *</label>
+          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Nom complet *</label>
           <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} required
-            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+            className="w-full rounded-lg text-sm px-3 py-2.5"/>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Email *</label>
+          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Email *</label>
           <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} required
-            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+            className="w-full rounded-lg text-sm px-3 py-2.5"/>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Téléphone</label>
+          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Téléphone</label>
           <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))}
-            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+            className="w-full rounded-lg text-sm px-3 py-2.5"/>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Type de bien</label>
+          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Type de bien</label>
           <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
-            className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400">
+            className="w-full rounded-lg text-sm px-3 py-2.5">
             {PROPERTY_TYPES.map(t=><option key={t}>{t}</option>)}
           </select>
         </div>
       </div>
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Adresse du bien</label>
+        <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Adresse du bien</label>
         <input value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="12 rue des Lilas, 75015 Paris"
-          className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"/>
+          className="w-full rounded-lg text-sm px-3 py-2.5"/>
       </div>
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Message</label>
+        <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Message</label>
         <textarea value={form.message} onChange={e=>setForm(f=>({...f,message:e.target.value}))} rows={4}
           placeholder="Décrivez votre projet..."
-          className="w-full rounded-lg border border-gray-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 resize-none"/>
+          className="w-full rounded-lg text-sm px-3 py-2.5 resize-none"/>
       </div>
-      {status==='error' && <p className="text-red-500 text-sm">{errMsg}</p>}
+      {status==='error' && <p className="text-sm" style={{color:'#f87171'}}>{errMsg}</p>}
       <button type="submit" disabled={status==='sending'}
-        className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-black font-bold py-3 rounded-xl transition-all">
+        className="btn-gold w-full disabled:opacity-60 py-3 rounded-xl">
         {status==='sending' ? 'Envoi en cours…' : 'Envoyer la demande de devis'}
       </button>
     </form>
@@ -218,6 +288,7 @@ function PortfolioApp() {
         bio: 'Photographe immobilier professionnel avec 10 ans d\'expérience. Spécialisé dans la mise en valeur de tous types de biens : appartements, maisons, villas et locaux commerciaux.',
         zone: 'Paris et Île-de-France',
         portfolio_enabled: true,
+        social_links: {instagram:'https://instagram.com', facebook:'https://facebook.com', linkedin:'https://linkedin.com'},
       });
       setPhotos([
         {id:'p1', url:'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600', category:'Appartements', caption:'Appartement lumineux 3 pièces'},
@@ -240,8 +311,8 @@ function PortfolioApp() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"/>
-          <p className="text-gray-500">Chargement du portfolio…</p>
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" style={{borderColor:'var(--gold-light)',borderTopColor:'transparent'}}/>
+          <p style={{color:'var(--muted)'}}>Chargement du portfolio…</p>
         </div>
       </div>
     );
@@ -252,8 +323,8 @@ function PortfolioApp() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Portfolio introuvable</h1>
-          <p className="text-gray-500">{error || 'Ce portfolio n\'existe pas ou a été désactivé.'}</p>
+          <h1 className="text-2xl font-bold mb-2" style={{color:'var(--text)'}}>Portfolio introuvable</h1>
+          <p style={{color:'var(--muted)'}}>{error || 'Ce portfolio n\'existe pas ou a été désactivé.'}</p>
         </div>
       </div>
     );
@@ -270,18 +341,20 @@ function PortfolioApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{background:'var(--bg)'}}>
       {/* HEADER */}
-      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-20">
+      <header className="nav-blur sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-black font-bold text-sm">{initials}</div>
+            <div className="aperture flex-shrink-0">
+              <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'12px',color:'#08080f',position:'relative',zIndex:1}}>{initials}</span>
+            </div>
             <div>
-              <div className="font-bold text-gray-900">{profile.company_name}</div>
-              {profile.zone && <div className="text-xs text-gray-500">📍 {profile.zone}</div>}
+              <div className="font-display font-semibold" style={{color:'var(--text)'}}>{profile.company_name}</div>
+              {profile.zone && <div className="text-xs" style={{color:'var(--muted)'}}>📍 {profile.zone}</div>}
             </div>
           </div>
-          <a href="#contact" className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-5 py-2 rounded-lg text-sm transition-all">
+          <a href="#contact" className="btn-gold px-5 py-2 rounded-lg text-sm">
             Demander un devis
           </a>
         </div>
@@ -290,28 +363,37 @@ function PortfolioApp() {
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-16 fade-in">
 
         {/* HERO / ABOUT */}
-        <section className="text-center py-12">
-          <div className="w-24 h-24 bg-amber-500 rounded-3xl flex items-center justify-center text-black font-bold text-3xl mx-auto mb-6">{initials}</div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">{profile.company_name}</h1>
-          {profile.zone && <p className="text-amber-500 font-medium mb-4">📍 {profile.zone}</p>}
-          {profile.bio && <p className="text-gray-600 max-w-2xl mx-auto text-lg leading-relaxed">{profile.bio}</p>}
-          <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
+        <section className="text-center py-12 relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none opacity-20" style={{background:'radial-gradient(ellipse,rgba(201,150,60,0.5),transparent 70%)'}}/>
+          <div className="aperture w-24 h-24 mx-auto mb-6 relative" style={{width:'96px',height:'96px',borderRadius:'24px'}}>
+            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'32px',color:'#08080f',position:'relative',zIndex:1}}>{initials}</span>
+          </div>
+          <h1 className="font-display text-4xl font-bold mb-3 gradient-text">{profile.company_name}</h1>
+          <div className="line-deco mx-auto mb-4"/>
+          {profile.zone && <p className="font-medium mb-4" style={{color:'var(--gold-light)'}}>📍 {profile.zone}</p>}
+          {profile.bio && <p className="max-w-2xl mx-auto text-lg leading-relaxed" style={{color:'var(--muted)'}}>{profile.bio}</p>}
+          <div className="flex items-center justify-center gap-6 mt-6 text-sm" style={{color:'var(--muted)'}}>
             {profile.phone && <span>📞 {profile.phone}</span>}
             {profile.siret && <span>SIRET : {profile.siret}</span>}
           </div>
+          <div className="mt-6">
+            <SocialLinks social={profile.social_links}/>
+          </div>
         </section>
+
+        <div className="divider"/>
 
         {/* PORTFOLIO PHOTOS */}
         {photos.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Mes réalisations</h2>
+            <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Mes réalisations</h2>
 
             {/* Category tabs */}
             {photoCategories.length > 2 && (
               <div className="flex gap-2 flex-wrap justify-center mb-6">
                 {photoCategories.map(cat => (
                   <button key={cat} onClick={() => setActivePhotoTab(cat)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activePhotoTab===cat?'bg-amber-500 text-black':'bg-white text-gray-600 border border-gray-200 hover:border-amber-300'}`}>
+                    className={`tab-pill px-4 py-1.5 rounded-full text-sm transition-all ${activePhotoTab===cat?'active':''}`}>
                     {cat}
                   </button>
                 ))}
@@ -320,13 +402,13 @@ function PortfolioApp() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {filteredPhotos.map(p => (
-                <div key={p.id} className="group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all aspect-[4/3]">
+                <div key={p.id} className="card-premium group relative rounded-xl overflow-hidden aspect-[4/3]">
                   <img src={p.url} alt={p.caption || p.category}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={e=>{e.target.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%23e2e8f0" width="400" height="300"/><text fill="%2394a3b8" x="200" y="150" text-anchor="middle" dy=".3em" font-size="16" font-family="sans-serif">Photo</text></svg>';}}/>
+                    onError={e=>{e.target.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%2316162a" width="400" height="300"/><text fill="%237a7a9a" x="200" y="150" text-anchor="middle" dy=".3em" font-size="16" font-family="sans-serif">Photo</text></svg>';}}/>
                   {p.caption && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-white text-sm font-medium">{p.caption}</p>
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-sm font-medium" style={{color:'var(--text)'}}>{p.caption}</p>
                     </div>
                   )}
                 </div>
@@ -335,49 +417,53 @@ function PortfolioApp() {
           </section>
         )}
 
+        <div className="divider"/>
+
         {/* PRESTATIONS */}
         <section>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Mes prestations</h2>
+          <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Mes prestations</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {PACKS_PUBLIC.map(pack => (
-              <div key={pack.label} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all text-center">
-                <div className="text-4xl mb-3">{pack.icon}</div>
-                <h3 className="font-bold text-gray-900 text-lg mb-2">{pack.label}</h3>
-                <p className="text-gray-500 text-sm mb-4">{pack.desc}</p>
-                <div className="text-amber-500 font-bold text-lg">{pack.price}</div>
+              <div key={pack.label} className="card-premium rounded-2xl p-6 text-center">
+                <div className="feature-icon mx-auto mb-3">{pack.icon}</div>
+                <h3 className="font-display font-bold text-lg mb-2" style={{color:'var(--text)'}}>{pack.label}</h3>
+                <p className="text-sm mb-4" style={{color:'var(--muted)'}}>{pack.desc}</p>
+                <div className="font-bold text-lg" style={{color:'var(--gold-light)'}}>{pack.price}</div>
               </div>
             ))}
           </div>
-          <p className="text-center text-gray-400 text-sm mt-4">Tarifs sur devis selon la surface et les prestations choisies.</p>
+          <p className="text-center text-sm mt-4" style={{color:'var(--muted)'}}>Tarifs sur devis selon la surface et les prestations choisies.</p>
         </section>
 
         {/* TESTIMONIALS */}
         {testimonials.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Avis clients</h2>
+            <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Avis clients</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {testimonials.map(t => (
-                <div key={t.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <div key={t.id} className="testimonial-card rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold text-sm">{t.client_name[0]}</div>
-                      <div className="font-semibold text-gray-900">{t.client_name}</div>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm" style={{background:'rgba(201,150,60,0.12)',color:'var(--gold-light)'}}>{t.client_name[0]}</div>
+                      <div className="font-semibold" style={{color:'var(--text)'}}>{t.client_name}</div>
                     </div>
                     <Stars rating={t.rating}/>
                   </div>
-                  <p className="text-gray-600 text-sm leading-relaxed">"{t.comment}"</p>
-                  {t.date && <p className="text-gray-400 text-xs mt-3">{new Date(t.date).toLocaleDateString('fr-FR', {month:'long',year:'numeric'})}</p>}
+                  <p className="text-sm leading-relaxed" style={{color:'var(--muted)'}}>"{t.comment}"</p>
+                  {t.date && <p className="text-xs mt-3" style={{color:'var(--border)'}}>{new Date(t.date).toLocaleDateString('fr-FR', {month:'long',year:'numeric'})}</p>}
                 </div>
               ))}
             </div>
           </section>
         )}
 
+        <div className="divider"/>
+
         {/* CONTACT / DEVIS FORM */}
-        <section id="contact" className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        <section id="contact" className="card-premium rounded-3xl p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Demander un devis gratuit</h2>
-            <p className="text-gray-500">Réponse sous 24 heures</p>
+            <h2 className="font-display text-2xl font-bold mb-2" style={{color:'var(--text)'}}>Demander un devis gratuit</h2>
+            <p style={{color:'var(--muted)'}}>Réponse sous 24 heures</p>
           </div>
           <div className="max-w-xl mx-auto">
             <ContactForm slug={slug} photographerName={profile.company_name}/>
@@ -387,16 +473,16 @@ function PortfolioApp() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-gray-900 text-gray-400 mt-16 py-8">
+      <footer className="mt-16 py-8" style={{background:'#050508',borderTop:'1px solid var(--border)'}}>
         <div className="max-w-5xl mx-auto px-4 text-center text-sm">
-          <div className="font-bold text-white text-lg mb-2">{profile.company_name}</div>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
+          <div className="font-display font-bold text-lg mb-2" style={{color:'var(--text)'}}>{profile.company_name}</div>
+          <div className="flex items-center justify-center gap-4 flex-wrap" style={{color:'var(--muted)'}}>
             {profile.phone && <span>📞 {profile.phone}</span>}
             {profile.address && <span>📍 {profile.address}</span>}
             {profile.siret && <span>SIRET : {profile.siret}</span>}
           </div>
-          <div className="mt-4 text-gray-600 text-xs">
-            Propulsé par <a href="/" className="text-amber-400 hover:underline">PhotoImmo Pro</a>
+          <div className="mt-4 text-xs" style={{color:'var(--border)'}}>
+            Propulsé par <a href="/" className="hover:underline" style={{color:'var(--gold-light)'}}>PhotoImmo Pro</a>
           </div>
         </div>
       </footer>

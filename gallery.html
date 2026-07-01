@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <title>Galerie Photos — PhotoImmo Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{accent:'#c9963c',gold:'#c9963c','gold-light':'#e8b96e'}}}}</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --gold: #c9963c;
+      --gold-light: #e8b96e;
+      --bg: #08080f;
+      --surface: #0f0f1a;
+      --surface2: #16162a;
+      --border: #1e1e35;
+      --text: #f0ede8;
+      --muted: #7a7a9a;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    h1,h2,h3,.font-display { font-family: 'Playfair Display', Georgia, serif; }
+    .fade-in { animation: fadeIn .5s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .nav-blur { background: rgba(8,8,15,0.85); backdrop-filter: blur(20px) saturate(1.5); -webkit-backdrop-filter: blur(20px) saturate(1.5); border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    .gradient-text { background: linear-gradient(135deg, #e8b96e 0%, #c9963c 50%, #f0c070 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    .btn-gold { background: linear-gradient(135deg, #c9963c 0%, #e8b96e 50%, #c9963c 100%); background-size: 200% 100%; color: #08080f; font-weight: 600; border: none; cursor: pointer; transition: background-position .4s, box-shadow .3s, opacity .2s; box-shadow: 0 0 30px rgba(201,150,60,0.2); }
+    .btn-gold:hover:not(:disabled) { background-position: 100% 0; box-shadow: 0 0 45px rgba(201,150,60,0.35); }
+    .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .aperture { position: relative; background: var(--gold); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .aperture::before { content: ''; position: absolute; border-radius: 50%; border: 2px solid rgba(0,0,0,0.7); box-shadow: inset 0 0 0 3px rgba(0,0,0,0.3); }
+
+    /* Photo grid */
+    .photo-card { position: relative; overflow: hidden; border-radius: 10px; cursor: pointer; aspect-ratio: 4/3; background: var(--surface2); border: 2px solid transparent; transition: transform .2s ease, border-color .2s ease; }
+    .photo-card:hover { transform: scale(1.03); }
+    .photo-card.selected { border-color: var(--gold); }
+    .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-overlay { position: absolute; inset: 0; background: rgba(201,150,60,0.1); opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .photo-card.selected .photo-overlay { opacity: 1; }
+    .photo-check { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: #08080f; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: opacity .2s, transform .2s; pointer-events: none; }
+    .photo-card.selected .photo-check { opacity: 1; transform: scale(1); }
+    .photo-actions { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
+    .photo-card:hover .photo-actions { opacity: 1; }
+    @media (hover: none) { .photo-actions { opacity: 1; } }
+    .photo-action-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(8,8,15,0.75); backdrop-filter: blur(4px); color: var(--text); display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; text-decoration: none; transition: background .15s; }
+    .photo-action-btn:hover { background: rgba(201,150,60,0.5); }
+
+    /* Sticky bottom bar */
+    .sticky-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15,15,26,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(201,150,60,0.2); z-index: 40; }
+
+    /* Lightbox */
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 60; display: flex; align-items: center; justify-content: center; }
+    .lightbox img { max-width: 95vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+    .lightbox-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 22px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const SB_URL = typeof __SUPABASE_URL__ !== 'undefined' ? __SUPABASE_URL__ : '';
+const SB_KEY = typeof __SUPABASE_KEY__ !== 'undefined' ? __SUPABASE_KEY__ : '';
+
+function LoadingScreen() {
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{textAlign:'center'}}>
+        <div className="aperture mx-auto mb-5" style={{width:'56px',height:'56px',borderRadius:'16px'}}>
+          <span style={{position:'relative',zIndex:1,color:'#08080f',fontWeight:700,fontSize:'18px',fontFamily:'Playfair Display,serif'}}>PI</span>
+        </div>
+        <p style={{color:'var(--muted)',fontSize:'15px'}}>Chargement de la galerie…</p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorScreen({ message }) {
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
+      <div style={{textAlign:'center',maxWidth:'440px'}}>
+        <div style={{fontSize:'56px',marginBottom:'20px'}}>📷</div>
+        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'28px',fontWeight:700,marginBottom:'12px'}}>Galerie introuvable</h1>
+        <p style={{color:'var(--muted)',lineHeight:1.6}}>{message || 'Cette galerie n\'existe pas ou n\'est plus disponible.'}</p>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmScreen({ count }) {
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
+      <div style={{textAlign:'center',maxWidth:'440px'}} className="fade-in">
+        <div style={{width:'72px',height:'72px',borderRadius:'50%',background:'linear-gradient(135deg,var(--gold),var(--gold-light))',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',fontSize:'32px'}}>✓</div>
+        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'28px',fontWeight:700,marginBottom:'12px'}} className="gradient-text">
+          Sélection confirmée !
+        </h1>
+        <p style={{color:'var(--muted)',lineHeight:1.7}}>
+          Votre sélection de <strong style={{color:'var(--gold-light)'}}>{count} photo{count !== 1 ? 's' : ''}</strong> a bien été enregistrée.
+          Le photographe en sera informé.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function GalleryApp() {
+  const [gallery, setGallery] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [toast, setToast] = useState('');
+  const [lightbox, setLightbox] = useState(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
+
+  const token = window.location.pathname.split('/gallery/')[1]?.split('?')[0]?.split('/')[0] || '';
+
+  useEffect(() => {
+    if (!token) { setError('Lien de galerie invalide.'); setLoading(false); return; }
+    if (!SB_URL || !SB_KEY) { setError('Cette galerie n\'est pas encore configurée.'); setLoading(false); return; }
+
+    const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+    (async () => {
+      const { data, error: gErr } = await sb
+        .from('galleries')
+        .select('*, gallery_photos(*)')
+        .eq('token', token)
+        .eq('ready', true)
+        .single();
+
+      if (gErr || !data) {
+        setError('Cette galerie n\'existe pas ou n\'est pas encore disponible.');
+        setLoading(false);
+        return;
+      }
+
+      setGallery(data);
+      const sorted = (data.gallery_photos || [])
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      setPhotos(sorted);
+      setSelected(new Set(sorted.filter(p => p.selected).map(p => p.id)));
+      setLoading(false);
+    })();
+  }, [token]);
+
+  const togglePhoto = async (photo) => {
+    const nowSelected = !selected.has(photo.id);
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (nowSelected) next.add(photo.id); else next.delete(photo.id);
+      return next;
+    });
+    try {
+      const res = await fetch('/api/gallery-select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, photo_id: photo.id, selected: nowSelected })
+      });
+      if (!res.ok) showToast('Erreur d\'enregistrement');
+    } catch (_) {
+      showToast('Erreur de connexion');
+    }
+  };
+
+  const confirmSelection = async () => {
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 400));
+    setSaving(false);
+    setConfirmed(true);
+  };
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  if (loading) return <LoadingScreen />;
+  if (error) return <ErrorScreen message={error} />;
+  if (confirmed) return <ConfirmScreen count={selected.size} />;
+
+  const selCount = selected.size;
+
+  return (
+    <div style={{minHeight:'100vh',paddingBottom:'80px'}}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{position:'fixed',top:'16px',right:'16px',zIndex:50,background:'var(--gold)',color:'#08080f',padding:'11px 18px',borderRadius:'10px',fontWeight:600,fontSize:'14px',boxShadow:'0 4px 24px rgba(201,150,60,0.4)'}}>
+          {toast}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <img src={lightbox.full_url} alt={lightbox.name} onClick={e => e.stopPropagation()}/>
+          <button className="lightbox-close" onClick={() => setLightbox(null)}>×</button>
+          <a href={lightbox.full_url} download={lightbox.name}
+            onClick={e => e.stopPropagation()}
+            style={{position:'absolute',bottom:'24px',right:'24px',background:'rgba(201,150,60,0.15)',border:'1px solid rgba(201,150,60,0.3)',color:'var(--gold-light)',padding:'8px 18px',borderRadius:'8px',textDecoration:'none',fontSize:'13px',fontWeight:500}}>
+            Télécharger
+          </a>
+        </div>
+      )}
+
+      {/* Nav */}
+      <header className="nav-blur sticky top-0 z-30">
+        <div style={{maxWidth:'1200px',margin:'0 auto',padding:'12px 20px',display:'flex',alignItems:'center',gap:'12px'}}>
+          <div className="aperture" style={{width:'36px',height:'36px',borderRadius:'10px'}}>
+            <span style={{position:'relative',zIndex:1,color:'#08080f',fontWeight:700,fontSize:'13px',fontFamily:'Playfair Display,serif'}}>PI</span>
+          </div>
+          <div>
+            <div style={{fontSize:'14px',fontWeight:600}}>Galerie Photos</div>
+            {gallery.property_address && (
+              <div style={{fontSize:'12px',color:'var(--muted)'}}>{gallery.property_address}</div>
+            )}
+          </div>
+          <div style={{marginLeft:'auto',fontSize:'12px',color:'var(--muted)'}}>
+            {photos.length} photo{photos.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'40px 20px 28px',textAlign:'center'}} className="fade-in">
+        {gallery.property_address && (
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'clamp(24px,4vw,38px)',fontWeight:700,marginBottom:'10px'}} className="gradient-text">
+            {gallery.property_address}
+          </h1>
+        )}
+        <p style={{color:'var(--muted)',fontSize:'15px',lineHeight:1.6,maxWidth:'480px',margin:'0 auto'}}>
+          Cliquez sur les photos que vous souhaitez conserver.
+          Votre sélection est enregistrée automatiquement.
+        </p>
+        {selCount > 0 && (
+          <div style={{marginTop:'16px',display:'inline-flex',alignItems:'center',gap:'8px',padding:'8px 16px',borderRadius:'99px',background:'rgba(201,150,60,0.12)',border:'1px solid rgba(201,150,60,0.25)',color:'var(--gold-light)',fontSize:'14px',fontWeight:500}}>
+            <span>✓</span>
+            <span>{selCount} photo{selCount !== 1 ? 's' : ''} sélectionnée{selCount !== 1 ? 's' : ''}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Grid */}
+      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'0 16px 100px'}}>
+        {photos.length === 0 ? (
+          <div style={{textAlign:'center',padding:'80px 0',color:'var(--muted)'}}>
+            <div style={{fontSize:'48px',marginBottom:'12px'}}>📷</div>
+            <p>Aucune photo dans cette galerie.</p>
+          </div>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:'12px'}}>
+            {photos.map(p => (
+              <div key={p.id} className={`photo-card${selected.has(p.id) ? ' selected' : ''}`}
+                onClick={() => togglePhoto(p)}>
+                <img src={p.thumb_url || p.full_url} alt={p.name} loading="lazy"/>
+                <div className="photo-overlay"/>
+                <div className="photo-check">✓</div>
+                <div className="photo-actions" onClick={e => e.stopPropagation()}>
+                  <button className="photo-action-btn" title="Agrandir" onClick={() => setLightbox(p)}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                    </svg>
+                  </button>
+                  <a className="photo-action-btn" href={p.full_url} download={p.name} title="Télécharger">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sticky bottom bar */}
+      <div className="sticky-bar">
+        <div style={{maxWidth:'1200px',margin:'0 auto',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px'}}>
+          <div style={{color:'var(--muted)',fontSize:'14px'}}>
+            {selCount === 0
+              ? 'Aucune photo sélectionnée'
+              : `${selCount} photo${selCount !== 1 ? 's' : ''} sélectionnée${selCount !== 1 ? 's' : ''}`
+            }
+          </div>
+          <button onClick={confirmSelection} disabled={selCount === 0 || saving}
+            className="btn-gold"
+            style={{padding:'10px 22px',borderRadius:'12px',fontSize:'14px',flexShrink:0}}>
+            {saving ? 'Enregistrement…' : 'Confirmer ma sélection'}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<GalleryApp/>);
+</script>
+</body>
+</html>

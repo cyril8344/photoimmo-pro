@@ -200,8 +200,10 @@ create table if not exists user_profiles (
   zone text,
   logo_url text,
   micro_entrepreneur boolean default false,
+  social_links jsonb default '{}',
   created_at timestamptz default now()
 );
+alter table user_profiles add column if not exists social_links jsonb default '{}';
 alter table user_profiles enable row level security;
 create policy "profiles_select_own" on user_profiles for select using (auth.uid() = user_id);
 create policy "profiles_insert" on user_profiles for insert with check (auth.uid() = user_id);
@@ -228,6 +230,17 @@ create policy "testimonials_delete" on testimonials for delete using (auth.uid()
 create policy "testimonials_public_read" on testimonials for select using (
   exists (select 1 from user_profiles p where p.user_id = testimonials.user_id and p.portfolio_enabled = true)
 );
+
+-- Migration: adresse de la propriété sur les galeries (pour affichage public sans FK missions)
+alter table galleries add column if not exists property_address text;
+
+-- Bucket de stockage pour les photos de galeries (à exécuter dans le SQL Editor Supabase)
+-- insert into storage.buckets (id, name, public) values ('gallery-photos', 'gallery-photos', true) on conflict (id) do nothing;
+
+-- Politiques RLS pour le stockage (storage.objects) — décommenter et exécuter séparément
+-- create policy "gallery_photos_storage_upload" on storage.objects for insert to authenticated with check (bucket_id = 'gallery-photos' and name like (auth.uid()::text || '/%'));
+-- create policy "gallery_photos_storage_read"   on storage.objects for select using (bucket_id = 'gallery-photos');
+-- create policy "gallery_photos_storage_delete" on storage.objects for delete to authenticated using (bucket_id = 'gallery-photos' and name like (auth.uid()::text || '/%'));
 
 -- Photos portfolio (séparées des missions)
 create table if not exists portfolio_photos (

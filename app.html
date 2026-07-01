@@ -253,12 +253,9 @@ const StatCard=({label,value,sub,icon})=>(
 );
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({clients,missions,quotes}){
+function Dashboard({clients,missions,quotes,invoices}){
   const now=new Date();
   const month=now.getMonth();const year=now.getFullYear();
-
-  // KPIs
-  const invoices=store.get('pii_invoices',[]);
   const monthMissions=missions.filter(m=>{const d=new Date(m.date);return d.getMonth()===month&&d.getFullYear()===year;});
   const doneMissions=monthMissions.filter(m=>['Livraison','Facturé','Payé'].includes(m.status));
   const ca=quotes.filter(q=>q.status==='Accepté').reduce((s,q)=>s+q.ttc,0);
@@ -466,28 +463,35 @@ function Dashboard({clients,missions,quotes}){
 }
 
 // ─── CLIENTS ─────────────────────────────────────────────────────────────────
-function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
+function ClientsPage({clients,setClients,missions,quotes,user}){
   const [search,setSearch]=useState('');
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',email:'',phone:'',agent:'',agent_email:''});
-  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase()));
+  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||(c.email||'').toLowerCase().includes(search.toLowerCase()));
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.name||form.name.trim().length<2)return;
     if(form.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)){alert('Email invalide');return;}
     if(modal==='new'){
-      const c={...form,id:uid(),created_at:today()};
-      const updated=[...clients,c];setClients(updated);store.set('pii_clients',updated);
+      if(sb&&user){
+        const{data,error}=await sb.from('clients').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const updated=[...clients,data];setClients(updated);store.set('pii_clients',updated);
+      } else {
+        const updated=[...clients,{...form,id:uid(),created_at:today()}];setClients(updated);store.set('pii_clients',updated);
+      }
     } else {
+      if(sb&&user)await sb.from('clients').update(form).eq('id',modal);
       const updated=clients.map(c=>c.id===modal?{...c,...form}:c);setClients(updated);store.set('pii_clients',updated);
     }
     setModal(null);
   };
-  const del=(id)=>{
+  const del=async(id)=>{
     if(!confirm('Supprimer ce client ?'))return;
+    if(sb&&user)await sb.from('clients').delete().eq('id',id);
     const updated=clients.filter(c=>c.id!==id);setClients(updated);store.set('pii_clients',updated);
   };
-  const openEdit=(c)=>{setForm({name:c.name,email:c.email,phone:c.phone,agent:c.agent,agent_email:c.agent_email});setModal(c.id);};
+  const openEdit=(c)=>{setForm({name:c.name,email:c.email||'',phone:c.phone||'',agent:c.agent||'',agent_email:c.agent_email||''});setModal(c.id);};
   const openNew=()=>{setForm({name:'',email:'',phone:'',agent:'',agent_email:''});setModal('new');};
 
   const exportCSV=()=>{
@@ -499,16 +503,17 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
   const importCSV=(e)=>{
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       const rows=parseCSV(ev.target.result);
       if(rows.length<2){alert('Fichier vide ou invalide');return;}
-      const newClients=rows.slice(1).filter(r=>r[0]).map(r=>({
-        id:uid(),created_at:today(),
-        name:r[0]||'',email:r[1]||'',phone:r[2]||'',agent:r[3]||'',agent_email:r[4]||''
-      }));
-      const updated=[...clients,...newClients];
-      setClients(updated);store.set('pii_clients',updated);
-      alert(`${newClients.length} client(s) importé(s) !`);
+      const objs=rows.slice(1).filter(r=>r[0]).map(r=>({name:r[0]||'',email:r[1]||'',phone:r[2]||'',agent:r[3]||'',agent_email:r[4]||''}));
+      if(sb&&user){
+        const{data}=await sb.from('clients').insert(objs.map(o=>({...o,user_id:user.id}))).select();
+        if(data){const u=[...clients,...data];setClients(u);store.set('pii_clients',u);}
+      } else {
+        const u=[...clients,...objs.map(o=>({...o,id:uid(),created_at:today()}))];setClients(u);store.set('pii_clients',u);
+      }
+      alert(`${objs.length} client(s) importé(s) !`);
     };
     reader.readAsText(file,'UTF-8');
     e.target.value='';
@@ -535,12 +540,12 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
           const cq=quotes.filter(q=>q.client_id===c.id).length;
           return(
             <Card key={c.id} className="flex items-center justify-between hover:border-gray-700 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">{c.name[0]}</div>
-                <div>
-                  <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-gray-500">{c.email} · {c.phone}</div>
-                  {c.agent&&<div className="text-xs text-gray-600">Agent : {c.agent}</div>}
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm flex-shrink-0">{c.name[0]}</div>
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{c.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{c.email} · {c.phone}</div>
+                  {c.agent&&<div className="text-xs text-gray-600 truncate">Agent : {c.agent}</div>}
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -556,11 +561,11 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
         <Modal title={modal==='new'?'Nouveau client':'Modifier le client'} onClose={()=>setModal(null)}>
           <div className="space-y-3">
             <Input label="Nom / Raison sociale" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} required/>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3">
               <Input label="Email" type="email" value={form.email} onChange={v=>setForm(f=>({...f,email:v}))}/>
               <Input label="Téléphone" value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))}/>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3">
               <Input label="Nom agent immobilier" value={form.agent} onChange={v=>setForm(f=>({...f,agent:v}))}/>
               <Input label="Email agent" type="email" value={form.agent_email} onChange={v=>setForm(f=>({...f,agent_email:v}))}/>
             </div>
@@ -576,7 +581,7 @@ function ClientsPage({clients,setClients,missions,quotes,setPage,setSelected}){
 }
 
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
-function MissionsPage({missions,setMissions,clients}){
+function MissionsPage({missions,setMissions,clients,user}){
   const [modal,setModal]=useState(null);
   const [filter,setFilter]=useState('Tous');
   const [form,setForm]=useState({client_id:'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});
@@ -585,20 +590,26 @@ function MissionsPage({missions,setMissions,clients}){
   const sorted=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const getClient=id=>clients.find(c=>c.id===id);
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.client_id||!form.address||!form.date)return;
     if(modal==='new'){
-      const m={...form,id:uid(),created_at:today()};
-      const u=[...missions,m];setMissions(u);store.set('pii_missions',u);
+      if(sb&&user){
+        const{data,error}=await sb.from('missions').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const u=[...missions,data];setMissions(u);store.set('pii_missions',u);
+      } else {
+        const u=[...missions,{...form,id:uid(),created_at:today()}];setMissions(u);store.set('pii_missions',u);
+      }
     } else {
+      if(sb&&user)await sb.from('missions').update(form).eq('id',modal);
       const u=missions.map(m=>m.id===modal?{...m,...form}:m);setMissions(u);store.set('pii_missions',u);
     }
     setModal(null);
   };
-  const del=(id)=>{if(!confirm('Supprimer cette mission ?'))return;const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette mission ?'))return;if(sb&&user)await sb.from('missions').delete().eq('id',id);const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
   const openEdit=(m)=>{setForm({client_id:m.client_id,address:m.address,type:m.type,date:m.date,status:m.status,notes:m.notes||''});setModal(m.id);};
   const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});setModal('new');};
-  const setStatus=(id,status)=>{const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
+  const setStatus=async(id,status)=>{if(sb&&user)await sb.from('missions').update({status}).eq('id',id);const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
 
   const exportCSV=()=>{
     downloadCSV('missions.csv',
@@ -609,21 +620,20 @@ function MissionsPage({missions,setMissions,clients}){
   const importCSV=(e)=>{
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       const rows=parseCSV(ev.target.result);
       if(rows.length<2){alert('Fichier vide ou invalide');return;}
-      const newMissions=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
-        const clientName=r[4]||'';
-        const client=clients.find(c=>c.name.toLowerCase()===clientName.toLowerCase());
-        return {
-          id:uid(),created_at:today(),
-          date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',
-          status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''
-        };
+      const objs=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
+        const client=clients.find(c=>c.name.toLowerCase()===(r[4]||'').toLowerCase());
+        return {date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''};
       });
-      const updated=[...missions,...newMissions];
-      setMissions(updated);store.set('pii_missions',updated);
-      alert(`${newMissions.length} mission(s) importée(s) !`);
+      if(sb&&user){
+        const{data}=await sb.from('missions').insert(objs.map(o=>({...o,user_id:user.id}))).select();
+        if(data){const u=[...missions,...data];setMissions(u);store.set('pii_missions',u);}
+      } else {
+        const u=[...missions,...objs.map(o=>({...o,id:uid(),created_at:today()}))];setMissions(u);store.set('pii_missions',u);
+      }
+      alert(`${objs.length} mission(s) importée(s) !`);
     };
     reader.readAsText(file,'UTF-8');
     e.target.value='';
@@ -684,7 +694,7 @@ function MissionsPage({missions,setMissions,clients}){
             <Select label="Client *" value={form.client_id} onChange={v=>setForm(f=>({...f,client_id:v}))}
               options={clients.map(c=>({value:c.id,label:c.name}))}/>
             <Input label="Adresse du bien *" value={form.address} onChange={v=>setForm(f=>({...f,address:v}))} required/>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3">
               <Select label="Type de bien" value={form.type} onChange={v=>setForm(f=>({...f,type:v}))} options={PROPERTY_TYPES}/>
               <Input label="Date de la mission *" type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} required/>
             </div>
@@ -715,27 +725,45 @@ function exportPDF(q,client,mission){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const amber=[245,158,11];
-  const gray=[55,65,81];
+  const gray=[107,114,128];
+  const profile=store.get('pii_profile',{});
+  const companyName=profile.company_name||'PhotoImmo Pro';
+  const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 
-  doc.setFillColor(...amber);doc.rect(0,0,210,35,'F');
-  doc.setTextColor(0,0,0);doc.setFontSize(22);doc.setFont('helvetica','bold');
-  doc.text('DEVIS PHOTOGRAPHIE IMMOBILIÈRE',105,18,{align:'center'});
+  // Header band
+  doc.setFillColor(...amber);doc.rect(0,0,210,40,'F');
+  doc.setTextColor(0,0,0);doc.setFontSize(20);doc.setFont('helvetica','bold');
+  doc.text('DEVIS',14,18);
   doc.setFontSize(11);doc.setFont('helvetica','normal');
-  doc.text(`N° ${q.num} · ${fmt(q.created_at)}`,105,27,{align:'center'});
+  doc.text(`N° ${q.num}`,14,27);doc.text(`Date : ${fmt(q.created_at)}`,14,33);
 
-  doc.setTextColor(...gray);doc.setFontSize(10);
-  doc.text('CLIENT',14,48);doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text(client?.name||'—',14,55);doc.setFont('helvetica','normal');doc.setTextColor(...gray);
-  doc.text(client?.email||'',14,61);doc.text(client?.phone||'',14,67);
+  // Logo circle
+  doc.setFillColor(0,0,0);doc.circle(185,20,12,'F');
+  doc.setTextColor(245,158,11);doc.setFontSize(10);doc.setFont('helvetica','bold');
+  doc.text(initials,185,23,{align:'center'});
 
+  // Emetteur (photographe)
+  doc.setTextColor(...gray);doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.text(companyName,130,48);doc.setFont('helvetica','normal');
+  if(profile.siret)doc.text('SIRET : '+profile.siret,130,54);
+  if(profile.address)doc.text(profile.address,130,60,{maxWidth:70});
+  if(profile.phone)doc.text(profile.phone,130,66);
+
+  // Client block
+  doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('CLIENT',14,48);
+  doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+  doc.text(client?.name||'—',14,55);doc.setTextColor(...gray);
+  if(client?.email)doc.text(client.email,14,61);if(client?.phone)doc.text(client.phone,14,67);
+
+  // Mission block
   if(mission){
-    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',130,48);
+    doc.setFont('helvetica','bold');doc.setTextColor(...gray);doc.text('BIEN',14,78);
     doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-    doc.text(mission.address||'',130,55,{maxWidth:65});
-    doc.text(mission.type||'',130,61);doc.text(fmt(mission.date),130,67);
+    doc.text(mission.address||'',14,84,{maxWidth:90});
+    doc.text(mission.type||'',14,90);doc.text(fmt(mission.date),14,96);
   }
 
-  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,75,196,75);
+  doc.setDrawColor(...amber);doc.setLineWidth(0.5);doc.line(14,104,196,104);
 
   const rows=[
     ['Forfait de base (surface '+q.surface+'m²)',TARIFS.surface[q.surface]],
@@ -745,29 +773,66 @@ function exportPDF(q,client,mission){
     ['Retouches '+q.retouche,TARIFS.retouche[q.retouche]],
   ].filter(r=>r[1]>0);
 
-  let y=85;
+  let y=114;
   doc.setFontSize(9);doc.setTextColor(...gray);
-  doc.text('PRESTATION',14,y);doc.text('MONTANT HT',175,y,{align:'right'});
-  y+=5;doc.setDrawColor(200,200,200);doc.line(14,y,196,y);y+=6;
+  doc.setFillColor(240,240,240);doc.rect(14,y-5,182,8,'F');
+  doc.setFont('helvetica','bold');
+  doc.text('PRESTATION',16,y);doc.text('MONTANT HT',175,y,{align:'right'});
+  y+=8;doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
 
-  doc.setTextColor(0,0,0);
   rows.forEach(([label,val])=>{
-    doc.text(label,14,y);doc.text(fmtMoney(val),175,y,{align:'right'});y+=8;
+    doc.text(label,16,y);doc.text(fmtMoney(val),175,y,{align:'right'});
+    doc.setDrawColor(220,220,220);doc.line(14,y+3,196,y+3);y+=10;
   });
 
-  doc.line(14,y,196,y);y+=6;
-  doc.setFont('helvetica','bold');
+  y+=4;doc.setFont('helvetica','normal');doc.setTextColor(...gray);
   doc.text('Total HT',130,y);doc.text(fmtMoney(q.ht),175,y,{align:'right'});y+=7;
-  doc.setFont('helvetica','normal');doc.setTextColor(...gray);
   doc.text('TVA 20%',130,y);doc.text(fmtMoney(q.tva),175,y,{align:'right'});y+=7;
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...amber);
-  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=12;
+  doc.text('TOTAL TTC',130,y);doc.text(fmtMoney(q.ttc),175,y,{align:'right'});y+=15;
 
-  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');
-  doc.text('Devis valable 30 jours. Acompte de 30% à la commande.',14,y);
-  doc.text(`Généré le ${fmt(today())} par PhotoImmo Pro`,196,y,{align:'right'});
+  doc.setFontSize(7.5);doc.setTextColor(...gray);doc.setFont('helvetica','normal');
+  doc.setDrawColor(220,220,220);doc.line(14,y,196,y);y+=5;
+  ['Devis valable 30 jours à compter de sa date d\'émission.','Acompte de 30% à la commande. Solde à la livraison des fichiers.',
+   'En cas de litige, application du droit français.'].forEach(l=>{doc.text(l,14,y);y+=5;});
+  if(profile.micro_entrepreneur)doc.text('TVA non applicable — article 293 B du CGI (micro-entrepreneur)',14,y);
 
   doc.save(`devis-${q.num}.pdf`);
+}
+
+async function sendQuoteEmail(q, client) {
+  try {
+    const dueDate=new Date(q.created_at);dueDate.setDate(dueDate.getDate()+30);
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'quote_sent',to:client.email,
+        data:{client_name:client.name,num:q.num,ttc:fmtMoney(q.ttc),expires:fmt(dueDate.toISOString().split('T')[0])}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
+}
+
+async function sendGalleryEmail(gallery, client, address) {
+  try {
+    const galleryUrl=`${location.origin}/gallery/${gallery.token}`;
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'gallery_ready',to:client.email,
+        data:{client_name:client.name,address:address||'',gallery_url:galleryUrl}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
+}
+
+async function sendInvoiceReminder(inv, client) {
+  try {
+    const res=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'invoice_reminder',to:client.email,
+        data:{client_name:client.name,num:inv.num,ttc:fmtMoney(inv.ttc),due_date:fmt(inv.due_date)}})});
+    const result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Erreur envoi');
+    return {success:true};
+  }catch(err){return {success:false,error:err.message};}
 }
 
 function exportInvoicePDF(inv, client, mission, quote) {
@@ -936,7 +1001,7 @@ async function sendInvoiceEmail(inv, client) {
   }
 }
 
-function QuotesPage({quotes,setQuotes,clients,missions}){
+function QuotesPage({quotes,setQuotes,clients,missions,user}){
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard'});
   const getClient=id=>clients.find(c=>c.id===id);
@@ -944,14 +1009,21 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
   const calc=useMemo(()=>calcDevis(form),[form]);
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.client_id)return;
     const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
-    const q={...form,...calc,id:uid(),num,status:'En attente',created_at:today()};
-    const u=[...quotes,q];setQuotes(u);store.set('pii_quotes',u);setModal(null);
+    const payload={...form,...calc,num,status:'En attente'};
+    if(sb&&user){
+      const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
+      if(error){alert('Erreur : '+error.message);return;}
+      const u=[...quotes,data];setQuotes(u);store.set('pii_quotes',u);
+    } else {
+      const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
+    }
+    setModal(null);
   };
-  const setStatus=(id,status)=>{const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
-  const del=(id)=>{if(!confirm('Supprimer ce devis ?'))return;const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
+  const setStatus=async(id,status)=>{if(sb&&user)await sb.from('quotes').update({status}).eq('id',id);const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
+  const del=async(id)=>{if(!confirm('Supprimer ce devis ?'))return;if(sb&&user)await sb.from('quotes').delete().eq('id',id);const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
   const sorted=[...quotes].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
   return(
@@ -986,6 +1058,7 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
                       {QUOTE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
+                    {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl);alert(r.success?'Devis envoyé par email !':'Erreur : '+r.error);}}>📧 Email</Btn>}
                     <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
                   </div>
                 </div>
@@ -1063,66 +1136,129 @@ function QuotesPage({quotes,setQuotes,clients,missions}){
 }
 
 // ─── LIVRAISONS ───────────────────────────────────────────────────────────────
-function DeliveryPage({missions,clients,galleries,setGalleries}){
-  const [modal,setModal]=useState(null);
+function DeliveryPage({missions,clients,galleries,setGalleries,user}){
   const [viewGallery,setViewGallery]=useState(null);
   const [photos,setPhotos]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [loadingPhotos,setLoadingPhotos]=useState(false);
+  const [toast,setToast]=useState('');
+  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),3000);};
+
   const getClient=id=>clients.find(c=>c.id===id);
   const done=missions.filter(m=>m.status==='Réalisé'||m.status==='Livré');
-
   const getGallery=mId=>galleries.find(g=>g.mission_id===mId);
 
-  const createGallery=(mId)=>{
-    const token=uid();
-    const g={id:uid(),mission_id:mId,token,photos:[],ready:false,created_at:today()};
-    const u=[...galleries,g];setGalleries(u);store.set('pii_galleries',u);
-  };
-  const toggleReady=(gId)=>{
-    const u=galleries.map(g=>g.id===gId?{...g,ready:!g.ready}:g);setGalleries(u);store.set('pii_galleries',u);
-  };
-  const openGallery=(g)=>{setViewGallery(g);setPhotos(g.photos||[]);};
+  useEffect(()=>{
+    if(!sb||!user)return;
+    (async()=>{
+      const{data}=await sb.from('galleries').select('*, gallery_photos(id)').eq('user_id',user.id).order('created_at',{ascending:false});
+      if(data){
+        const normalized=data.map(g=>({...g,photos_count:g.gallery_photos?.length||0}));
+        setGalleries(normalized);store.set('pii_galleries',normalized);
+      }
+    })();
+  },[user]);
 
-  const handleUpload=(e)=>{
+  const createGallery=async(m)=>{
+    if(sb&&user){
+      const{data,error}=await sb.from('galleries').insert({user_id:user.id,mission_id:m.id,property_address:m.address}).select().single();
+      if(error){showToast('Erreur lors de la création');return;}
+      const updated=[...galleries,{...data,photos_count:0}];
+      setGalleries(updated);store.set('pii_galleries',updated);
+    }else{
+      const g={id:uid(),mission_id:m.id,token:uid(),ready:false,photos_count:0,created_at:today(),property_address:m.address};
+      const updated=[...galleries,g];setGalleries(updated);store.set('pii_galleries',updated);
+    }
+  };
+
+  const toggleReady=async(gId)=>{
+    const g=galleries.find(x=>x.id===gId);
+    const newReady=!g.ready;
+    if(sb&&user)await sb.from('galleries').update({ready:newReady}).eq('id',gId);
+    const updated=galleries.map(g=>g.id===gId?{...g,ready:newReady}:g);
+    setGalleries(updated);store.set('pii_galleries',updated);
+    if(viewGallery?.id===gId)setViewGallery(prev=>({...prev,ready:newReady}));
+  };
+
+  const openGallery=async(g)=>{
+    setViewGallery(g);setPhotos([]);setLoadingPhotos(true);
+    if(sb){
+      const{data}=await sb.from('gallery_photos').select('*').eq('gallery_id',g.id).order('created_at',{ascending:true});
+      setPhotos(data||[]);
+    }
+    setLoadingPhotos(false);
+  };
+
+  const handleUpload=async(e)=>{
+    if(!viewGallery)return;
     const files=Array.from(e.target.files);
-    files.forEach(file=>{
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        const p={id:uid(),name:file.name,url:ev.target.result,selected:false};
-        setPhotos(prev=>{
-          const u=[...prev,p];
-          const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
-          store.set('pii_galleries',gu);setGalleries(gu);
-          return u;
+    e.target.value='';
+    if(!files.length)return;
+    setUploading(true);let added=0;
+    for(const file of files){
+      if(sb&&user){
+        const ext=file.name.split('.').pop().toLowerCase();
+        const path=`${user.id}/${viewGallery.id}/${uid()}.${ext}`;
+        const{error:upErr}=await sb.storage.from('gallery-photos').upload(path,file);
+        if(upErr){showToast('Erreur upload : '+upErr.message);continue;}
+        const{data:{publicUrl}}=sb.storage.from('gallery-photos').getPublicUrl(path);
+        const{data:photo,error:dbErr}=await sb.from('gallery_photos').insert({gallery_id:viewGallery.id,name:file.name,full_url:publicUrl,thumb_url:publicUrl,selected:false}).select().single();
+        if(dbErr){showToast('Erreur base de données');continue;}
+        if(photo){setPhotos(prev=>[...prev,photo]);added++;}
+      }else{
+        await new Promise(resolve=>{
+          const reader=new FileReader();
+          reader.onload=ev=>{
+            setPhotos(prev=>[...prev,{id:uid(),name:file.name,full_url:ev.target.result,thumb_url:ev.target.result,selected:false}]);
+            added++;resolve();
+          };
+          reader.readAsDataURL(file);
         });
-      };
-      reader.readAsDataURL(file);
-    });
+      }
+    }
+    if(added>0){
+      const updated=galleries.map(g=>g.id===viewGallery.id?{...g,photos_count:(g.photos_count||0)+added}:g);
+      setGalleries(updated);store.set('pii_galleries',updated);
+      showToast(`${added} photo${added>1?'s':''} ajoutée${added>1?'s':''}`);
+    }
+    setUploading(false);
   };
 
-  const toggleSelect=(pid)=>{
-    setPhotos(prev=>{
-      const u=prev.map(p=>p.id===pid?{...p,selected:!p.selected}:p);
-      const gu=galleries.map(g=>g.id===viewGallery.id?{...g,photos:u}:g);
-      store.set('pii_galleries',gu);setGalleries(gu);return u;
-    });
+  const deletePhoto=async(pid,url)=>{
+    if(sb&&user){
+      if(url&&url.includes('/gallery-photos/')){
+        try{
+          const pathPart=url.split('/gallery-photos/')[1];
+          if(pathPart)await sb.storage.from('gallery-photos').remove([decodeURIComponent(pathPart)]);
+        }catch(_){}
+      }
+      await sb.from('gallery_photos').delete().eq('id',pid);
+    }
+    setPhotos(prev=>prev.filter(p=>p.id!==pid));
+    const updated=galleries.map(g=>g.id===viewGallery.id?{...g,photos_count:Math.max(0,(g.photos_count||1)-1)}:g);
+    setGalleries(updated);store.set('pii_galleries',updated);
   };
 
   const copyLink=(token)=>{
     navigator.clipboard.writeText(`${location.origin}/gallery/${token}`);
-    alert('Lien copié !');
+    showToast('Lien copié !');
   };
+
+  const currentMission=viewGallery?missions.find(m=>m.id===viewGallery.mission_id):null;
+  const selCount=photos.filter(p=>p.selected).length;
 
   return(
     <div className="fade-in space-y-5">
+      {toast&&<div className="fixed top-4 right-4 z-50 bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium shadow-lg">{toast}</div>}
       <h1 className="text-2xl font-bold">Livraisons</h1>
       <div className="space-y-3">
-        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée</p>}
+        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée — passez une mission en statut "Réalisé" pour créer sa galerie.</p>}
         {done.map(m=>{
           const cl=getClient(m.client_id);
           const g=getGallery(m.id);
           return(
             <Card key={m.id} className="hover:border-gray-700 transition-colors">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <div className="flex items-center gap-2 mb-1"><Badge s={m.status}/><span className="text-xs text-gray-500">{m.type}</span></div>
                   <div className="font-medium">{m.address}</div>
@@ -1131,18 +1267,21 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   {!g?(
-                    <Btn size="sm" onClick={()=>createGallery(m.id)}>🖼️ Créer galerie</Btn>
+                    <Btn size="sm" onClick={()=>createGallery(m)}>🖼️ Créer galerie</Btn>
                   ):(
                     <>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${g.ready?'bg-green-500/20 text-green-400':'bg-gray-700 text-gray-400'}`}>
                           {g.ready?'✓ Publiée':'Brouillon'}
                         </span>
-                        <span className="text-xs text-gray-500">{g.photos?.length||0} photos</span>
+                        <span className="text-xs text-gray-500">{g.photos_count||0} photo{(g.photos_count||0)!==1?'s':''}</span>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap justify-end">
                         <Btn size="sm" variant="ghost" onClick={()=>openGallery(g)}>✏️ Gérer</Btn>
                         <Btn size="sm" variant="ghost" onClick={()=>copyLink(g.token)}>🔗 Lien</Btn>
+                        {g.ready&&cl?.email&&(
+                          <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendGalleryEmail(g,cl,m.address);showToast(r.success?'Email envoyé à '+cl.email:'Erreur : '+r.error);}}>📧</Btn>
+                        )}
                         <Btn size="sm" variant={g.ready?'secondary':'primary'} onClick={()=>toggleReady(g.id)}>
                           {g.ready?'Dépublier':'Publier'}
                         </Btn>
@@ -1157,16 +1296,21 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
       </div>
 
       {viewGallery&&(
-        <Modal title={`Galerie – ${missions.find(m=>m.id===viewGallery.mission_id)?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
+        <Modal title={`Galerie — ${currentMission?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer">
-                <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload}/>
-                <span className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-medium px-4 py-2 rounded-lg transition-all">+ Ajouter des photos</span>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className={`cursor-pointer ${uploading?'opacity-50 pointer-events-none':''}`}>
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading}/>
+                <span className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-medium px-4 py-2 rounded-lg transition-all inline-block">
+                  {uploading?'⏳ Upload en cours…':'+ Ajouter des photos'}
+                </span>
               </label>
-              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {photos.filter(p=>p.selected).length} sélectionnée{photos.filter(p=>p.selected).length!==1?'s':''}</span>
+              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {selCount} sélectionnée{selCount!==1?'s':''} par le client</span>
             </div>
-            {photos.length===0?(
+
+            {loadingPhotos?(
+              <div className="text-center py-12 text-gray-600">Chargement…</div>
+            ):photos.length===0?(
               <div className="text-center py-16 text-gray-600">
                 <div className="text-5xl mb-3">🖼️</div>
                 <p>Aucune photo encore. Cliquez pour en ajouter.</p>
@@ -1174,11 +1318,11 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
             ):(
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
                 {photos.map(p=>(
-                  <div key={p.id} className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${p.selected?'border-amber-500':'border-transparent'}`} onClick={()=>toggleSelect(p.id)}>
-                    <img src={p.url} alt={p.name} className="w-full h-24 object-cover"/>
-                    <div className={`absolute inset-0 flex items-center justify-center transition-all ${p.selected?'bg-amber-500/30':'bg-black/0 group-hover:bg-black/30'}`}>
-                      {p.selected&&<span className="text-2xl">⭐</span>}
-                    </div>
+                  <div key={p.id} className="relative group rounded-lg overflow-hidden border border-gray-700">
+                    <img src={p.thumb_url||p.full_url} alt={p.name} className="w-full h-24 object-cover"/>
+                    {p.selected&&<div className="absolute top-1 left-1 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center text-xs text-black font-bold">✓</div>}
+                    <button onClick={()=>deletePhoto(p.id,p.full_url)}
+                      className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all">×</button>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 p-1">
                       <p className="text-xs text-white truncate">{p.name}</p>
                     </div>
@@ -1186,7 +1330,17 @@ function DeliveryPage({missions,clients,galleries,setGalleries}){
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-500">Cliquez sur une photo pour la marquer comme favorite (⭐). Le client pourra sélectionner ses photos depuis le lien de livraison.</p>
+
+            <p className="text-xs text-gray-500">Les photos avec ✓ ont été sélectionnées par votre client depuis son lien de livraison.</p>
+            <div className="flex items-center gap-2 pt-2 border-t border-gray-800 flex-wrap">
+              <Btn size="sm" variant="ghost" onClick={()=>copyLink(viewGallery.token)}>🔗 Copier le lien client</Btn>
+              {!viewGallery.ready&&(
+                <Btn size="sm" onClick={()=>toggleReady(viewGallery.id)}>Publier la galerie</Btn>
+              )}
+              {viewGallery.ready&&(
+                <span className="text-xs text-green-400 ml-auto">✓ Galerie publiée — le lien est actif</span>
+              )}
+            </div>
           </div>
         </Modal>
       )}
@@ -1278,22 +1432,27 @@ function TrialBanner({daysLeft,user}){
 }
 
 // ─── AGENCES ──────────────────────────────────────────────────────────────────
-function AgenciesPage({clients,missions,quotes}){
-  const [agencies,setAgencies]=useState(()=>store.get('pii_agencies',[]));
+function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user}){
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',contacts:'',notes:''});
 
-  const save=()=>{
+  const save=async()=>{
     if(!form.name)return;
     if(modal==='new'){
-      const a={...form,id:uid(),created_at:today()};
-      const u=[...agencies,a];setAgencies(u);store.set('pii_agencies',u);
+      if(sb&&user){
+        const{data,error}=await sb.from('agencies').insert({...form,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const u=[...agencies,data];setAgencies(u);store.set('pii_agencies',u);
+      } else {
+        const u=[...agencies,{...form,id:uid(),created_at:today()}];setAgencies(u);store.set('pii_agencies',u);
+      }
     } else {
+      if(sb&&user)await sb.from('agencies').update(form).eq('id',modal);
       const u=agencies.map(a=>a.id===modal?{...a,...form}:a);setAgencies(u);store.set('pii_agencies',u);
     }
     setModal(null);
   };
-  const del=(id)=>{if(!confirm('Supprimer cette agence ?'))return;const u=agencies.filter(a=>a.id!==id);setAgencies(u);store.set('pii_agencies',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette agence ?'))return;if(sb&&user)await sb.from('agencies').delete().eq('id',id);const u=agencies.filter(a=>a.id!==id);setAgencies(u);store.set('pii_agencies',u);};
   const openEdit=(a)=>{setForm({name:a.name,contacts:a.contacts||'',notes:a.notes||''});setModal(a.id);};
 
   return(
@@ -1346,32 +1505,35 @@ function AgenciesPage({clients,missions,quotes}){
 }
 
 // ─── FACTURES ─────────────────────────────────────────────────────────────────
-function InvoicesPage({quotes,clients,missions}){
-  const [invoices,setInvoices]=useState(()=>store.get('pii_invoices',[]));
+function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
   const [filter,setFilter]=useState('Tous');
 
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
 
-  const createFromQuote=(q)=>{
+  const createFromQuote=async(q)=>{
     if(invoices.find(i=>i.quote_id===q.id)){alert('Une facture existe déjà pour ce devis.');return;}
     const num=`FAC-${String(invoices.length+1).padStart(3,'0')}`;
     const dueDate=new Date();dueDate.setDate(dueDate.getDate()+30);
-    const inv={
-      id:uid(),quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
+    const payload={quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
       num,ht:q.ht,tva:q.tva||Math.round(q.ht*0.20*100)/100,ttc:q.ttc,
-      status:'En attente',due_date:dueDate.toISOString().split('T')[0],
-      reminders_sent:0,created_at:today()
-    };
-    const u=[...invoices,inv];setInvoices(u);store.set('pii_invoices',u);
+      status:'En attente',due_date:dueDate.toISOString().split('T')[0],reminders_sent:0};
+    if(sb&&user){
+      const{data,error}=await sb.from('invoices').insert({...payload,user_id:user.id}).select().single();
+      if(error){alert('Erreur : '+error.message);return;}
+      const u=[...invoices,data];setInvoices(u);store.set('pii_invoices',u);
+    } else {
+      const u=[...invoices,{...payload,id:uid(),created_at:today()}];setInvoices(u);store.set('pii_invoices',u);
+    }
   };
 
-  const setStatus=(id,status)=>{
-    const u=invoices.map(i=>i.id===id?{...i,status,paid_date:status==='Payée'?today():i.paid_date}:i);
-    setInvoices(u);store.set('pii_invoices',u);
+  const setStatus=async(id,status)=>{
+    const updates={status,paid_date:status==='Payée'?today():undefined};
+    if(sb&&user)await sb.from('invoices').update(updates).eq('id',id);
+    const u=invoices.map(i=>i.id===id?{...i,...updates}:i);setInvoices(u);store.set('pii_invoices',u);
   };
 
-  const del=(id)=>{if(!confirm('Supprimer cette facture ?'))return;const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
+  const del=async(id)=>{if(!confirm('Supprimer cette facture ?'))return;if(sb&&user)await sb.from('invoices').delete().eq('id',id);const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
 
   const INVOICE_STATUSES=['En attente','Envoyée','Payée','Annulée'];
   const INV_COLORS={'En attente':'bg-gray-500/20 text-gray-400','Envoyée':'bg-blue-500/20 text-blue-400','Payée':'bg-green-500/20 text-green-400','Annulée':'bg-red-500/20 text-red-400'};
@@ -1438,11 +1600,11 @@ function InvoicesPage({quotes,clients,missions}){
                       {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
-                    {cl?.email && (
-                      <Btn size="sm" variant="ghost" onClick={async()=>{
-                        const r = await sendInvoiceEmail(inv, cl);
-                        alert(r.success ? 'Email envoyé !' : 'Erreur : ' + r.error);
-                      }}>📧 Email</Btn>
+                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceEmail(inv,cl);alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
+                    )}
+                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceReminder(inv,cl);alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
                     )}
                     {inv.status !== 'Payée' && (
                       <Btn size="sm" variant="secondary" onClick={()=>setStatus(inv.id, 'Payée')}>✓ Payée</Btn>
@@ -1460,8 +1622,7 @@ function InvoicesPage({quotes,clients,missions}){
 }
 
 // ─── ACCOUNTING ───────────────────────────────────────────────────────────────
-function AccountingPage({quotes, clients, missions}) {
-  const [invoices, setInvoices] = useState(() => store.get('pii_invoices', []));
+function AccountingPage({invoices, quotes, clients, missions}) {
   const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'annual'
   const now = new Date();
   const [selMonth, setSelMonth] = useState(now.getMonth());
@@ -1871,44 +2032,105 @@ function PortfolioPage({user}) {
   const [photoForm, setPhotoForm] = useState({url:'', category:'Appartements', caption:''});
   const [testimonialForm, setTestimonialForm] = useState({client_name:'', rating:5, comment:'', date:today()});
   const [toast, setToast] = useState('');
+  const syncTimer = useRef(null);
 
   const PHOTO_CATEGORIES = ['Appartements','Maisons','Villas','Commerces','Drone','Visite virtuelle'];
+  const SOCIAL_NETWORKS = [
+    {key:'instagram', label:'Instagram', placeholder:'https://instagram.com/votre-compte'},
+    {key:'facebook', label:'Facebook', placeholder:'https://facebook.com/votre-page'},
+    {key:'linkedin', label:'LinkedIn', placeholder:'https://linkedin.com/in/votre-profil'},
+    {key:'tiktok', label:'TikTok', placeholder:'https://tiktok.com/@votre-compte'},
+    {key:'website', label:'Site web', placeholder:'https://votre-site.fr'},
+  ];
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  // Le profil/les photos/les témoignages affichés sur la page publique viennent de Supabase :
+  // on charge depuis la base (et on crée la ligne user_profiles si elle n'existe pas encore).
+  useEffect(() => {
+    if (!sb || !user) return;
+    (async () => {
+      let { data: profileData } = await sb.from('user_profiles').select('*').eq('user_id', user.id).single();
+      if (!profileData) {
+        const { data: created } = await sb.from('user_profiles').insert({user_id: user.id}).select().single();
+        profileData = created;
+      }
+      if (profileData) { setProfile(profileData); store.set('pii_profile', profileData); }
+
+      const { data: photosData } = await sb.from('portfolio_photos').select('*').eq('user_id', user.id).order('display_order', {ascending: true});
+      if (photosData) { setPhotos(photosData); store.set('pii_portfolio_photos', photosData); }
+
+      const { data: testimonialsData } = await sb.from('testimonials').select('*').eq('user_id', user.id).order('date', {ascending: false});
+      if (testimonialsData) { setTestimonials(testimonialsData); store.set('pii_testimonials', testimonialsData); }
+    })();
+  }, [user]);
 
   const saveProfile = (p) => {
     const updated = {...profile, ...p};
     setProfile(updated);
     store.set('pii_profile', updated);
+    if (sb && user) {
+      clearTimeout(syncTimer.current);
+      syncTimer.current = setTimeout(() => {
+        sb.from('user_profiles').upsert({...updated, user_id: user.id}, {onConflict: 'user_id'})
+          .then(({error}) => { if (error) showToast('Erreur de sauvegarde'); });
+      }, 600);
+    }
   };
 
-  const addPhoto = () => {
+  const saveSocial = (key, value) => {
+    saveProfile({social_links: {...(profile.social_links||{}), [key]: value}});
+  };
+
+  const addPhoto = async () => {
     if (!photoForm.url) return;
-    const p = {...photoForm, id: uid(), created_at: today()};
-    const u = [...photos, p];
-    setPhotos(u);
-    store.set('pii_portfolio_photos', u);
+    if (sb && user) {
+      const { data, error } = await sb.from('portfolio_photos')
+        .insert({user_id: user.id, url: photoForm.url, category: photoForm.category, caption: photoForm.caption, display_order: photos.length})
+        .select().single();
+      if (error || !data) { showToast('Erreur lors de l\'ajout'); return; }
+      const u = [...photos, data];
+      setPhotos(u);
+      store.set('pii_portfolio_photos', u);
+    } else {
+      const p = {...photoForm, id: uid(), created_at: today()};
+      const u = [...photos, p];
+      setPhotos(u);
+      store.set('pii_portfolio_photos', u);
+    }
     setPhotoModal(false);
     setPhotoForm({url:'', category:'Appartements', caption:''});
   };
 
-  const deletePhoto = id => {
+  const deletePhoto = async id => {
+    if (sb && user) await sb.from('portfolio_photos').delete().eq('id', id);
     const u = photos.filter(p => p.id !== id);
     setPhotos(u);
     store.set('pii_portfolio_photos', u);
   };
 
-  const addTestimonial = () => {
+  const addTestimonial = async () => {
     if (!testimonialForm.client_name) return;
-    const t = {...testimonialForm, id: uid()};
-    const u = [...testimonials, t];
-    setTestimonials(u);
-    store.set('pii_testimonials', u);
+    if (sb && user) {
+      const { data, error } = await sb.from('testimonials')
+        .insert({user_id: user.id, client_name: testimonialForm.client_name, rating: testimonialForm.rating, comment: testimonialForm.comment, date: testimonialForm.date})
+        .select().single();
+      if (error || !data) { showToast('Erreur lors de l\'ajout'); return; }
+      const u = [...testimonials, data];
+      setTestimonials(u);
+      store.set('pii_testimonials', u);
+    } else {
+      const t = {...testimonialForm, id: uid()};
+      const u = [...testimonials, t];
+      setTestimonials(u);
+      store.set('pii_testimonials', u);
+    }
     setTestimonialModal(false);
     setTestimonialForm({client_name:'', rating:5, comment:'', date:today()});
   };
 
-  const deleteTestimonial = id => {
+  const deleteTestimonial = async id => {
+    if (sb && user) await sb.from('testimonials').delete().eq('id', id);
     const u = testimonials.filter(t => t.id !== id);
     setTestimonials(u);
     store.set('pii_testimonials', u);
@@ -1959,6 +2181,18 @@ function PortfolioPage({user}) {
             <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>🔗 Voir ma page</Btn>
           )}
         </div>
+      </Card>
+
+      {/* Réseaux sociaux */}
+      <Card>
+        <h3 className="font-semibold mb-4">Réseaux sociaux</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {SOCIAL_NETWORKS.map(net => (
+            <Input key={net.key} label={net.label} value={(profile.social_links||{})[net.key]||''}
+              onChange={v=>saveSocial(net.key, v)} placeholder={net.placeholder}/>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-3">Ces liens apparaîtront sur votre page portfolio publique.</p>
       </Card>
 
       {/* Portfolio Photos */}
@@ -2104,6 +2338,49 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
   );
 }
 
+// ─── RESET PASSWORD ───────────────────────────────────────────────────────────
+function ResetPasswordPage({onDone}){
+  const [password,setPassword]=useState('');
+  const [confirm,setConfirm]=useState('');
+  const [msg,setMsg]=useState({text:'',type:'error'});
+  const [loading,setLoading]=useState(false);
+
+  const submit=async(e)=>{
+    e.preventDefault();
+    if(password.length<8){setMsg({text:'Le mot de passe doit faire au moins 8 caractères.',type:'error'});return;}
+    if(password!==confirm){setMsg({text:'Les mots de passe ne correspondent pas.',type:'error'});return;}
+    setLoading(true);
+    const{error}=await sb.auth.updateUser({password});
+    setLoading(false);
+    if(error)setMsg({text:error.message,type:'error'});
+    else{setMsg({text:'Mot de passe mis à jour !',type:'success'});setTimeout(()=>onDone(),1500);}
+  };
+
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'var(--bg)'}}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px'}}>
+            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
+          </div>
+          <h1 className="font-display text-2xl font-bold mb-1" style={{color:'var(--text)'}}>Nouveau mot de passe</h1>
+          <p className="text-sm" style={{color:'var(--muted)'}}>Choisissez un mot de passe sécurisé</p>
+        </div>
+        <div className="rounded-2xl p-6" style={{background:'var(--surface)',border:'1px solid var(--border)',boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
+          <form onSubmit={submit} className="space-y-4">
+            <Input label="Nouveau mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
+            <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" required/>
+            {msg.text&&<p className={`text-sm ${msg.type==='success'?'text-green-400':'text-red-400'}`}>{msg.text}</p>}
+            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
+              {loading?'Mise à jour…':'Enregistrer le mot de passe'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [tab,setTab]=useState('login');
@@ -2136,6 +2413,16 @@ function Login({onLogin}){
     }
   };
 
+  const forgotPassword=async()=>{
+    if(!email){setMsg({text:'Entrez votre email ci-dessus puis cliquez ici.',type:'error'});return;}
+    if(!sb){setMsg({text:'Fonctionnalité non disponible en mode démo.',type:'error'});return;}
+    setLoading(true);
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}/app`});
+    setLoading(false);
+    if(error)setMsg({text:error.message,type:'error'});
+    else setMsg({text:'Email de réinitialisation envoyé ! Vérifiez votre boîte mail.',type:'success'});
+  };
+
   return(
     <div className="min-h-screen flex items-center justify-center p-4" style={{background:'var(--bg)'}}>
       <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(ellipse at 50% 30%,rgba(201,150,60,0.06) 0%,transparent 65%)'}}/>
@@ -2159,8 +2446,15 @@ function Login({onLogin}){
             <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
               {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter →'}
             </button>
+            {tab==='login'&&sb&&<button type="button" onClick={forgotPassword} className="text-xs w-full text-center transition-colors hover:opacity-80" style={{color:'var(--gold-light)'}}>Mot de passe oublié ?</button>}
             {!sb&&<p className="text-xs text-center" style={{color:'#3a3a55'}}>Mode démo — entrez n'importe quel email/mot de passe</p>}
-            {tab==='signup'&&<p className="text-xs text-center" style={{color:'var(--muted)'}}>Sans carte bancaire · Annulation à tout moment</p>}
+            {tab==='signup'&&(
+              <p className="text-xs text-center" style={{color:'var(--muted)'}}>
+                Sans carte bancaire · Annulation à tout moment<br/>
+                <span>En créant un compte, vous acceptez nos </span>
+                <a href="/legal" target="_blank" style={{color:'var(--gold-light)'}}>CGV et mentions légales</a>
+              </p>
+            )}
           </form>
         </div>
       </div>
@@ -2174,10 +2468,13 @@ function App(){
   const [user,setUser]=useState(null);
   const [subscription,setSubscription]=useState(sb?null:{status:'trialing',trial_ends_at:new Date(Date.now()+14*86400000).toISOString()});
   const [page,setPage]=useState('dashboard');
+  const [resetMode,setResetMode]=useState(false);
   const [sideOpen,setSideOpen]=useState(false);
   const [clients,setClients]=useState(()=>store.get('pii_clients',[]));
   const [missions,setMissions]=useState(()=>store.get('pii_missions',[]));
   const [quotes,setQuotes]=useState(()=>store.get('pii_quotes',[]));
+  const [invoices,setInvoices]=useState(()=>store.get('pii_invoices',[]));
+  const [agencies,setAgencies]=useState(()=>store.get('pii_agencies',[]));
   const [galleries,setGalleries]=useState(()=>store.get('pii_galleries',[]));
   const [profile,setProfile]=useState(()=>store.get('pii_profile',{}));
 
@@ -2185,12 +2482,30 @@ function App(){
     setClients(store.get('pii_clients',[]));
     setMissions(store.get('pii_missions',[]));
     setQuotes(store.get('pii_quotes',[]));
+    setInvoices(store.get('pii_invoices',[]));
+    setAgencies(store.get('pii_agencies',[]));
     setGalleries(store.get('pii_galleries',[]));
   },[]);
 
   const loadProfile=async(userId)=>{
     const{data}=await sb.from('user_profiles').select('*').eq('user_id',userId).single();
     if(data){store.set('pii_profile',data);setProfile(data);}
+  };
+
+  const loadAllData=async(userId)=>{
+    if(!sb)return;
+    const[{data:cd},{data:md},{data:qd},{data:ind},{data:ad}]=await Promise.all([
+      sb.from('clients').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('missions').select('*').eq('user_id',userId).order('date',{ascending:false}),
+      sb.from('quotes').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('invoices').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+      sb.from('agencies').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
+    ]);
+    if(cd){setClients(cd);store.set('pii_clients',cd);}
+    if(md){setMissions(md);store.set('pii_missions',md);}
+    if(qd){setQuotes(qd);store.set('pii_quotes',qd);}
+    if(ind){setInvoices(ind);store.set('pii_invoices',ind);}
+    if(ad){setAgencies(ad);store.set('pii_agencies',ad);}
   };
 
   const loadSubscription=async(userId)=>{
@@ -2206,10 +2521,11 @@ function App(){
   useEffect(()=>{
     if(!sb)return;
     sb.auth.getSession().then(async({data:{session}})=>{
-      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);}
+      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);}}
+      if(event==='PASSWORD_RECOVERY'){setResetMode(true);return;}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();
@@ -2244,7 +2560,8 @@ function App(){
   // NOTE: loadSubscription is defined above (as const) so it is in scope here.
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
-  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);}}}/>;
+  if(resetMode)return <ResetPasswordPage onDone={()=>setResetMode(false)}/>;
+  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);loadAllData(u.id);}}}/>;
   if(sb&&subscription===null)return(
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
@@ -2256,14 +2573,14 @@ function App(){
 
   const renderPage=()=>{
     switch(page){
-      case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes}/>;
-      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes}/>;
-      case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients}/>;
-      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions}/>;
-      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries}/>;
-      case'agencies':    return <AgenciesPage clients={clients} missions={missions} quotes={quotes}/>;
-      case'invoices':    return <InvoicesPage quotes={quotes} clients={clients} missions={missions}/>;
-      case'accounting':  return <AccountingPage quotes={quotes} clients={clients} missions={missions}/>;
+      case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes} invoices={invoices}/>;
+      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} user={user}/>;
+      case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients} user={user}/>;
+      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user}/>;
+      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user}/>;
+      case'agencies':    return <AgenciesPage agencies={agencies} setAgencies={setAgencies} clients={clients} missions={missions} quotes={quotes} user={user}/>;
+      case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user}/>;
+      case'accounting':  return <AccountingPage invoices={invoices} quotes={quotes} clients={clients} missions={missions}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
       case'admin':       return <AdminPage user={user}/>;
       default:           return null;

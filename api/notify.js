@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     invoice_reminder: {
-      subject: '📋 Rappel de paiement — Facture ${d.num}',
+      subject: (d) => `📋 Rappel de paiement — Facture ${d.num}`,
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
           <h2 style="color:#f59e0b;">Rappel de paiement</h2>
@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     invoice_sent: {
-      subject: `📋 Votre facture \${d.num} — PhotoImmo Pro`,
+      subject: (d) => `📋 Votre facture ${d.num} — PhotoImmo Pro`,
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
           <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
@@ -144,7 +144,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         from: process.env.EMAIL_FROM || 'PhotoImmo Pro <onboarding@resend.dev>',
         to: [to],
-        subject: template.subject,
+        subject: typeof template.subject === 'function' ? template.subject(data || {}) : template.subject,
         html: template.html(data || {}),
       }),
     });
