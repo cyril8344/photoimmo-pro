@@ -2370,6 +2370,16 @@ function Login({onLogin}){
     }
   };
 
+  const forgotPassword=async()=>{
+    if(!email){setMsg({text:'Entrez votre email ci-dessus puis cliquez ici.',type:'error'});return;}
+    if(!sb){setMsg({text:'Fonctionnalité non disponible en mode démo.',type:'error'});return;}
+    setLoading(true);
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}/app`});
+    setLoading(false);
+    if(error)setMsg({text:error.message,type:'error'});
+    else setMsg({text:'Email de réinitialisation envoyé ! Vérifiez votre boîte mail.',type:'success'});
+  };
+
   return(
     <div className="min-h-screen flex items-center justify-center p-4" style={{background:'var(--bg)'}}>
       <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(ellipse at 50% 30%,rgba(201,150,60,0.06) 0%,transparent 65%)'}}/>
@@ -2393,6 +2403,7 @@ function Login({onLogin}){
             <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
               {loading?'Chargement…':tab==='signup'?'Créer mon compte — 14 jours gratuits':'Se connecter →'}
             </button>
+            {tab==='login'&&sb&&<button type="button" onClick={forgotPassword} className="text-xs w-full text-center transition-colors" style={{color:'var(--muted)'}}>Mot de passe oublié ?</button>}
             {!sb&&<p className="text-xs text-center" style={{color:'#3a3a55'}}>Mode démo — entrez n'importe quel email/mot de passe</p>}
             {tab==='signup'&&(
               <p className="text-xs text-center" style={{color:'var(--muted)'}}>
