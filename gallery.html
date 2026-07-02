@@ -28,46 +28,88 @@
     }
     * { box-sizing: border-box; margin: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    h1,h2,h3,.font-display { font-family: 'Playfair Display', Georgia, serif; }
-    .fade-in { animation: fadeIn .5s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+    h1,h2,h3 { font-family: 'Playfair Display', Georgia, serif; }
+
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 3px; }
 
-    .nav-blur { background: rgba(8,8,15,0.85); backdrop-filter: blur(20px) saturate(1.5); -webkit-backdrop-filter: blur(20px) saturate(1.5); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    /* Nav */
+    .nav-blur { background: rgba(8,8,15,0.70); backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8); border-bottom: 1px solid rgba(201,150,60,0.12); }
 
-    .gradient-text { background: linear-gradient(135deg, #e8b96e 0%, #c9963c 50%, #f0c070 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    /* Logo */
+    .aperture { position: relative; background: linear-gradient(135deg,var(--gold),var(--gold-light)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 20px rgba(201,150,60,0.3); }
 
-    .btn-gold { background: linear-gradient(135deg, #c9963c 0%, #e8b96e 50%, #c9963c 100%); background-size: 200% 100%; color: #08080f; font-weight: 600; border: none; cursor: pointer; transition: background-position .4s, box-shadow .3s, opacity .2s; box-shadow: 0 0 30px rgba(201,150,60,0.2); }
-    .btn-gold:hover:not(:disabled) { background-position: 100% 0; box-shadow: 0 0 45px rgba(201,150,60,0.35); }
-    .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Gradient text */
+    .gradient-text { background: linear-gradient(135deg, #f0c070 0%, #c9963c 50%, #e8b96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-    .aperture { position: relative; background: var(--gold); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .aperture::before { content: ''; position: absolute; border-radius: 50%; border: 2px solid rgba(0,0,0,0.7); box-shadow: inset 0 0 0 3px rgba(0,0,0,0.3); }
+    /* Gold divider */
+    .gold-line { height: 1px; background: linear-gradient(90deg, transparent, rgba(201,150,60,0.5), transparent); margin: 0 auto; }
+
+    /* CTA button */
+    .btn-gold { background: linear-gradient(135deg, #c9963c 0%, #e8b96e 50%, #c9963c 100%); background-size: 200% 100%; color: #08080f; font-weight: 700; border: none; cursor: pointer; transition: background-position .4s, box-shadow .3s, transform .15s; box-shadow: 0 0 40px rgba(201,150,60,0.25); }
+    .btn-gold:hover:not(:disabled) { background-position: 100% 0; box-shadow: 0 0 60px rgba(201,150,60,0.4); transform: translateY(-1px); }
+    .btn-gold:active:not(:disabled) { transform: translateY(0); }
+    .btn-gold:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* Hero section */
+    .hero-section { position: relative; padding: 56px 20px 40px; text-align: center; overflow: hidden; }
+    .hero-section::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(201,150,60,0.08) 0%, transparent 70%); pointer-events:none; }
 
     /* Photo grid */
-    .photo-card { position: relative; overflow: hidden; border-radius: 10px; cursor: pointer; aspect-ratio: 4/3; background: var(--surface2); border: 2px solid transparent; transition: transform .2s ease, border-color .2s ease; }
-    .photo-card:hover { transform: scale(1.03); }
-    .photo-card.selected { border-color: var(--gold); }
-    .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .photo-overlay { position: absolute; inset: 0; background: rgba(201,150,60,0.1); opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    @media (max-width: 480px) { .photo-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; } }
+
+    .photo-card {
+      position: relative; overflow: hidden; border-radius: 12px; cursor: pointer;
+      aspect-ratio: 4/3; background: var(--surface2);
+      border: 2px solid transparent;
+      transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .25s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .photo-card:hover { transform: scale(1.025) translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 20px rgba(201,150,60,0.08); }
+    .photo-card.selected { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,150,60,0.4), 0 8px 30px rgba(201,150,60,0.15); }
+
+    .photo-card img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      filter: brightness(1.06) contrast(1.04) saturate(1.12);
+      transition: filter .2s;
+    }
+    .photo-card:hover img { filter: brightness(1.10) contrast(1.05) saturate(1.15); }
+
+    .photo-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(201,150,60,0.15), rgba(232,185,110,0.05)); opacity: 0; transition: opacity .2s; pointer-events: none; }
     .photo-card.selected .photo-overlay { opacity: 1; }
-    .photo-check { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: #08080f; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: opacity .2s, transform .2s; pointer-events: none; }
+
+    .photo-check { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,var(--gold),var(--gold-light)); color: #08080f; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.4); transition: opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1); pointer-events: none; box-shadow: 0 2px 12px rgba(201,150,60,0.5); }
     .photo-card.selected .photo-check { opacity: 1; transform: scale(1); }
-    .photo-actions { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
+
+    .photo-actions { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
     .photo-card:hover .photo-actions { opacity: 1; }
     @media (hover: none) { .photo-actions { opacity: 1; } }
-    .photo-action-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(8,8,15,0.75); backdrop-filter: blur(4px); color: var(--text); display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; text-decoration: none; transition: background .15s; }
-    .photo-action-btn:hover { background: rgba(201,150,60,0.5); }
+
+    .photo-action-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(8,8,15,0.82); backdrop-filter: blur(6px); color: var(--text); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: background .15s, border-color .15s; }
+    .photo-action-btn:hover { background: rgba(201,150,60,0.45); border-color: rgba(201,150,60,0.5); }
+
+    .photo-num { position: absolute; top: 10px; left: 10px; background: rgba(8,8,15,0.7); backdrop-filter: blur(4px); color: var(--muted); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 999px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .photo-card:hover .photo-num { opacity: 1; }
 
     /* Sticky bottom bar */
-    .sticky-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15,15,26,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(201,150,60,0.2); z-index: 40; }
+    .sticky-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(9,9,20,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(201,150,60,0.18); z-index: 40; }
 
     /* Lightbox */
-    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 60; display: flex; align-items: center; justify-content: center; }
-    .lightbox img { max-width: 95vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
-    .lightbox-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 22px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 60; display: flex; align-items: center; justify-content: center; animation: fadeIn .2s ease; }
+    .lightbox img { max-width: calc(100vw - 100px); max-height: 90vh; object-fit: contain; border-radius: 6px; filter: brightness(1.05) contrast(1.03); box-shadow: 0 20px 80px rgba(0,0,0,0.8); }
+    .lightbox-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .lightbox-close:hover { background: rgba(255,255,255,0.18); }
+    .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: white; font-size: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s; }
+    .lightbox-nav:hover { background: rgba(201,150,60,0.25); border-color: rgba(201,150,60,0.4); }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
+    .fade-in { animation: fadeIn .5s ease both; }
+    .anim-1 { animation: fadeUp .7s .05s ease both; }
+    .anim-2 { animation: fadeUp .7s .15s ease both; }
+    .anim-3 { animation: fadeUp .7s .25s ease both; }
   </style>
 </head>
 <body>
@@ -82,10 +124,11 @@ function LoadingScreen() {
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{textAlign:'center'}}>
-        <div className="aperture mx-auto mb-5" style={{width:'56px',height:'56px',borderRadius:'16px'}}>
-          <span style={{position:'relative',zIndex:1,color:'#08080f',fontWeight:700,fontSize:'18px',fontFamily:'Playfair Display,serif'}}>PI</span>
+        <div className="aperture" style={{width:'60px',height:'60px',borderRadius:'18px',margin:'0 auto 20px'}}>
+          <span style={{position:'relative',zIndex:1,color:'#08080f',fontWeight:700,fontSize:'19px',fontFamily:'Playfair Display,serif'}}>PI</span>
         </div>
-        <p style={{color:'var(--muted)',fontSize:'15px'}}>Chargement de la galerie…</p>
+        <div style={{width:'40px',height:'2px',background:'linear-gradient(90deg,var(--gold),var(--gold-light))',margin:'0 auto 16px',borderRadius:'1px',animation:'fadeIn 1s ease infinite alternate'}}/>
+        <p style={{color:'var(--muted)',fontSize:'14px',letterSpacing:'.04em'}}>Chargement de la galerie…</p>
       </div>
     </div>
   );
@@ -94,10 +137,10 @@ function LoadingScreen() {
 function ErrorScreen({ message }) {
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
-      <div style={{textAlign:'center',maxWidth:'440px'}}>
-        <div style={{fontSize:'56px',marginBottom:'20px'}}>📷</div>
-        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'28px',fontWeight:700,marginBottom:'12px'}}>Galerie introuvable</h1>
-        <p style={{color:'var(--muted)',lineHeight:1.6}}>{message || 'Cette galerie n\'existe pas ou n\'est plus disponible.'}</p>
+      <div style={{textAlign:'center',maxWidth:'440px'}} className="fade-in">
+        <div style={{fontSize:'52px',marginBottom:'20px'}}>📷</div>
+        <h1 style={{fontSize:'28px',fontWeight:700,marginBottom:'12px'}}>Galerie introuvable</h1>
+        <p style={{color:'var(--muted)',lineHeight:1.7,fontSize:'15px'}}>{message || "Cette galerie n'existe pas ou n'est plus disponible."}</p>
       </div>
     </div>
   );
@@ -106,14 +149,14 @@ function ErrorScreen({ message }) {
 function ConfirmScreen({ count }) {
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
-      <div style={{textAlign:'center',maxWidth:'440px'}} className="fade-in">
-        <div style={{width:'72px',height:'72px',borderRadius:'50%',background:'linear-gradient(135deg,var(--gold),var(--gold-light))',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',fontSize:'32px'}}>✓</div>
-        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'28px',fontWeight:700,marginBottom:'12px'}} className="gradient-text">
-          Sélection confirmée !
-        </h1>
-        <p style={{color:'var(--muted)',lineHeight:1.7}}>
-          Votre sélection de <strong style={{color:'var(--gold-light)'}}>{count} photo{count !== 1 ? 's' : ''}</strong> a bien été enregistrée.
-          Le photographe en sera informé.
+      <div style={{textAlign:'center',maxWidth:'460px'}} className="fade-in">
+        <div style={{width:'80px',height:'80px',borderRadius:'50%',background:'linear-gradient(135deg,var(--gold),var(--gold-light))',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 28px',fontSize:'36px',boxShadow:'0 0 40px rgba(201,150,60,0.35)'}}>✓</div>
+        <h1 style={{fontSize:'30px',fontWeight:700,marginBottom:'14px'}} className="gradient-text">Sélection confirmée !</h1>
+        <div className="gold-line" style={{width:'60px',marginBottom:'20px'}}/>
+        <p style={{color:'var(--muted)',lineHeight:1.8,fontSize:'15px'}}>
+          Votre sélection de{' '}
+          <strong style={{color:'var(--gold-light)'}}>{count} photo{count !== 1 ? 's' : ''}</strong>{' '}
+          a bien été enregistrée. Votre photographe en sera informé.
         </p>
       </div>
     </div>
@@ -131,7 +174,7 @@ function GalleryApp() {
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   const downloadPhoto = async (url, filename) => {
     try {
@@ -154,10 +197,9 @@ function GalleryApp() {
 
   useEffect(() => {
     if (!token) { setError('Lien de galerie invalide.'); setLoading(false); return; }
-    if (!SB_URL || !SB_KEY) { setError('Cette galerie n\'est pas encore configurée.'); setLoading(false); return; }
+    if (!SB_URL || !SB_KEY) { setError("Cette galerie n'est pas encore configurée."); setLoading(false); return; }
 
     const sb = window.supabase.createClient(SB_URL, SB_KEY);
-
     (async () => {
       const { data, error: gErr } = await sb
         .from('galleries')
@@ -167,14 +209,13 @@ function GalleryApp() {
         .single();
 
       if (gErr || !data) {
-        setError('Cette galerie n\'existe pas ou n\'est pas encore disponible.');
+        setError("Cette galerie n'existe pas ou n'est pas encore disponible.");
         setLoading(false);
         return;
       }
 
       setGallery(data);
-      const sorted = (data.gallery_photos || [])
-        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      const sorted = (data.gallery_photos || []).sort((a, b) => (a.created_at||'').localeCompare(b.created_at||''));
       setPhotos(sorted);
       setSelected(new Set(sorted.filter(p => p.selected).map(p => p.id)));
       setLoading(false);
@@ -183,22 +224,29 @@ function GalleryApp() {
 
   const togglePhoto = async (photo) => {
     const nowSelected = !selected.has(photo.id);
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (nowSelected) next.add(photo.id); else next.delete(photo.id);
-      return next;
-    });
+    setSelected(prev => { const n = new Set(prev); nowSelected ? n.add(photo.id) : n.delete(photo.id); return n; });
     try {
       const res = await fetch('/api/gallery-select', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token, photo_id: photo.id, selected: nowSelected })
       });
-      if (!res.ok) showToast('Erreur d\'enregistrement');
-    } catch (_) {
-      showToast('Erreur de connexion');
-    }
+      if (!res.ok) showToast("Erreur d'enregistrement");
+    } catch (_) { showToast('Erreur de connexion'); }
   };
+
+  const openLightbox = (photo) => setLightbox(photo);
+  const prevPhoto = () => { const i = photos.findIndex(p => p.id === lightbox?.id); if (i > 0) setLightbox(photos[i-1]); };
+  const nextPhoto = () => { const i = photos.findIndex(p => p.id === lightbox?.id); if (i < photos.length-1) setLightbox(photos[i+1]); };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightbox(null);
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'ArrowRight') nextPhoto();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox, photos]);
 
   const confirmSelection = async () => {
     setSaving(true);
@@ -207,25 +255,19 @@ function GalleryApp() {
     setConfirmed(true);
   };
 
-  // Close lightbox on Escape
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setLightbox(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} />;
   if (confirmed) return <ConfirmScreen count={selected.size} />;
 
   const selCount = selected.size;
+  const lbIndex = photos.findIndex(p => p.id === lightbox?.id);
 
   return (
     <div style={{minHeight:'100vh',paddingBottom:'80px'}}>
 
       {/* Toast */}
       {toast && (
-        <div style={{position:'fixed',top:'16px',right:'16px',zIndex:50,background:'var(--gold)',color:'#08080f',padding:'11px 18px',borderRadius:'10px',fontWeight:600,fontSize:'14px',boxShadow:'0 4px 24px rgba(201,150,60,0.4)'}}>
+        <div style={{position:'fixed',top:'20px',right:'20px',zIndex:70,background:'linear-gradient(135deg,var(--gold),var(--gold-light))',color:'#08080f',padding:'12px 20px',borderRadius:'12px',fontWeight:600,fontSize:'14px',boxShadow:'0 4px 24px rgba(201,150,60,0.45)'}}>
           {toast}
         </div>
       )}
@@ -235,67 +277,77 @@ function GalleryApp() {
         <div className="lightbox" onClick={() => setLightbox(null)}>
           <img src={lightbox.full_url} alt={lightbox.name} onClick={e => e.stopPropagation()}/>
           <button className="lightbox-close" onClick={() => setLightbox(null)}>×</button>
-          <button onClick={e => { e.stopPropagation(); downloadPhoto(lightbox.full_url, lightbox.name); }}
-            style={{position:'absolute',bottom:'24px',right:'24px',background:'rgba(201,150,60,0.15)',border:'1px solid rgba(201,150,60,0.3)',color:'var(--gold-light)',padding:'8px 18px',borderRadius:'8px',cursor:'pointer',fontSize:'13px',fontWeight:500}}>
-            Télécharger
-          </button>
+
+          {lbIndex > 0 && (
+            <button className="lightbox-nav" style={{left:'16px'}} onClick={e => { e.stopPropagation(); prevPhoto(); }}>‹</button>
+          )}
+          {lbIndex < photos.length - 1 && (
+            <button className="lightbox-nav" style={{right:'16px'}} onClick={e => { e.stopPropagation(); nextPhoto(); }}>›</button>
+          )}
+
+          <div style={{position:'absolute',bottom:'20px',left:'50%',transform:'translateX(-50%)',display:'flex',gap:'12px',alignItems:'center'}}>
+            <span style={{color:'var(--muted)',fontSize:'13px'}}>{lbIndex+1} / {photos.length}</span>
+            <button onClick={e => { e.stopPropagation(); downloadPhoto(lightbox.full_url, lightbox.name); }}
+              style={{background:'rgba(201,150,60,0.15)',border:'1px solid rgba(201,150,60,0.35)',color:'var(--gold-light)',padding:'8px 20px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',fontWeight:600,backdropFilter:'blur(8px)'}}>
+              ↓ Télécharger
+            </button>
+          </div>
         </div>
       )}
 
       {/* Nav */}
       <header className="nav-blur sticky top-0 z-30">
-        <div style={{maxWidth:'1200px',margin:'0 auto',padding:'12px 20px',display:'flex',alignItems:'center',gap:'12px'}}>
-          <div className="aperture" style={{width:'36px',height:'36px',borderRadius:'10px'}}>
+        <div style={{maxWidth:'1280px',margin:'0 auto',padding:'14px 24px',display:'flex',alignItems:'center',gap:'14px'}}>
+          <div className="aperture" style={{width:'38px',height:'38px',borderRadius:'11px'}}>
             <span style={{position:'relative',zIndex:1,color:'#08080f',fontWeight:700,fontSize:'13px',fontFamily:'Playfair Display,serif'}}>PI</span>
           </div>
           <div>
-            <div style={{fontSize:'14px',fontWeight:600}}>Galerie Photos</div>
-            {gallery.property_address && (
-              <div style={{fontSize:'12px',color:'var(--muted)'}}>{gallery.property_address}</div>
-            )}
+            <div style={{fontSize:'13px',fontWeight:600,letterSpacing:'.02em'}}>PhotoImmo Pro</div>
+            <div style={{fontSize:'11px',color:'var(--muted)'}}>Galerie privée</div>
           </div>
-          <div style={{marginLeft:'auto',fontSize:'12px',color:'var(--muted)'}}>
-            {photos.length} photo{photos.length !== 1 ? 's' : ''}
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'16px'}}>
+            {selCount > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(201,150,60,0.12)',border:'1px solid rgba(201,150,60,0.25)',borderRadius:'999px',padding:'4px 12px',fontSize:'13px',color:'var(--gold-light)',fontWeight:500}}>
+                <span>✓</span><span>{selCount} sélectionnée{selCount>1?'s':''}</span>
+              </div>
+            )}
+            <div style={{fontSize:'12px',color:'var(--muted)'}}>{photos.length} photo{photos.length!==1?'s':''}</div>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'40px 20px 28px',textAlign:'center'}} className="fade-in">
-        {gallery.property_address && (
-          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'clamp(24px,4vw,38px)',fontWeight:700,marginBottom:'10px'}} className="gradient-text">
-            {gallery.property_address}
-          </h1>
-        )}
-        <p style={{color:'var(--muted)',fontSize:'15px',lineHeight:1.6,maxWidth:'480px',margin:'0 auto'}}>
-          Cliquez sur les photos que vous souhaitez conserver.
+      <div className="hero-section anim-1">
+        <h1 style={{fontSize:'clamp(26px,4vw,42px)',fontWeight:700,marginBottom:'10px',lineHeight:1.2}} className="gradient-text">
+          {gallery.property_address || 'Vos photos sont prêtes'}
+        </h1>
+        <div className="gold-line anim-2" style={{width:'48px',marginBottom:'16px'}}/>
+        <p style={{color:'var(--muted)',fontSize:'15px',lineHeight:1.7,maxWidth:'500px',margin:'0 auto'}} className="anim-3">
+          Sélectionnez les photos que vous souhaitez conserver.<br/>
           Votre sélection est enregistrée automatiquement.
         </p>
-        {selCount > 0 && (
-          <div style={{marginTop:'16px',display:'inline-flex',alignItems:'center',gap:'8px',padding:'8px 16px',borderRadius:'99px',background:'rgba(201,150,60,0.12)',border:'1px solid rgba(201,150,60,0.25)',color:'var(--gold-light)',fontSize:'14px',fontWeight:500}}>
-            <span>✓</span>
-            <span>{selCount} photo{selCount !== 1 ? 's' : ''} sélectionnée{selCount !== 1 ? 's' : ''}</span>
-          </div>
-        )}
       </div>
 
       {/* Grid */}
-      <div style={{maxWidth:'1200px',margin:'0 auto',padding:'0 16px 100px'}}>
+      <div style={{maxWidth:'1280px',margin:'0 auto',padding:'8px 20px 100px'}}>
         {photos.length === 0 ? (
           <div style={{textAlign:'center',padding:'80px 0',color:'var(--muted)'}}>
-            <div style={{fontSize:'48px',marginBottom:'12px'}}>📷</div>
-            <p>Aucune photo dans cette galerie.</p>
+            <div style={{fontSize:'48px',marginBottom:'16px'}}>📷</div>
+            <p style={{fontSize:'15px'}}>Aucune photo dans cette galerie.</p>
           </div>
         ) : (
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:'12px'}}>
-            {photos.map(p => (
-              <div key={p.id} className={`photo-card${selected.has(p.id) ? ' selected' : ''}`}
+          <div className="photo-grid">
+            {photos.map((p, i) => (
+              <div key={p.id}
+                className={`photo-card${selected.has(p.id) ? ' selected' : ''}`}
+                style={{animation:`fadeIn .4s ${Math.min(i*0.04, 0.6)}s both`}}
                 onClick={() => togglePhoto(p)}>
                 <img src={p.thumb_url || p.full_url} alt={p.name} loading="lazy"/>
                 <div className="photo-overlay"/>
                 <div className="photo-check">✓</div>
+                <div className="photo-num">#{i+1}</div>
                 <div className="photo-actions" onClick={e => e.stopPropagation()}>
-                  <button className="photo-action-btn" title="Agrandir" onClick={() => setLightbox(p)}>
+                  <button className="photo-action-btn" title="Agrandir" onClick={() => openLightbox(p)}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
                       <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
@@ -317,17 +369,19 @@ function GalleryApp() {
 
       {/* Sticky bottom bar */}
       <div className="sticky-bar">
-        <div style={{maxWidth:'1200px',margin:'0 auto',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px'}}>
-          <div style={{color:'var(--muted)',fontSize:'14px'}}>
-            {selCount === 0
-              ? 'Aucune photo sélectionnée'
-              : `${selCount} photo${selCount !== 1 ? 's' : ''} sélectionnée${selCount !== 1 ? 's' : ''}`
-            }
+        <div style={{maxWidth:'1280px',margin:'0 auto',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px'}}>
+          <div>
+            <div style={{fontSize:'14px',fontWeight:500}}>
+              {selCount === 0
+                ? <span style={{color:'var(--muted)'}}>Aucune photo sélectionnée</span>
+                : <span style={{color:'var(--gold-light)'}}>{selCount} photo{selCount!==1?'s':''} sélectionnée{selCount!==1?'s':''}</span>}
+            </div>
+            <div style={{fontSize:'12px',color:'var(--muted)',marginTop:'2px'}}>Cliquez sur les photos pour les sélectionner</div>
           </div>
           <button onClick={confirmSelection} disabled={selCount === 0 || saving}
             className="btn-gold"
-            style={{padding:'10px 22px',borderRadius:'12px',fontSize:'14px',flexShrink:0}}>
-            {saving ? 'Enregistrement…' : 'Confirmer ma sélection'}
+            style={{padding:'12px 28px',borderRadius:'12px',fontSize:'14px',flexShrink:0,letterSpacing:'.02em'}}>
+            {saving ? '…' : `Confirmer${selCount > 0 ? ` (${selCount})` : ''}`}
           </button>
         </div>
       </div>
