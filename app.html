@@ -1143,6 +1143,88 @@ async function sendInvoiceEmail(inv, client, mission, quote) {
   }
 }
 
+// ─── FACTUR-X EXPORT ──────────────────────────────────────────────────────────
+const escXml=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function exportFacturX(inv,client,mission){
+  const p=store.get('pii_profile',{});
+  const d2s=s=>(s||'').replace(/-/g,'').slice(0,8);
+  const f2=n=>(Math.round((n||0)*100)/100).toFixed(2);
+  const siret=(p.siret||'').replace(/\s/g,'');
+  const tvaNum=p.tva_number||'';
+  const invDate=d2s(inv.created_at||today());
+  const dueDate=d2s(inv.due_date||'');
+  const svcDate=d2s(mission?.date||inv.created_at||today());
+  const isMicro=!!(p.micro_entrepreneur);
+  const vatCat=isMicro?'E':'S';
+  const vatRate=isMicro?'0':'20';
+
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice
+  xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:factur-x.eu:1p0:en16931</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>${escXml(inv.num)}</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime><udt:DateTimeString format="102">${invDate}</udt:DateTimeString></ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:SellerTradeParty>
+        <ram:Name>${escXml(p.company_name||'PhotoImmo Pro')}</ram:Name>
+        ${siret?`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${siret}</ram:ID></ram:SpecifiedLegalOrganization>`:''}
+        <ram:PostalTradeAddress>
+          <ram:LineOne>${escXml(p.address||'')}</ram:LineOne>
+          <ram:CountryID>FR</ram:CountryID>
+        </ram:PostalTradeAddress>
+        ${tvaNum?`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${escXml(tvaNum)}</ram:ID></ram:SpecifiedTaxRegistration>`:''}
+      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty>
+        <ram:Name>${escXml(client?.name||'')}</ram:Name>
+        <ram:PostalTradeAddress><ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>
+      </ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery>
+      <ram:ActualDeliverySupplyChainEvent>
+        <ram:OccurrenceDateTime><udt:DateTimeString format="102">${svcDate}</udt:DateTimeString></ram:OccurrenceDateTime>
+      </ram:ActualDeliverySupplyChainEvent>
+    </ram:ApplicableHeaderTradeDelivery>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>${f2(inv.tva)}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:BasisAmount>${f2(inv.ht)}</ram:BasisAmount>
+        <ram:CategoryCode>${vatCat}</ram:CategoryCode>
+        <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:SpecifiedTradePaymentTerms>
+        ${dueDate?`<ram:DueDateDateTime><udt:DateTimeString format="102">${dueDate}</udt:DateTimeString></ram:DueDateDateTime>`:''}
+      </ram:SpecifiedTradePaymentTerms>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>${f2(inv.ht)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${f2(inv.ht)}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">${f2(inv.tva)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${f2(inv.ttc)}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${f2(inv.ttc)}</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+
+  const blob=new Blob([xml],{type:'application/xml'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${inv.num}-facturx.xml`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const [userTarifs,setUserTarifs]=useState(getUserTarifs);
@@ -1792,6 +1874,7 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
                       {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
+                    <Btn size="sm" variant="ghost" title="Export Factur-X (XML) pour dépôt sur le PPF" onClick={()=>exportFacturX(inv,cl,getMission(inv.mission_id))}>🧾 XML</Btn>
                     {inv.status!=='Payée'&&inv.status!=='Annulée'&&(
                       <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail},getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id));if(r.success){if(inv.status==='En attente')await setStatus(inv.id,'Envoyée');alert('Facture envoyée !');}else alert('Erreur : '+r.error);}}>📧 Envoyer</Btn>
                     )}
@@ -2345,6 +2428,7 @@ function PortfolioPage({user}) {
         <div className="grid md:grid-cols-2 gap-4">
           <Input label="Nom de l'entreprise" value={profile.company_name||''} onChange={v=>saveProfile({company_name:v})}/>
           <Input label="SIRET" value={profile.siret||''} onChange={v=>saveProfile({siret:v})} placeholder="123 456 789 00012"/>
+          <Input label="N° TVA intracommunautaire" value={profile.tva_number||''} onChange={v=>saveProfile({tva_number:v})} placeholder="FR12345678900"/>
           <Input label="Adresse" value={profile.address||''} onChange={v=>saveProfile({address:v})}/>
           <Input label="Téléphone" value={profile.phone||''} onChange={v=>saveProfile({phone:v})}/>
           <Input label="Préfixe facture (ex: NF, FAC)" value={profile.invoice_prefix||''} onChange={v=>saveProfile({invoice_prefix:v})} placeholder="FAC"/>
