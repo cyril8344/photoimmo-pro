@@ -1176,7 +1176,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
                   {value:'>200',label:`Plus de 200 m² — ${fmtMoney(userTarifs.surface['>200'])}`},
                 ]}/>
               <Select label="Nombre de photos" value={String(form.photos)} onChange={v=>setForm(f=>({...f,photos:+v}))}
-                options={[10,20,30,50].map(n=>({value:String(n),label:`${n} photos${userTarifs.photos[n]>0?' (+'+fmtMoney(userTarifs.photos[n])+')':`''`}`}))}/>
+                options={[10,20,30,50].map(n=>{const e=userTarifs.photos[n];return{value:String(n),label:n+' photos'+(e>0?' (+'+fmtMoney(e)+')':'')}})}/>
               <Select label="Visite virtuelle 360°" value={form.visite} onChange={v=>setForm(f=>({...f,visite:v}))}
                 options={[{value:'non',label:'Non'},{value:'oui',label:`Oui (+${fmtMoney(userTarifs.visite.oui)})`}]}/>
               <Select label="Prise de vue drone" value={form.drone} onChange={v=>setForm(f=>({...f,drone:v}))}
