@@ -61,7 +61,14 @@ module.exports = async function handler(req, res) {
               <tr><td style="color:#9ca3af;padding:6px 0;">Valable jusqu'au</td><td style="text-align:right;color:#e5e7eb;">${d.expires}</td></tr>
             </table>
           </div>
-          <p>Pour l'accepter, retournez-le signé avec la mention <em>"Bon pour accord"</em> accompagné d'un acompte de 30 %.</p>
+          ${d.accept_url ? `
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${d.accept_url}" style="background:linear-gradient(135deg,#c9963c,#e8b96e);color:#0a0906;padding:14px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">
+              ✓ Accepter ce devis
+            </a>
+          </div>
+          <p style="text-align:center;color:#6b7280;font-size:13px;">Ou vous pouvez retourner ce devis signé avec la mention <em>"Bon pour accord"</em>.</p>
+          ` : `<p>Pour l'accepter, retournez-le signé avec la mention <em>"Bon pour accord"</em> accompagné d'un acompte de 30 %.</p>`}
           <p style="color:#6b7280;font-size:12px;margin-top:30px;border-top:1px solid #374151;padding-top:15px;">
             PhotoImmo Pro — Photographie immobilière professionnelle<br/>
             Ce devis a été généré automatiquement, ne pas répondre directement à cet email.

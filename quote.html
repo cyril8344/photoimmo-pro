@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Accepter le devis — PhotoImmo Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --gold:#c9963c; --gold-light:#e8b96e; --bg:#0a0906; --surface:#131108; --surface2:#1a1710; --border:rgba(201,150,60,0.15); --text:#f0ede8; --muted:#7a7060; }
+    * { box-sizing:border-box; margin:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+    h1,h2,h3 { font-family:'Playfair Display',Georgia,serif; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:40px; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+    .logo { width:52px; height:52px; background:var(--gold); border-radius:14px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; flex-shrink:0; }
+    .logo span { font-family:'Playfair Display',serif; font-weight:700; font-size:17px; color:#0a0906; }
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:500; }
+    .badge-pending { background:rgba(201,150,60,0.15); color:var(--gold); border:1px solid rgba(201,150,60,0.3); }
+    .badge-accepted { background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); }
+    .badge-refused { background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); }
+    .row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .row:last-child { border-bottom:none; }
+    .row-label { color:var(--muted); font-size:14px; }
+    .row-value { font-weight:500; font-size:14px; }
+    .btn { display:block; width:100%; padding:14px; border-radius:12px; font-weight:600; font-size:15px; cursor:pointer; border:none; transition:opacity .2s, transform .1s; }
+    .btn:hover { opacity:.9; transform:translateY(-1px); }
+    .btn:active { transform:translateY(0); }
+    .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+    .btn-accept { background:linear-gradient(135deg,#c9963c,#e8b96e); color:#0a0906; }
+    .btn-refuse { background:var(--surface2); color:var(--muted); border:1px solid var(--border); margin-top:10px; }
+    .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .fade-in { animation:fadeIn .4s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const token = location.pathname.split('/quote/')[1]?.split('/')[0];
+
+    const fmtMoney = v => v != null ? Number(v).toLocaleString('fr-FR', {style:'currency',currency:'EUR'}) : '—';
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'}) : '—';
+
+    async function render() {
+      const root = document.getElementById('root');
+
+      if (!token) {
+        root.innerHTML = `<div class="card text-center"><p style="color:#f87171">Lien invalide.</p></div>`;
+        return;
+      }
+
+      root.innerHTML = `<div class="card text-center"><div class="spinner" style="margin:0 auto"></div><p style="color:var(--muted);margin-top:16px;font-size:14px;">Chargement…</p></div>`;
+
+      let quote, client;
+      try {
+        const r = await fetch('/api/accept-quote?token=' + encodeURIComponent(token));
+        const data = await r.json();
+        if (!r.ok || data.error) throw new Error(data.error || 'Erreur');
+        quote = data.quote;
+        client = data.client;
+      } catch(e) {
+        root.innerHTML = `<div class="card fade-in"><div class="logo"><span>PI</span></div><p style="color:#f87171;text-align:center">${e.message}</p></div>`;
+        return;
+      }
+
+      const alreadyDone = quote.status === 'Accepté' || quote.status === 'Refusé';
+
+      function showResult(status) {
+        const isAccepted = status === 'Accepté';
+        root.innerHTML = `
+          <div class="card fade-in" style="text-align:center">
+            <div class="logo"><span>PI</span></div>
+            <div style="font-size:48px;margin:16px 0">${isAccepted ? '✅' : '❌'}</div>
+            <h2 style="color:var(--text);margin-bottom:8px">${isAccepted ? 'Devis accepté !' : 'Devis refusé'}</h2>
+            <p style="color:var(--muted);font-size:14px;line-height:1.6">
+              ${isAccepted
+                ? 'Votre photographe a été notifié. Il vous contactera prochainement pour confirmer la date de shooting.'
+                : 'Votre réponse a bien été enregistrée. N\'hésitez pas à contacter votre photographe pour toute question.'}
+            </p>
+            <p style="color:var(--muted);font-size:12px;margin-top:24px">PhotoImmo Pro — Photographie immobilière</p>
+          </div>`;
+      }
+
+      if (alreadyDone) { showResult(quote.status); return; }
+
+      root.innerHTML = `
+        <div class="card fade-in">
+          <div class="logo"><span>PI</span></div>
+          <h2 style="text-align:center;margin-bottom:4px;color:var(--text)">Devis ${quote.num}</h2>
+          <p style="text-align:center;color:var(--muted);font-size:14px;margin-bottom:24px">Bonjour ${client.name || ''}, veuillez consulter votre devis ci-dessous.</p>
+
+          <div style="background:var(--surface2);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:24px">
+            <div class="row">
+              <span class="row-label">Numéro</span>
+              <span class="row-value" style="color:var(--gold)">${quote.num}</span>
+            </div>
+            <div class="row">
+              <span class="row-label">Montant HT</span>
+              <span class="row-value">${fmtMoney(quote.ht)}</span>
+            </div>
+            <div class="row">
+              <span class="row-label">TVA (20%)</span>
+              <span class="row-value">${fmtMoney(quote.tva)}</span>
+            </div>
+            <div class="row">
+              <span class="row-label">Total TTC</span>
+              <span class="row-value" style="font-size:18px;color:var(--gold-light)">${fmtMoney(quote.ttc)}</span>
+            </div>
+            <div class="row">
+              <span class="row-label">Date du devis</span>
+              <span class="row-value">${fmtDate(quote.created_at)}</span>
+            </div>
+          </div>
+
+          <button id="btn-accept" class="btn btn-accept" onclick="acceptQuote()">✓ Accepter ce devis</button>
+          <button id="btn-refuse" class="btn btn-refuse" onclick="refuseQuote()">Refuser</button>
+          <p style="color:var(--muted);font-size:11px;text-align:center;margin-top:20px">Ce lien est personnel et vous est destiné uniquement.</p>
+        </div>`;
+
+      window.acceptQuote = async () => {
+        const btn = document.getElementById('btn-accept');
+        const btn2 = document.getElementById('btn-refuse');
+        btn.disabled = true; btn2.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>';
+        try {
+          const r = await fetch('/api/accept-quote', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({token, action:'accept'})
+          });
+          const d = await r.json();
+          if (d.success) showResult('Accepté');
+          else { btn.disabled = false; btn2.disabled = false; btn.textContent = '✓ Accepter ce devis'; alert(d.error || 'Erreur'); }
+        } catch(e) { btn.disabled = false; btn2.disabled = false; btn.textContent = '✓ Accepter ce devis'; alert('Erreur réseau'); }
+      };
+
+      window.refuseQuote = async () => {
+        if (!confirm('Confirmer le refus de ce devis ?')) return;
+        const btn = document.getElementById('btn-refuse');
+        const btn2 = document.getElementById('btn-accept');
+        btn.disabled = true; btn2.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="border-top-color:var(--muted)"></span>';
+        try {
+          const r = await fetch('/api/accept-quote', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({token, action:'refuse'})
+          });
+          const d = await r.json();
+          if (d.success) showResult('Refusé');
+          else { btn.disabled = false; btn2.disabled = false; btn.textContent = 'Refuser'; alert(d.error || 'Erreur'); }
+        } catch(e) { btn.disabled = false; btn2.disabled = false; btn.textContent = 'Refuser'; alert('Erreur réseau'); }
+      };
+    }
+
+    render();
+  </script>
+</body>
+</html>
