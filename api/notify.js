@@ -13,22 +13,76 @@ module.exports = async function handler(req, res) {
 
   const templates = {
     gallery_ready: {
-      subject: '📸 Vos photos sont disponibles !',
-      html: (d) => `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
-          <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
-            <h1 style="color:#000;margin:0;font-size:24px;">📸 PhotoImmo Pro</h1>
-          </div>
-          <h2 style="color:#f59e0b;">Vos photos sont prêtes !</h2>
-          <p>Bonjour ${d.client_name},</p>
-          <p>Les photos de votre bien <strong>${d.address}</strong> sont maintenant disponibles.</p>
-          <div style="text-align:center;margin:30px 0;">
-            <a href="${d.gallery_url}" style="background:#f59e0b;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;">
-              Voir mes photos
-            </a>
-          </div>
-          <p style="color:#6b7280;font-size:12px;">Ce lien est privé et vous est destiné uniquement.</p>
-        </div>`,
+      subject: (d) => `Vos photos sont disponibles — ${d.address || 'PhotoImmo Pro'}`,
+      html: (d) => `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vos photos sont prêtes</title></head>
+<body style="margin:0;padding:0;background:#f4f3ef;font-family:Georgia,'Times New Roman',serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3ef;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#c9963c 0%,#e8b96e 50%,#c9963c 100%);border-radius:14px 14px 0 0;padding:32px 40px;text-align:center;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td align="center">
+        <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:8px 18px;margin-bottom:12px;">
+          <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;letter-spacing:0.05em;">PI</span>
+          <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;letter-spacing:0.02em;">PhotoImmo Pro</span>
+        </div>
+        <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:bold;color:#fff;margin:0;line-height:1.2;">Vos photos sont prêtes</div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#ffffff;padding:40px 40px 32px;border-left:1px solid #e8e4dc;border-right:1px solid #e8e4dc;">
+
+    <p style="font-family:Arial,sans-serif;font-size:15px;color:#4a4a5a;margin:0 0 20px;">Bonjour <strong style="color:#1c1c28;">${d.client_name || 'Madame, Monsieur'}</strong>,</p>
+
+    <p style="font-family:Arial,sans-serif;font-size:15px;color:#4a4a5a;margin:0 0 24px;line-height:1.7;">
+      Nous avons le plaisir de vous informer que vos photos immobilières sont désormais disponibles dans votre galerie privée.
+    </p>
+
+    <!-- Property address block -->
+    ${d.address ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f7f4;border-left:3px solid #c9963c;border-radius:0 8px 8px 0;margin:0 0 28px;"><tr><td style="padding:14px 18px;">
+      <div style="font-family:Arial,sans-serif;font-size:11px;color:#c9963c;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Bien photographié</div>
+      <div style="font-family:Arial,sans-serif;font-size:15px;color:#1c1c28;font-weight:600;">${d.address}</div>
+    </td></tr></table>` : ''}
+
+    <!-- CTA Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;">
+      <tr><td align="center">
+        <a href="${d.gallery_url}" style="display:inline-block;background:#c9963c;color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:16px 40px;border-radius:10px;letter-spacing:0.03em;">
+          Voir mes photos →
+        </a>
+      </td></tr>
+    </table>
+
+    <p style="font-family:Arial,sans-serif;font-size:14px;color:#4a4a5a;line-height:1.7;margin:0 0 8px;">
+      Depuis votre galerie, vous pouvez&nbsp;:
+    </p>
+    <ul style="font-family:Arial,sans-serif;font-size:14px;color:#4a4a5a;line-height:1.9;margin:0 0 24px;padding-left:20px;">
+      <li>Consulter l'ensemble des photos</li>
+      <li>Sélectionner vos préférées</li>
+      <li>Télécharger les photos en haute résolution</li>
+    </ul>
+
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#8a8a9a;margin:0;line-height:1.6;">
+      Ce lien est personnel et privé — il vous est destiné exclusivement.
+    </p>
+
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#1c1c28;border-radius:0 0 14px 14px;padding:24px 40px;text-align:center;">
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">PhotoImmo Pro</p>
+    <p style="font-family:Arial,sans-serif;font-size:12px;color:#6b6b7a;margin:0;line-height:1.6;">Photographie immobilière professionnelle</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`,
     },
     mission_reminder: {
       subject: '⏰ Rappel mission photo demain',
@@ -102,16 +156,42 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     gallery_not_downloaded: {
-      subject: '🖼️ Vos photos vous attendent depuis 7 jours',
-      html: (d) => `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
-          <h2 style="color:#f59e0b;">Vos photos sont toujours disponibles</h2>
-          <p>Bonjour ${d.client_name},</p>
-          <p>Vos photos de <strong>${d.address}</strong> sont disponibles depuis 7 jours et n'ont pas encore été consultées.</p>
-          <div style="text-align:center;margin:30px 0;">
-            <a href="${d.gallery_url}" style="background:#f59e0b;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;">Accéder à mes photos</a>
-          </div>
-        </div>`,
+      subject: (d) => `Vos photos vous attendent — ${d.address || 'PhotoImmo Pro'}`,
+      html: (d) => `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vos photos vous attendent</title></head>
+<body style="margin:0;padding:0;background:#f4f3ef;font-family:Georgia,'Times New Roman',serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3ef;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;">
+  <tr><td style="background:linear-gradient(135deg,#c9963c 0%,#e8b96e 50%,#c9963c 100%);border-radius:14px 14px 0 0;padding:32px 40px;text-align:center;">
+    <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:8px 18px;margin-bottom:12px;">
+      <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;letter-spacing:0.05em;">PI</span>
+      <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;">PhotoImmo Pro</span>
+    </div>
+    <div style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#fff;margin:0;">Vos photos vous attendent encore</div>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:40px 40px 32px;border-left:1px solid #e8e4dc;border-right:1px solid #e8e4dc;">
+    <p style="font-family:Arial,sans-serif;font-size:15px;color:#4a4a5a;margin:0 0 20px;">Bonjour <strong style="color:#1c1c28;">${d.client_name || 'Madame, Monsieur'}</strong>,</p>
+    <p style="font-family:Arial,sans-serif;font-size:15px;color:#4a4a5a;margin:0 0 24px;line-height:1.7;">
+      Vos photos${d.address ? ` de <strong style="color:#1c1c28;">${d.address}</strong>` : ''} sont disponibles depuis 7 jours dans votre galerie privée et n'ont pas encore été consultées.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;">
+      <tr><td align="center">
+        <a href="${d.gallery_url}" style="display:inline-block;background:#c9963c;color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:16px 40px;border-radius:10px;letter-spacing:0.03em;">
+          Accéder à mes photos →
+        </a>
+      </td></tr>
+    </table>
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#8a8a9a;margin:0;line-height:1.6;">Ce lien est personnel et privé — il vous est destiné exclusivement.</p>
+  </td></tr>
+  <tr><td style="background:#1c1c28;border-radius:0 0 14px 14px;padding:24px 40px;text-align:center;">
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">PhotoImmo Pro</p>
+    <p style="font-family:Arial,sans-serif;font-size:12px;color:#6b6b7a;margin:0;">Photographie immobilière professionnelle</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
     },
     invoice_reminder: {
       subject: (d) => `📋 Rappel de paiement — Facture ${d.num}`,
