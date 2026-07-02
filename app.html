@@ -889,7 +889,7 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.save(`devis-${q.num}.pdf`);
 }
 
-async function sendQuoteEmail(q, client, mission) {
+async function sendQuoteEmail(q, client, mission, acceptUrl) {
   try {
     const dueDate=new Date(q.created_at);dueDate.setDate(dueDate.getDate()+30);
     let pdfBase64=null;
@@ -902,6 +902,7 @@ async function sendQuoteEmail(q, client, mission) {
           ttc:fmtMoney(q.ttc),
           expires:fmt(dueDate.toISOString().split('T')[0]),
           address:mission?.address||'',
+          accept_url:acceptUrl||null,
           pdf_base64:pdfBase64,
           pdf_filename:`devis-${q.num}.pdf`
         }})});
@@ -1164,7 +1165,13 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                 </select>
                 <div className="flex gap-1 shrink-0">
                   <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
-                  {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl,mi);if(r.success){alert('Devis envoyé par email !');setStatus(q.id,'Envoyé');if(q.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Devis envoyé');}else alert('Erreur : '+r.error);}}>📧 Email</Btn>}
+                  {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{
+                    let token=q.accept_token;
+                    if(!token){token=crypto.randomUUID();if(sb&&user){await sb.from('quotes').update({accept_token:token}).eq('id',q.id);}const u=quotes.map(x=>x.id===q.id?{...x,accept_token:token}:x);setQuotes(u);store.set('pii_quotes',u);}
+                    const acceptUrl=`${location.origin}/quote/${token}`;
+                    const r=await sendQuoteEmail(q,cl,mi,acceptUrl);
+                    if(r.success){alert('Devis envoyé par email !');setStatus(q.id,'Envoyé');if(q.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Devis envoyé');}else alert('Erreur : '+r.error);
+                  }}>📧 Email</Btn>}
                   <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
                 </div>
               </div>

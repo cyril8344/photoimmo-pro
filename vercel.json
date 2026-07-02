@@ -23,6 +23,7 @@
     { "source": "/app", "destination": "/app.html" },
     { "source": "/app/(.*)", "destination": "/app.html" },
     { "source": "/legal", "destination": "/legal.html" },
+    { "source": "/quote/:token*", "destination": "/quote.html" },
     { "source": "/gallery/:token*", "destination": "/gallery.html" },
     { "source": "/portfolio/:slug*", "destination": "/portfolio.html" },
     { "source": "/", "destination": "/landing.html" }
