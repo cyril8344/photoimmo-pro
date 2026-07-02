@@ -1188,7 +1188,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                 <div className="text-xs text-gray-400 mb-2">Charger un pack</div>
                 <div className="flex gap-2">
                   {Object.entries(PACKS).map(([key,pack])=>(
-                    <button key={key} onClick={()=>setForm(f=>({...f,...pack}))}
+                    <button key={key} onClick={()=>{const{label:_,...fields}=pack;setForm(f=>({...f,...fields}));}}
                       className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-amber-500/20 border border-gray-700 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 rounded-lg transition-all">
                       {pack.label}
                     </button>
