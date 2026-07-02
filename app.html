@@ -1731,16 +1731,16 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-amber-400">{fmtMoney(inv.ttc)}</div>
-                  <div className="flex gap-1 mt-2 justify-end">
+                  <div className="flex gap-1 mt-2 justify-end flex-wrap">
                     <select value={inv.status} onChange={e=>setStatus(inv.id,e.target.value)}
                       className="text-xs rounded px-2 py-1 bg-gray-800 border border-gray-700 text-gray-300 focus:outline-none">
                       {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
-                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&(
+                    {cl?.email&&inv.status!=='Payée'&&inv.status!=='Annulée'&&(
                       <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceEmail(inv,cl);alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
                     )}
-                    {cl?.email&&(inv.status==='En attente'||inv.status==='Envoyée')&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
+                    {cl?.email&&inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
                       <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceReminder(inv,cl);alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
                     )}
                     {inv.status !== 'Payée' && (
@@ -2306,7 +2306,7 @@ function PortfolioPage({user}) {
           </div>
           <Input label="Zone géographique" value={profile.zone||''} onChange={v=>saveProfile({zone:v})} placeholder="Paris et Île-de-France"/>
         </div>
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800 gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-gray-800 gap-3">
           <div className="flex items-center gap-3">
             <button onClick={()=>saveProfile({portfolio_enabled:!profile.portfolio_enabled})}
               className={`relative w-11 h-6 rounded-full transition-colors ${profile.portfolio_enabled?'bg-amber-500':'bg-gray-700'}`}>
@@ -2314,12 +2314,12 @@ function PortfolioPage({user}) {
             </button>
             <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="text-amber-400 font-medium">active</span>:<span className="text-gray-500">inactive</span>}</span>
           </div>
-          {publicUrl && (
-            <div className="flex gap-2">
-              <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>
-                {profile.portfolio_enabled?'🔗 Voir ma page':'👁 Prévisualiser'}
-              </Btn>
-            </div>
+          {publicUrl ? (
+            <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>
+              {profile.portfolio_enabled?'🔗 Voir ma page':'👁 Prévisualiser'}
+            </Btn>
+          ) : (
+            <span className="text-xs text-gray-500">Entrez un slug URL pour prévisualiser</span>
           )}
         </div>
       </Card>
