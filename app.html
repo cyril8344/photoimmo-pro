@@ -117,7 +117,19 @@ const TARIFS = {
   visite:  {non:0,oui:350},
   drone:   {non:0,oui:250},
   retouche:{standard:0,premium:120},
+  deplacement:0,
 };
+function getUserTarifs(){
+  const ct=(store.get('pii_profile',{})).custom_tarifs||{};
+  return {
+    surface:{...TARIFS.surface,...(ct.surface||{})},
+    photos:{...TARIFS.photos,...(ct.photos||{})},
+    visite:{...TARIFS.visite,...(ct.visite||{})},
+    drone:{...TARIFS.drone,...(ct.drone||{})},
+    retouche:{...TARIFS.retouche,...(ct.retouche||{})},
+    deplacement:ct.deplacement!=null?Number(ct.deplacement):0,
+  };
+}
 const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
 const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Livraison','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
@@ -716,8 +728,8 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
-function calcDevis(form){
-  const ht=(TARIFS.surface[form.surface]||0)+(TARIFS.photos[+form.photos]||0)+(TARIFS.visite[form.visite]||0)+(TARIFS.drone[form.drone]||0)+(TARIFS.retouche[form.retouche]||0);
+function calcDevis(form, tarifs=TARIFS){
+  const ht=(tarifs.surface[form.surface]||0)+(tarifs.photos[+form.photos]||0)+(tarifs.visite[form.visite]||0)+(tarifs.drone[form.drone]||0)+(tarifs.retouche[form.retouche]||0)+(Number(form.deplacement)||0);
   return {ht, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
 }
 
@@ -796,12 +808,14 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
   y+=8;
 
+  const t=getUserTarifs();
   const rows=[
-    ['Forfait de base (surface '+q.surface+'m²)',TARIFS.surface[q.surface]],
-    ['Photos ('+q.photos+' prises de vue)',TARIFS.photos[+q.photos]],
-    ['Visite virtuelle 360°',TARIFS.visite[q.visite]],
-    ['Prise de vue drone',TARIFS.drone[q.drone]],
-    ['Retouches '+q.retouche,TARIFS.retouche[q.retouche]],
+    ['Forfait de base (surface '+q.surface+'m²)',t.surface[q.surface]],
+    ['Photos ('+q.photos+' prises de vue)',t.photos[+q.photos]],
+    ['Visite virtuelle 360°',t.visite[q.visite]],
+    ['Prise de vue drone',t.drone[q.drone]],
+    ['Retouches '+q.retouche,t.retouche[q.retouche]],
+    ...(Number(q.deplacement)>0?[['Forfait déplacement',Number(q.deplacement)]]:[] ),
   ].filter(r=>r[1]>0);
 
   doc.setFont('helvetica','normal');
@@ -978,11 +992,13 @@ function exportInvoicePDF(inv, client, mission, quote) {
 
   const rows=[];
   if(quote){
-    if(TARIFS.surface[quote.surface]>0)rows.push(['Forfait de base (surface '+quote.surface+'m²)',TARIFS.surface[quote.surface]]);
-    if(TARIFS.photos[+quote.photos]>0)rows.push(['Photos ('+quote.photos+' prises de vue)',TARIFS.photos[+quote.photos]]);
-    if(TARIFS.visite[quote.visite]>0)rows.push(['Visite virtuelle 360°',TARIFS.visite[quote.visite]]);
-    if(TARIFS.drone[quote.drone]>0)rows.push(['Prise de vue drone',TARIFS.drone[quote.drone]]);
-    if(TARIFS.retouche[quote.retouche]>0)rows.push(['Retouches '+quote.retouche,TARIFS.retouche[quote.retouche]]);
+    const ti=getUserTarifs();
+    if(ti.surface[quote.surface]>0)rows.push(['Forfait de base (surface '+quote.surface+'m²)',ti.surface[quote.surface]]);
+    if(ti.photos[+quote.photos]>0)rows.push(['Photos ('+quote.photos+' prises de vue)',ti.photos[+quote.photos]]);
+    if(ti.visite[quote.visite]>0)rows.push(['Visite virtuelle 360°',ti.visite[quote.visite]]);
+    if(ti.drone[quote.drone]>0)rows.push(['Prise de vue drone',ti.drone[quote.drone]]);
+    if(ti.retouche[quote.retouche]>0)rows.push(['Retouches '+quote.retouche,ti.retouche[quote.retouche]]);
+    if(Number(quote.deplacement)>0)rows.push(['Forfait déplacement',Number(quote.deplacement)]);
   }
   if(rows.length===0)rows.push(['Prestation de photographie immobilière',inv.ht]);
 
@@ -1063,10 +1079,12 @@ async function sendInvoiceEmail(inv, client) {
 
 function QuotesPage({quotes,setQuotes,clients,missions,user}){
   const [modal,setModal]=useState(null);
-  const [form,setForm]=useState({client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard'});
+  const [userTarifs,setUserTarifs]=useState(getUserTarifs);
+  const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard',deplacement:t.deplacement};};
+  const [form,setForm]=useState(defaultForm);
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
-  const calc=useMemo(()=>calcDevis(form),[form]);
+  const calc=useMemo(()=>calcDevis(form,userTarifs),[form,userTarifs]);
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
   const save=async()=>{
@@ -1090,7 +1108,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Devis</h1>
-        <Btn onClick={()=>setModal('new')}>+ Nouveau devis</Btn>
+        <Btn onClick={()=>{const t=getUserTarifs();setUserTarifs(t);setForm(defaultForm());setModal('new');}}>+ Nouveau devis</Btn>
       </div>
       <div className="space-y-3">
         {sorted.length===0&&<p className="text-gray-500 text-sm">Aucun devis</p>}
@@ -1151,25 +1169,32 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
                 </div>
               </div>
               <Select label="Surface du bien" value={form.surface} onChange={v=>setForm(f=>({...f,surface:v}))}
-                options={[{value:'<50',label:'Moins de 50 m²'},{value:'50-100',label:'50 à 100 m²'},{value:'100-200',label:'100 à 200 m²'},{value:'>200',label:'Plus de 200 m²'}]}/>
+                options={[
+                  {value:'<50',label:`Moins de 50 m² — ${fmtMoney(userTarifs.surface['<50'])}`},
+                  {value:'50-100',label:`50 à 100 m² — ${fmtMoney(userTarifs.surface['50-100'])}`},
+                  {value:'100-200',label:`100 à 200 m² — ${fmtMoney(userTarifs.surface['100-200'])}`},
+                  {value:'>200',label:`Plus de 200 m² — ${fmtMoney(userTarifs.surface['>200'])}`},
+                ]}/>
               <Select label="Nombre de photos" value={String(form.photos)} onChange={v=>setForm(f=>({...f,photos:+v}))}
-                options={[10,20,30,50].map(n=>({value:String(n),label:`${n} photos`}))}/>
+                options={[10,20,30,50].map(n=>({value:String(n),label:`${n} photos${userTarifs.photos[n]>0?' (+'+fmtMoney(userTarifs.photos[n])+')':`''`}`}))}/>
               <Select label="Visite virtuelle 360°" value={form.visite} onChange={v=>setForm(f=>({...f,visite:v}))}
-                options={[{value:'non',label:'Non (+0€)'},{value:'oui',label:'Oui (+350€)'}]}/>
+                options={[{value:'non',label:'Non'},{value:'oui',label:`Oui (+${fmtMoney(userTarifs.visite.oui)})`}]}/>
               <Select label="Prise de vue drone" value={form.drone} onChange={v=>setForm(f=>({...f,drone:v}))}
-                options={[{value:'non',label:'Non (+0€)'},{value:'oui',label:'Oui (+250€)'}]}/>
+                options={[{value:'non',label:'Non'},{value:'oui',label:`Oui (+${fmtMoney(userTarifs.drone.oui)})`}]}/>
               <Select label="Niveau de retouche" value={form.retouche} onChange={v=>setForm(f=>({...f,retouche:v}))}
-                options={[{value:'standard',label:'Standard (+0€)'},{value:'premium',label:'Premium (+120€)'}]}/>
+                options={[{value:'standard',label:'Standard'},{value:'premium',label:`Premium (+${fmtMoney(userTarifs.retouche.premium)})`}]}/>
+              <Input label={`Forfait déplacement (€ HT)`} value={String(form.deplacement||0)} onChange={v=>setForm(f=>({...f,deplacement:Number(v)||0}))} placeholder="0"/>
             </div>
             <div>
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
                 <h3 className="font-semibold mb-4 text-amber-400">Récapitulatif</h3>
                 {[
-                  ['Forfait surface ('+form.surface+'m²)',TARIFS.surface[form.surface]],
-                  ['Photos ('+form.photos+')',TARIFS.photos[+form.photos]],
-                  ['Visite virtuelle',TARIFS.visite[form.visite]],
-                  ['Drone',TARIFS.drone[form.drone]],
-                  ['Retouches '+form.retouche,TARIFS.retouche[form.retouche]],
+                  ['Forfait surface ('+form.surface+'m²)',userTarifs.surface[form.surface]],
+                  ['Photos ('+form.photos+')',userTarifs.photos[+form.photos]],
+                  ['Visite virtuelle',userTarifs.visite[form.visite]],
+                  ['Drone',userTarifs.drone[form.drone]],
+                  ['Retouches '+form.retouche,userTarifs.retouche[form.retouche]],
+                  ...(form.deplacement>0?[['Forfait déplacement',Number(form.deplacement)]]:[] ),
                 ].map(([l,v])=>(
                   <div key={l} className="flex justify-between text-sm py-1.5 border-b border-gray-700">
                     <span className="text-gray-400">{l}</span><span className={v>0?'text-white':'text-gray-600'}>{fmtMoney(v)}</span>
@@ -2241,6 +2266,85 @@ function PortfolioPage({user}) {
             <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>🔗 Voir ma page</Btn>
           )}
         </div>
+      </Card>
+
+      {/* Mes Tarifs */}
+      <Card>
+        <h3 className="font-semibold mb-1">💰 Mes Tarifs</h3>
+        <p className="text-xs text-gray-500 mb-4">Ces tarifs s'appliquent automatiquement à tous vos nouveaux devis. Laissez vide pour utiliser les tarifs par défaut.</p>
+        {(()=>{
+          const ct=(profile.custom_tarifs||{});
+          const saveTarif=(path,val)=>{
+            const prev=profile.custom_tarifs||{};
+            let next;
+            if(Array.isArray(path)){
+              const [cat,key]=path;
+              next={...prev,[cat]:{...(prev[cat]||{}),[key]:val===''?undefined:Number(val)||0}};
+            } else {
+              next={...prev,[path]:val===''?undefined:Number(val)||0};
+            }
+            saveProfile({custom_tarifs:next});
+          };
+          const def=TARIFS;
+          const c=ct;
+          return (
+            <div className="space-y-5">
+              <div>
+                <div className="text-xs font-semibold text-amber-400 mb-2">Surface du bien (€ HT)</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {['<50','50-100','100-200','>200'].map(k=>(
+                    <div key={k}>
+                      <label className="block text-xs text-gray-500 mb-1">{k} m²</label>
+                      <input type="number" placeholder={def.surface[k]} value={(c.surface||{})[k]!=null?(c.surface||{})[k]:''}
+                        onChange={e=>saveTarif(['surface',k],e.target.value)}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-amber-400 mb-2">Supplément photos (€ HT)</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {[10,20,30,50].map(k=>(
+                    <div key={k}>
+                      <label className="block text-xs text-gray-500 mb-1">{k} photos</label>
+                      <input type="number" placeholder={def.photos[k]} value={(c.photos||{})[k]!=null?(c.photos||{})[k]:''}
+                        onChange={e=>saveTarif(['photos',String(k)],e.target.value)}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Visite virtuelle 360° (€ HT)</label>
+                  <input type="number" placeholder={def.visite.oui} value={(c.visite||{}).oui!=null?(c.visite||{}).oui:''}
+                    onChange={e=>saveTarif(['visite','oui'],e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Drone (€ HT)</label>
+                  <input type="number" placeholder={def.drone.oui} value={(c.drone||{}).oui!=null?(c.drone||{}).oui:''}
+                    onChange={e=>saveTarif(['drone','oui'],e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Retouche premium (€ HT)</label>
+                  <input type="number" placeholder={def.retouche.premium} value={(c.retouche||{}).premium!=null?(c.retouche||{}).premium:''}
+                    onChange={e=>saveTarif(['retouche','premium'],e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Forfait déplacement par défaut (€ HT, ajouté à chaque devis)</label>
+                <input type="number" placeholder="0" value={c.deplacement!=null?c.deplacement:''}
+                  onChange={e=>saveTarif('deplacement',e.target.value)}
+                  className="w-full md:w-48 rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+              </div>
+              <p className="text-xs text-gray-600">Les champs vides utilisent les tarifs par défaut : surface 200–600€, visite 350€, drone 250€, retouche premium 120€.</p>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Réseaux sociaux */}

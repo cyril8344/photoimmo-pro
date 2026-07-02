@@ -261,3 +261,9 @@ create policy "portfolio_photos_delete" on portfolio_photos for delete using (au
 create policy "portfolio_photos_public_read" on portfolio_photos for select using (
   exists (select 1 from user_profiles p where p.user_id = portfolio_photos.user_id and p.portfolio_enabled = true)
 );
+
+-- Migration: tarifs personnalisés par photographe
+alter table user_profiles add column if not exists custom_tarifs jsonb default '{}';
+
+-- Migration: forfait déplacement sur les devis
+alter table quotes add column if not exists deplacement numeric default 0;
