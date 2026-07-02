@@ -2,6 +2,9 @@
   "name": "photoimmo-pro",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "stripe": "^14.21.0",
     "@supabase/supabase-js": "^2.39.0"
