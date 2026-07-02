@@ -935,7 +935,7 @@ async function sendInvoiceReminder(inv, client) {
   }catch(err){return {success:false,error:err.message};}
 }
 
-function exportInvoicePDF(inv, client, mission, quote) {
+function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) {
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const dark=[15,17,23];
@@ -1068,11 +1068,14 @@ function exportInvoicePDF(inv, client, mission, quote) {
   doc.setFontSize(7);doc.setTextColor(...lightGray);
   doc.text(companyName+(profile.siret?' — SIRET '+profile.siret:''),105,292,{align:'center'});
 
+  if(returnBase64)return doc.output('datauristring').split(',')[1];
   doc.save('facture-'+inv.num+'.pdf');
 }
 
-async function sendInvoiceEmail(inv, client) {
+async function sendInvoiceEmail(inv, client, mission, quote) {
   try {
+    let pdfBase64=null;
+    try{pdfBase64=exportInvoicePDF(inv,client,mission,quote,{returnBase64:true});}catch(e){}
     const res = await fetch('/api/notify', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -1084,7 +1087,8 @@ async function sendInvoiceEmail(inv, client) {
           num: inv.num,
           ttc: fmtMoney(inv.ttc),
           due_date: fmt(inv.due_date),
-          pdf_base64: null
+          pdf_base64: pdfBase64,
+          pdf_filename: `facture-${inv.num}.pdf`
         }
       })
     });
@@ -1746,7 +1750,7 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
                     {inv.status!=='Payée'&&inv.status!=='Annulée'&&(
-                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail});alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
+                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail},getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id));alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
                     )}
                     {inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
                       <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceReminder(inv,{...cl,email:clEmail});alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
