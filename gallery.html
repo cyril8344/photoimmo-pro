@@ -135,7 +135,7 @@ function GalleryApp() {
 
     (async () => {
       try {
-        const res = await fetch('/api/gallery?token=' + encodeURIComponent(token));
+        const res = await fetch('/api/gallery-data?token=' + encodeURIComponent(token));
         const data = await res.json();
         if (!res.ok || data.error) {
           setError(data.error || 'Cette galerie n\'existe pas ou n\'est pas encore disponible.');
