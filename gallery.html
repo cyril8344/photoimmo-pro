@@ -13,6 +13,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/api/init"></script>
   <style>
     :root {
       --gold: #c9963c;
@@ -73,6 +75,9 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+const SB_URL = (typeof __SUPABASE_URL__ !== 'undefined' ? __SUPABASE_URL__ : '').replace(/\/+$/, '').split('/rest')[0].split('/auth')[0];
+const SB_KEY = typeof __SUPABASE_KEY__ !== 'undefined' ? __SUPABASE_KEY__ : '';
+
 function LoadingScreen() {
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -132,22 +137,29 @@ function GalleryApp() {
 
   useEffect(() => {
     if (!token) { setError('Lien de galerie invalide.'); setLoading(false); return; }
+    if (!SB_URL || !SB_KEY) { setError('Cette galerie n\'est pas encore configurée.'); setLoading(false); return; }
+
+    const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
     (async () => {
-      try {
-        const res = await fetch('/api/gallery-data?token=' + encodeURIComponent(token));
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          setError(data.error || 'Cette galerie n\'existe pas ou n\'est pas encore disponible.');
-          setLoading(false);
-          return;
-        }
-        setGallery(data.gallery);
-        setPhotos(data.photos || []);
-        setSelected(new Set((data.photos || []).filter(p => p.selected).map(p => p.id)));
-      } catch (_) {
-        setError('Erreur de connexion. Veuillez réessayer.');
+      const { data, error: gErr } = await sb
+        .from('galleries')
+        .select('*, gallery_photos(*)')
+        .eq('token', token)
+        .eq('ready', true)
+        .single();
+
+      if (gErr || !data) {
+        setError('Cette galerie n\'existe pas ou n\'est pas encore disponible.');
+        setLoading(false);
+        return;
       }
+
+      setGallery(data);
+      const sorted = (data.gallery_photos || [])
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      setPhotos(sorted);
+      setSelected(new Set(sorted.filter(p => p.selected).map(p => p.id)));
       setLoading(false);
     })();
   }, [token]);
