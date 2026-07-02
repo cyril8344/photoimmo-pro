@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" style="background:#ffffff;">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <meta name="color-scheme" content="light"/>
+  <meta name="supported-color-schemes" content="light"/>
   <title>Galerie Photos — PhotoImmo Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -16,8 +17,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="/api/init"></script>
   <style>
+    html, body {
+      color-scheme: only light !important;
+      forced-color-adjust: none !important;
+      background-color: #ffffff !important;
+    }
     :root {
-      color-scheme: light only;
+      color-scheme: only light;
       --gold:     #c9963c;
       --gold-lt:  #e8b96e;
       --bg:       #ffffff;
