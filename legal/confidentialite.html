@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Politique de confidentialité — PhotoImmo Pro</title>
+  <style>
+    :root{--bg:#0a0906;--surface:#12100d;--border:#2e2820;--text:#f0ede8;--muted:#8a8070;--gold:#c9963c;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased;}
+    .wrap{max-width:760px;margin:0 auto;padding:48px 24px 80px;}
+    .back{display:inline-flex;align-items:center;gap:6px;color:var(--gold);text-decoration:none;font-size:14px;margin-bottom:40px;opacity:.8;}
+    .back:hover{opacity:1;}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:48px;}
+    .logo-box{width:36px;height:36px;border-radius:10px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#08080f;font-family:Georgia,serif;}
+    .logo-name{font-family:Georgia,serif;font-size:18px;font-weight:600;}
+    h1{font-family:Georgia,serif;font-size:28px;font-weight:700;margin-bottom:8px;}
+    .subtitle{color:var(--muted);font-size:14px;margin-bottom:48px;}
+    h2{font-size:15px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:36px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+    p,li{font-size:15px;color:#c8c0b0;margin-bottom:10px;}
+    ul{padding-left:20px;margin-bottom:10px;}
+    strong{color:var(--text);}
+    a{color:var(--gold);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    .placeholder{color:var(--gold);font-style:italic;}
+    table{width:100%;border-collapse:collapse;margin:16px 0;overflow-x:auto;display:block;}
+    th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    td{font-size:14px;color:#c8c0b0;padding:10px 12px;border-bottom:1px solid rgba(46,40,32,0.5);vertical-align:top;}
+    td strong{color:var(--text);}
+    footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:16px;}
+    footer a{color:var(--muted);}
+    footer a:hover{color:var(--text);}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← Retour à l'application</a>
+
+  <div class="logo">
+    <div class="logo-box">PI</div>
+    <div class="logo-name">PhotoImmo Pro</div>
+  </div>
+
+  <h1>Politique de confidentialité</h1>
+  <p class="subtitle">Dernière mise à jour : 1er juillet 2025. Conformément au Règlement Général sur la Protection des Données (RGPD — UE 2016/679) et à la loi Informatique et Libertés.</p>
+
+  <h2>1. Responsable de traitement</h2>
+  <p><span class="placeholder">[VOTRE NOM / RAISON SOCIALE]</span>, <span class="placeholder">[ADRESSE]</span>, SIRET <span class="placeholder">[SIRET]</span><br/>
+  Email : <a href="mailto:contact@photo-immo.pro">contact@photo-immo.pro</a></p>
+
+  <h2>2. Données collectées</h2>
+  <table>
+    <thead>
+      <tr><th>Catégorie</th><th>Données</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Compte utilisateur</strong></td>
+        <td>Adresse email, mot de passe (haché), date d'inscription</td>
+        <td>Saisie directe</td>
+      </tr>
+      <tr>
+        <td><strong>Clients & agences</strong></td>
+        <td>Noms, emails, téléphones, noms d'agents</td>
+        <td>Saisie par l'utilisateur</td>
+      </tr>
+      <tr>
+        <td><strong>Missions & biens</strong></td>
+        <td>Adresses de biens immobiliers, dates, types de prestation</td>
+        <td>Saisie par l'utilisateur</td>
+      </tr>
+      <tr>
+        <td><strong>Photographies</strong></td>
+        <td>Fichiers images téléversés</td>
+        <td>Upload par l'utilisateur</td>
+      </tr>
+      <tr>
+        <td><strong>Facturation</strong></td>
+        <td>Montants, références de factures (aucune donnée bancaire)</td>
+        <td>Saisie par l'utilisateur + Stripe</td>
+      </tr>
+      <tr>
+        <td><strong>Paiement</strong></td>
+        <td>Token de paiement Stripe, statut d'abonnement</td>
+        <td>Stripe</td>
+      </tr>
+      <tr>
+        <td><strong>Logs techniques</strong></td>
+        <td>Adresse IP, user-agent, horodatages de connexion</td>
+        <td>Automatique</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Finalités et bases légales</h2>
+  <table>
+    <thead>
+      <tr><th>Finalité</th><th>Base légale (RGPD)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Fourniture du service (gestion missions, clients, galeries)</td><td>Exécution du contrat — Art. 6.1.b</td></tr>
+      <tr><td>Facturation et gestion des abonnements</td><td>Exécution du contrat — Art. 6.1.b</td></tr>
+      <tr><td>Envoi d'emails transactionnels (galerie prête, relances)</td><td>Exécution du contrat — Art. 6.1.b</td></tr>
+      <tr><td>Sécurité et prévention de la fraude</td><td>Intérêt légitime — Art. 6.1.f</td></tr>
+      <tr><td>Obligations comptables et fiscales</td><td>Obligation légale — Art. 6.1.c</td></tr>
+      <tr><td>Amélioration du service (statistiques anonymisées)</td><td>Intérêt légitime — Art. 6.1.f</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Sous-traitants</h2>
+  <table>
+    <thead>
+      <tr><th>Sous-traitant</th><th>Rôle</th><th>Localisation</th><th>DPA</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Supabase Inc.</strong></td>
+        <td>Base de données, stockage fichiers, authentification</td>
+        <td>EU (eu-west-1)</td>
+        <td><a href="https://supabase.com/privacy" target="_blank" rel="noopener">DPA disponible</a></td>
+      </tr>
+      <tr>
+        <td><strong>Vercel Inc.</strong></td>
+        <td>Hébergement de l'application</td>
+        <td>USA (clauses contractuelles types)</td>
+        <td><a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">DPA disponible</a></td>
+      </tr>
+      <tr>
+        <td><strong>Resend Inc.</strong></td>
+        <td>Envoi d'emails transactionnels</td>
+        <td>USA (clauses contractuelles types)</td>
+        <td><a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">DPA disponible</a></td>
+      </tr>
+      <tr>
+        <td><strong>Stripe Inc.</strong></td>
+        <td>Traitement des paiements et abonnements</td>
+        <td>USA / EU</td>
+        <td><a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener">DPA disponible</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Durée de conservation</h2>
+  <ul>
+    <li><strong>Données de compte actif :</strong> pendant toute la durée de l'abonnement</li>
+    <li><strong>Après résiliation :</strong> 90 jours (permettre une réactivation), puis suppression définitive</li>
+    <li><strong>Données de facturation :</strong> 10 ans (obligation comptable — art. L.123-22 Code de commerce)</li>
+    <li><strong>Logs de connexion :</strong> 12 mois (obligation LCEN)</li>
+  </ul>
+
+  <h2>6. Droits des personnes concernées</h2>
+  <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+  <ul>
+    <li><strong>Droit d'accès</strong> (art. 15) : obtenir une copie de vos données</li>
+    <li><strong>Droit de rectification</strong> (art. 16) : corriger des données inexactes</li>
+    <li><strong>Droit à l'effacement</strong> (art. 17) : demander la suppression de vos données</li>
+    <li><strong>Droit à la portabilité</strong> (art. 20) : recevoir vos données dans un format structuré</li>
+    <li><strong>Droit d'opposition</strong> (art. 21) : vous opposer à certains traitements fondés sur l'intérêt légitime</li>
+    <li><strong>Droit à la limitation</strong> (art. 18) : limiter le traitement dans certains cas</li>
+  </ul>
+  <p>Pour exercer vos droits, contactez : <a href="mailto:contact@photo-immo.pro">contact@photo-immo.pro</a>. Réponse sous 30 jours.</p>
+  <p>En cas de réclamation, vous pouvez saisir la <strong>CNIL</strong> : <a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a> — 3 Place de Fontenoy, 75007 Paris.</p>
+
+  <h2>7. Cookies</h2>
+  <p>PhotoImmo Pro utilise uniquement des <strong>cookies strictement nécessaires</strong> au fonctionnement du service :</p>
+  <ul>
+    <li>Cookies d'authentification Supabase (session utilisateur)</li>
+    <li>Cookie de préférence de consentement (bandeau cookies)</li>
+  </ul>
+  <p>Aucun cookie publicitaire, de tracking ou de profilage n'est utilisé. Ces cookies essentiels ne nécessitent pas de consentement préalable (directive ePrivacy, art. 5.3).</p>
+
+  <h2>8. Transferts hors UE</h2>
+  <p>Vercel et Resend sont basés aux États-Unis. Ces transferts sont encadrés par les <strong>Clauses Contractuelles Types (CCT)</strong> adoptées par la Commission européenne, conformément à l'art. 46 RGPD.</p>
+
+  <h2>9. Sécurité</h2>
+  <p>PhotoImmo Pro met en œuvre les mesures techniques et organisationnelles appropriées pour protéger vos données :</p>
+  <ul>
+    <li>Chiffrement des communications (HTTPS/TLS)</li>
+    <li>Mots de passe hachés (Supabase Auth — bcrypt)</li>
+    <li>Accès aux données restreint par politique RLS (Row Level Security) côté base de données</li>
+    <li>Accès administrateur limité aux personnes habilitées</li>
+  </ul>
+
+  <h2>10. Contact</h2>
+  <p>Pour toute question relative à cette politique ou à vos données personnelles :<br/>
+  <a href="mailto:contact@photo-immo.pro">contact@photo-immo.pro</a></p>
+
+  <footer>
+    <a href="/legal/mentions-legales.html">Mentions légales</a>
+    <a href="/legal/cgv.html">CGV</a>
+    <a href="/legal/cgu.html">CGU</a>
+    <span>© 2025 PhotoImmo Pro</span>
+  </footer>
+</div>
+</body>
+</html>
