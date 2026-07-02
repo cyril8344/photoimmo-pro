@@ -19,14 +19,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="/api/init"></script>
   <style>
-    :root{--gold:#c9963c;--gold-light:#e8b96e;--bg:#08080f;--surface:#0f0f1a;--surface2:#16162a;--border:#1e1e35;--text:#f0ede8;--muted:#7a7a9a;}
+    :root{--gold:#c9963c;--gold-light:#e8b96e;--bg:#0a0906;--surface:#12100d;--surface2:#1e1b17;--border:#2e2820;--text:#f0ede8;--muted:#8a8070;}
     *{box-sizing:border-box;}
     body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
     h1,h2,h3,.font-display{font-family:'Playfair Display',Georgia,serif;}
     ::-webkit-scrollbar{width:4px;height:4px;}
     ::-webkit-scrollbar-track{background:var(--surface);}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-    ::-webkit-scrollbar-thumb:hover{background:#2a2a45;}
+    ::-webkit-scrollbar-thumb:hover{background:#3a3020;}
     .fade-in{animation:fadeIn .25s ease;}
     @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .sidebar-link{transition:all .15s;}
@@ -46,23 +46,23 @@
     .border-amber-500\/20{border-color:rgba(201,150,60,0.2)!important;}
     .ring-amber-500{--tw-ring-color:var(--gold)!important;}
 
-    /* gray → premium dark overrides */
-    .bg-gray-950{background:#050508!important;}
+    /* gray → premium dark overrides (warm tones, no blue) */
+    .bg-gray-950{background:#070604!important;}
     .bg-gray-900{background:var(--surface)!important;}
     .bg-gray-800{background:var(--surface2)!important;}
-    .bg-gray-700{background:#252540!important;}
+    .bg-gray-700{background:#2e2820!important;}
     .border-gray-800{border-color:var(--border)!important;}
-    .border-gray-700{border-color:#252540!important;}
+    .border-gray-700{border-color:#2e2820!important;}
     .text-gray-400{color:var(--muted)!important;}
-    .text-gray-500{color:#5a5a7a!important;}
-    .text-gray-600{color:#4a4a65!important;}
-    .text-gray-300{color:#b0adc8!important;}
-    .text-gray-200{color:#c8c5dc!important;}
+    .text-gray-500{color:#5e5848!important;}
+    .text-gray-600{color:#4a4438!important;}
+    .text-gray-300{color:#c0b8a8!important;}
+    .text-gray-200{color:#d8d0c0!important;}
     .hover\:bg-gray-800:hover{background:var(--surface2)!important;}
-    .hover\:bg-gray-700:hover{background:#252540!important;}
-    .hover\:text-gray-200:hover{color:#c8c5dc!important;}
-    .bg-gray-800\/50{background:rgba(22,22,42,0.5)!important;}
-    .bg-gray-950\/80{background:rgba(5,5,8,0.85)!important;}
+    .hover\:bg-gray-700:hover{background:#2e2820!important;}
+    .hover\:text-gray-200:hover{color:#d8d0c0!important;}
+    .bg-gray-800\/50{background:rgba(30,27,23,0.5)!important;}
+    .bg-gray-950\/80{background:rgba(10,9,6,0.85)!important;}
 
     /* gold button */
     .btn-gold-primary{
@@ -2473,7 +2473,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
   return(
     <>
       {sideOpen&&<div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={()=>setSideOpen(false)}/>}
-      <aside className={`fixed top-0 left-0 h-full w-56 z-30 flex flex-col transition-transform ${sideOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0`} style={{background:'#050508',borderRight:'1px solid var(--border)'}}>
+      <aside className={`fixed top-0 left-0 h-full w-56 z-30 flex flex-col transition-transform ${sideOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0`} style={{background:'linear-gradient(180deg,#0e0c08 0%,#100e09 100%)',borderRight:'1px solid rgba(201,150,60,0.18)'}}>
         <div className="p-5" style={{borderBottom:'1px solid var(--border)'}}>
           <div className="flex items-center gap-3">
             <div className="aperture w-9 h-9 flex-shrink-0" style={{width:'36px',height:'36px'}}>
@@ -2493,7 +2493,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
             <button key={n.id} onClick={()=>{setPage(n.id);setSideOpen(false);}}
               className="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
               style={page===n.id
-                ?{background:'rgba(201,150,60,0.12)',color:'var(--gold-light)',fontWeight:500,border:'1px solid rgba(201,150,60,0.2)'}
+                ?{background:'rgba(201,150,60,0.12)',color:'var(--gold-light)',fontWeight:500,border:'1px solid rgba(201,150,60,0.25)',boxShadow:'inset 0 0 16px rgba(201,150,60,0.06)'}
                 :{color:'var(--muted)',border:'1px solid transparent'}
               }
               onMouseEnter={e=>{if(page!==n.id){e.currentTarget.style.background='var(--surface2)';e.currentTarget.style.color='var(--text)';}}}
@@ -2504,7 +2504,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
             </button>
           ))}
         </nav>
-        <div className="p-4" style={{borderTop:'1px solid var(--border)',fontSize:'11px',color:'#3a3a55'}}>PhotoImmo Pro · v1.0</div>
+        <div className="p-4" style={{borderTop:'1px solid rgba(201,150,60,0.15)',fontSize:'11px',color:'rgba(201,150,60,0.4)',letterSpacing:'0.05em'}}>PhotoImmo Pro · v1.0</div>
       </aside>
     </>
   );
