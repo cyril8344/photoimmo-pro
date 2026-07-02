@@ -1095,7 +1095,7 @@ async function sendInvoiceEmail(inv, client) {
   }
 }
 
-function QuotesPage({quotes,setQuotes,clients,missions,user}){
+function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const [userTarifs,setUserTarifs]=useState(getUserTarifs);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard',deplacement:t.deplacement};};
@@ -1118,7 +1118,12 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
     }
     setModal(null);
   };
-  const setStatus=async(id,status)=>{if(sb&&user)await sb.from('quotes').update({status}).eq('id',id);const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);};
+  const setStatus=async(id,status)=>{
+    if(sb&&user)await sb.from('quotes').update({status}).eq('id',id);
+    const u=quotes.map(q=>q.id===id?{...q,status}:q);setQuotes(u);store.set('pii_quotes',u);
+    if(status==='Accepté'){const q=quotes.find(x=>x.id===id);if(q?.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Accepté');}
+    if(status==='Envoyé'){const q=quotes.find(x=>x.id===id);if(q?.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Devis envoyé');}
+  };
   const del=async(id)=>{if(!confirm('Supprimer ce devis ?'))return;if(sb&&user)await sb.from('quotes').delete().eq('id',id);const u=quotes.filter(q=>q.id!==id);setQuotes(u);store.set('pii_quotes',u);};
   const sorted=[...quotes].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
@@ -1159,7 +1164,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
                 </select>
                 <div className="flex gap-1 shrink-0">
                   <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
-                  {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl,mi);alert(r.success?'Devis envoyé par email !':'Erreur : '+r.error);}}>📧 Email</Btn>}
+                  {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendQuoteEmail(q,cl,mi);if(r.success){alert('Devis envoyé par email !');setStatus(q.id,'Envoyé');if(q.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Devis envoyé');}else alert('Erreur : '+r.error);}}>📧 Email</Btn>}
                   <Btn size="sm" variant="ghost" onClick={()=>del(q.id)}>🗑️</Btn>
                 </div>
               </div>
@@ -1243,7 +1248,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user}){
 }
 
 // ─── LIVRAISONS ───────────────────────────────────────────────────────────────
-function DeliveryPage({missions,clients,galleries,setGalleries,user}){
+function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissionStatus}){
   const [viewGallery,setViewGallery]=useState(null);
   const [photos,setPhotos]=useState([]);
   const [uploading,setUploading]=useState(false);
@@ -1269,7 +1274,7 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user}){
   const createGallery=async(m)=>{
     if(sb&&user){
       const{data,error}=await sb.from('galleries').insert({user_id:user.id,mission_id:m.id,property_address:m.address}).select().single();
-      if(error){showToast('Erreur lors de la création');return;}
+      if(error){showToast('Erreur : '+error.message);return;}
       const updated=[...galleries,{...data,photos_count:0}];
       setGalleries(updated);store.set('pii_galleries',updated);
     }else{
@@ -1285,6 +1290,7 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user}){
     const updated=galleries.map(g=>g.id===gId?{...g,ready:newReady}:g);
     setGalleries(updated);store.set('pii_galleries',updated);
     if(viewGallery?.id===gId)setViewGallery(prev=>({...prev,ready:newReady}));
+    if(newReady&&g.mission_id)updateMissionStatus&&updateMissionStatus(g.mission_id,'Livraison');
   };
 
   const openGallery=async(g)=>{
@@ -1615,7 +1621,7 @@ function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user,hideTit
 }
 
 // ─── FACTURES ─────────────────────────────────────────────────────────────────
-function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
+function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateMissionStatus}){
   const [subTab,setSubTab]=useState('invoices');
   const [filter,setFilter]=useState('Tous');
 
@@ -1633,8 +1639,10 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
       const{data,error}=await sb.from('invoices').insert({...payload,user_id:user.id}).select().single();
       if(error){alert('Erreur : '+error.message);return;}
       const u=[...invoices,data];setInvoices(u);store.set('pii_invoices',u);
+      if(q.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Facturé');
     } else {
       const u=[...invoices,{...payload,id:uid(),created_at:today()}];setInvoices(u);store.set('pii_invoices',u);
+      if(q.mission_id)updateMissionStatus&&updateMissionStatus(q.mission_id,'Facturé');
     }
   };
 
@@ -1642,6 +1650,7 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
     const updates={status,paid_date:status==='Payée'?today():undefined};
     if(sb&&user)await sb.from('invoices').update(updates).eq('id',id);
     const u=invoices.map(i=>i.id===id?{...i,...updates}:i);setInvoices(u);store.set('pii_invoices',u);
+    if(status==='Payée'){const inv=invoices.find(x=>x.id===id);if(inv?.mission_id)updateMissionStatus&&updateMissionStatus(inv.mission_id,'Payé');}
   };
 
   const del=async(id)=>{if(!confirm('Supprimer cette facture ?'))return;if(sb&&user)await sb.from('invoices').delete().eq('id',id);const u=invoices.filter(i=>i.id!==id);setInvoices(u);store.set('pii_invoices',u);};
@@ -2744,6 +2753,19 @@ function App(){
     return()=>authSub.unsubscribe();
   },[]);
 
+  const updateMissionStatus=async(missionId,newStatus)=>{
+    if(!missionId)return;
+    const m=missions.find(x=>x.id===missionId);
+    if(!m)return;
+    const idx=MISSION_STATUSES.indexOf;
+    const cur=MISSION_STATUSES.indexOf(m.status);
+    const next=MISSION_STATUSES.indexOf(newStatus);
+    if(next<=cur)return; // n'avance jamais en arrière
+    if(sb&&user)await sb.from('missions').update({status:newStatus}).eq('id',missionId);
+    const updated=missions.map(x=>x.id===missionId?{...x,status:newStatus}:x);
+    setMissions(updated);store.set('pii_missions',updated);
+  };
+
   const isActive=()=>{
     if(!subscription)return false;
     if(!sb)return true; // demo mode: always allow access
@@ -2789,9 +2811,9 @@ function App(){
       case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes} invoices={invoices}/>;
       case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} agencies={agencies} setAgencies={setAgencies} user={user}/>;
       case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients} user={user}/>;
-      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user}/>;
-      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user}/>;
-      case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user}/>;
+      case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user} updateMissionStatus={updateMissionStatus}/>;
+      case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user} updateMissionStatus={updateMissionStatus}/>;
+      case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user} updateMissionStatus={updateMissionStatus}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
       case'admin':       return <AdminPage user={user}/>;
       default:           return null;
