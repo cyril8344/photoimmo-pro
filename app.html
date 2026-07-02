@@ -2691,13 +2691,17 @@ function App(){
   };
 
   useEffect(()=>{
+    // Détecte immédiatement le token recovery dans l'URL avant tout chargement async
+    if(window.location.hash.includes('type=recovery')){
+      setResetMode(true);
+    }
     if(!sb)return;
     sb.auth.getSession().then(async({data:{session}})=>{
       if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}
     });
     const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
       if(event==='PASSWORD_RECOVERY'){setResetMode(true);return;}
-      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
+      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'&&!window.location.hash.includes('type=recovery')){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
       else{setUser(null);setAuthed(false);setSubscription(null);}
     });
     return()=>authSub.unsubscribe();
