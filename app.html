@@ -131,7 +131,7 @@ function getUserTarifs(){
   };
 }
 const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
-const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Livraison','Facturé','Payé'];
+const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Réalisé','Livraison','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
   'Prospect':'bg-gray-500/20 text-gray-400',
@@ -475,7 +475,8 @@ function Dashboard({clients,missions,quotes,invoices}){
 }
 
 // ─── CLIENTS ─────────────────────────────────────────────────────────────────
-function ClientsPage({clients,setClients,missions,quotes,user}){
+function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,user}){
+  const [subTab,setSubTab]=useState('clients');
   const [search,setSearch]=useState('');
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',email:'',phone:'',agent:'',agent_email:''});
@@ -531,10 +532,23 @@ function ClientsPage({clients,setClients,missions,quotes,user}){
     e.target.value='';
   };
 
+  if(subTab==='agencies') return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-2xl font-bold">Clients & Agences</h1>
+      </div>
+      <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
+        <button onClick={()=>setSubTab('clients')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>👥 Clients</button>
+        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>🏢 Agences</button>
+      </div>
+      <AgenciesPage agencies={agencies} setAgencies={setAgencies} clients={clients} missions={missions} quotes={quotes} user={user} hideTitle={true}/>
+    </div>
+  );
+
   return(
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Clients</h1>
+        <h1 className="text-2xl font-bold">Clients & Agences</h1>
         <div className="flex gap-2 flex-wrap">
           <label className="cursor-pointer px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">
             📥 Importer CSV<input type="file" accept=".csv" className="hidden" onChange={importCSV}/>
@@ -542,6 +556,10 @@ function ClientsPage({clients,setClients,missions,quotes,user}){
           <button onClick={exportCSV} className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">📤 Exporter CSV</button>
           <Btn onClick={openNew}>+ Nouveau client</Btn>
         </div>
+      </div>
+      <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
+        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>👥 Clients</button>
+        <button onClick={()=>setSubTab('agencies')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>🏢 Agences</button>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un client…"
         className="w-full max-w-sm rounded-lg border border-gray-700 bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
@@ -1521,7 +1539,7 @@ function TrialBanner({daysLeft,user}){
 }
 
 // ─── AGENCES ──────────────────────────────────────────────────────────────────
-function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user}){
+function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user,hideTitle}){
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({name:'',contacts:'',notes:''});
 
@@ -1545,11 +1563,14 @@ function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user}){
   const openEdit=(a)=>{setForm({name:a.name,contacts:a.contacts||'',notes:a.notes||''});setModal(a.id);};
 
   return(
-    <div className="fade-in space-y-5">
-      <div className="flex items-center justify-between">
+    <div className={hideTitle?'space-y-5':'fade-in space-y-5'}>
+      {!hideTitle&&<div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Agences</h1>
         <Btn onClick={()=>{setForm({name:'',contacts:'',notes:''});setModal('new');}}>+ Nouvelle agence</Btn>
-      </div>
+      </div>}
+      {hideTitle&&<div className="flex justify-end">
+        <Btn onClick={()=>{setForm({name:'',contacts:'',notes:''});setModal('new');}}>+ Nouvelle agence</Btn>
+      </div>}
       <div className="grid gap-3">
         {agencies.length===0&&<p className="text-gray-500 text-sm">Aucune agence. Ajoutez vos partenaires immobiliers.</p>}
         {agencies.map(a=>(
@@ -1595,6 +1616,7 @@ function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user}){
 
 // ─── FACTURES ─────────────────────────────────────────────────────────────────
 function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
+  const [subTab,setSubTab]=useState('invoices');
   const [filter,setFilter]=useState('Tous');
 
   const getClient=id=>clients.find(c=>c.id===id);
@@ -1634,11 +1656,28 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user}){
   // Devis acceptés sans facture
   const quotesWithoutInvoice=quotes.filter(q=>q.status==='Accepté'&&!invoices.find(i=>i.quote_id===q.id));
 
+  if(subTab==='accounting') return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Factures & Comptabilité</h1>
+      </div>
+      <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
+        <button onClick={()=>setSubTab('invoices')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>🧾 Factures</button>
+        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>📊 Comptabilité</button>
+      </div>
+      <AccountingPage invoices={invoices} quotes={quotes} clients={clients} missions={missions}/>
+    </div>
+  );
+
   return(
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Factures</h1>
+        <h1 className="text-2xl font-bold">Factures & Comptabilité</h1>
         {unpaid.length>0&&<div className="text-sm text-red-400 font-medium">{fmtMoney(totalUnpaid)} impayé{unpaid.length>1?'s':''}</div>}
+      </div>
+      <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
+        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>🧾 Factures</button>
+        <button onClick={()=>setSubTab('accounting')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>📊 Comptabilité</button>
       </div>
 
       {quotesWithoutInvoice.length>0&&(
@@ -2459,13 +2498,11 @@ function PortfolioPage({user}) {
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:'📊',label:'Dashboard'},
-  {id:'clients',icon:'👥',label:'Clients'},
+  {id:'clients',icon:'👥',label:'Clients & Agences'},
   {id:'missions',icon:'📅',label:'Missions'},
   {id:'quotes',icon:'📄',label:'Devis'},
   {id:'delivery',icon:'🖼️',label:'Livraisons'},
-  {id:'agencies',icon:'🏢',label:'Agences'},
-  {id:'invoices',icon:'🧾',label:'Factures'},
-  {id:'accounting',icon:'📊',label:'Comptabilité'},
+  {id:'invoices',icon:'🧾',label:'Factures & Compta'},
   {id:'portfolio',icon:'🌐',label:'Mon Portfolio'},
   {id:'admin',icon:'⚙️',label:'Admin',adminOnly:true},
 ];
@@ -2750,13 +2787,11 @@ function App(){
   const renderPage=()=>{
     switch(page){
       case'dashboard': return <Dashboard clients={clients} missions={missions} quotes={quotes} invoices={invoices}/>;
-      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} user={user}/>;
+      case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} agencies={agencies} setAgencies={setAgencies} user={user}/>;
       case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients} user={user}/>;
       case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user}/>;
       case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user}/>;
-      case'agencies':    return <AgenciesPage agencies={agencies} setAgencies={setAgencies} clients={clients} missions={missions} quotes={quotes} user={user}/>;
       case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user}/>;
-      case'accounting':  return <AccountingPage invoices={invoices} quotes={quotes} clients={clients} missions={missions}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
       case'admin':       return <AdminPage user={user}/>;
       default:           return null;
