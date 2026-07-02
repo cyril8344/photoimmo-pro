@@ -1750,7 +1750,7 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
                     {inv.status!=='Payée'&&inv.status!=='Annulée'&&(
-                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail},getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id));alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
+                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail},getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id));if(r.success){if(inv.status==='En attente')await setStatus(inv.id,'Envoyée');alert('Facture envoyée !');}else alert('Erreur : '+r.error);}}>📧 Envoyer</Btn>
                     )}
                     {inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
                       <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceReminder(inv,{...cl,email:clEmail});alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
