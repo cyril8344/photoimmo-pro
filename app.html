@@ -1715,7 +1715,8 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
       <div className="space-y-3">
         {filtered.length===0&&<p className="text-gray-500 text-sm">Aucune facture</p>}
         {filtered.map(inv=>{
-          const cl=getClient(inv.client_id);
+          const cl=getClient(inv.client_id)||getClient(quotes.find(q=>q.id===inv.quote_id)?.client_id);
+          const clEmail=cl?.email||cl?.agent_email;
           const overdue=inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date();
           return(
             <Card key={inv.id} className={`hover:border-gray-700 transition-colors ${overdue?'border-red-500/30':''}`}>
@@ -1737,11 +1738,11 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
                       {INVOICE_STATUSES.map(s=><option key={s}>{s}</option>)}
                     </select>
                     <Btn size="sm" variant="ghost" onClick={()=>exportInvoicePDF(inv,cl,getMission(inv.mission_id),quotes.find(q=>q.id===inv.quote_id))}>📄 PDF</Btn>
-                    {cl?.email&&inv.status!=='Payée'&&inv.status!=='Annulée'&&(
-                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceEmail(inv,cl);alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
+                    {inv.status!=='Payée'&&inv.status!=='Annulée'&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceEmail(inv,{...cl,email:clEmail});alert(r.success?'Facture envoyée !':'Erreur : '+r.error);}}>📧 Envoyer</Btn>
                     )}
-                    {cl?.email&&inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
-                      <Btn size="sm" variant="ghost" onClick={async()=>{const r=await sendInvoiceReminder(inv,cl);alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
+                    {inv.status!=='Payée'&&inv.status!=='Annulée'&&inv.due_date&&new Date(inv.due_date)<new Date()&&(
+                      <Btn size="sm" variant="ghost" onClick={async()=>{if(!clEmail){alert('Aucun email trouvé pour ce client. Ajoutez-en un dans sa fiche.');return;}const r=await sendInvoiceReminder(inv,{...cl,email:clEmail});alert(r.success?'Rappel envoyé !':'Erreur : '+r.error);}}>⚡ Rappel</Btn>
                     )}
                     {inv.status !== 'Payée' && (
                       <Btn size="sm" variant="secondary" onClick={()=>setStatus(inv.id, 'Payée')}>✓ Payée</Btn>
