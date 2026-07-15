@@ -2965,7 +2965,8 @@ function App(){
       <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
     </div>
   );
-  if(sb&&!isActive())return <UpgradeModal user={user}/>;
+  const isOwner=user&&(user.email==='cyrilleduc2000@gmail.com'||user.email==='admin@photoimmo.pro');
+  if(sb&&!isActive()&&!isOwner)return <UpgradeModal user={user}/>;
 
   const days=trialDaysLeft();
 
