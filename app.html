@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config={theme:{extend:{colors:{accent:'#c9963c',gold:'#c9963c','gold-light':'#e8b96e'}}}}</script>
+  <script>tailwind.config={theme:{extend:{colors:{accent:'#1d6ef5',gold:'#1d6ef5','gold-light':'#5a9bff'}}}}</script>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
@@ -25,10 +25,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="/api/init"></script>
   <style>
-    :root{--gold:#c9963c;--gold-light:#e8b96e;--bg:#0a0906;--surface:#12100d;--surface2:#1e1b17;--border:#2e2820;--text:#f0ede8;--muted:#8a8070;}
+    :root{--gold:#1d6ef5;--gold-light:#5a9bff;--bg:#0f1117;--surface:#181c26;--surface2:#222839;--border:#2d3448;--text:#e8eaf0;--muted:#7a8aaa;}
     *{box-sizing:border-box;}
     body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
-    h1,h2,h3,.font-display{font-family:'Playfair Display',Georgia,serif;}
+    h1,h2,h3,.font-display{font-family:'Inter',system-ui,sans-serif;font-weight:700;}
     ::-webkit-scrollbar{width:4px;height:4px;}
     ::-webkit-scrollbar-track{background:var(--surface);}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
@@ -38,18 +38,18 @@
     .sidebar-link{transition:all .15s;}
     input,select,textarea{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important;}
     input::placeholder,textarea::placeholder{color:var(--muted)!important;}
-    input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outline:none!important;box-shadow:0 0 0 2px rgba(201,150,60,0.15)!important;}
+    input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outline:none!important;box-shadow:0 0 0 2px rgba(29,110,245,0.15)!important;}
 
     /* amber → gold overrides */
     .bg-amber-500{background:var(--gold)!important;}
     .bg-amber-400{background:var(--gold-light)!important;}
-    .hover\:bg-amber-400:hover{background:rgba(201,150,60,0.85)!important;}
+    .hover\:bg-amber-400:hover{background:rgba(29,110,245,0.85)!important;}
     .text-amber-400{color:var(--gold-light)!important;}
     .text-amber-500{color:var(--gold)!important;}
     .border-amber-500{border-color:var(--gold)!important;}
     .focus\:border-amber-500:focus{border-color:var(--gold)!important;}
-    .bg-amber-500\/10,.bg-amber-500\/15,.bg-amber-500\/20{background:rgba(201,150,60,0.1)!important;}
-    .border-amber-500\/20{border-color:rgba(201,150,60,0.2)!important;}
+    .bg-amber-500\/10,.bg-amber-500\/15,.bg-amber-500\/20{background:rgba(29,110,245,0.1)!important;}
+    .border-amber-500\/20{border-color:rgba(29,110,245,0.2)!important;}
     .ring-amber-500{--tw-ring-color:var(--gold)!important;}
 
     /* gray → premium dark overrides (warm tones, no blue) */
@@ -72,40 +72,40 @@
 
     /* gold button */
     .btn-gold-primary{
-      background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 50%,var(--gold) 100%);
+      background:linear-gradient(135deg,#1d6ef5 0%,#5a9bff 50%,#1d6ef5 100%);
       background-size:200% 100%;
-      color:#08080f;font-weight:600;
+      color:#fff;font-weight:600;
       transition:background-position .4s,box-shadow .3s;
-      box-shadow:0 0 30px rgba(201,150,60,0.2);
+      box-shadow:0 0 20px rgba(29,110,245,0.3);
     }
-    .btn-gold-primary:hover{background-position:100% 0;box-shadow:0 0 40px rgba(201,150,60,0.35);}
+    .btn-gold-primary:hover{background-position:100% 0;box-shadow:0 0 30px rgba(29,110,245,0.5);}
     .btn-secondary-prem{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
-    .btn-secondary-prem:hover{border-color:rgba(201,150,60,0.3);background:#1e1e35;}
+    .btn-secondary-prem:hover{border-color:rgba(29,110,245,0.4);background:#222839;}
 
     /* card premium */
     .card-prem{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
-    .card-prem:hover{border-color:rgba(201,150,60,0.15);}
+    .card-prem:hover{border-color:rgba(29,110,245,0.15);}
 
     /* aperture logo */
     .aperture{background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;}
     .aperture::before{content:'';position:absolute;width:45%;height:45%;border-radius:50%;border:2px solid rgba(0,0,0,0.5);}
 
     /* trial banner */
-    .trial-banner{background:linear-gradient(135deg,rgba(201,150,60,0.12),rgba(201,150,60,0.05));border-bottom:1px solid rgba(201,150,60,0.2);}
+    .trial-banner{background:linear-gradient(135deg,rgba(29,110,245,0.12),rgba(29,110,245,0.05));border-bottom:1px solid rgba(29,110,245,0.2);}
 
     /* stat bar */
-    .stat-bar{border-left:2px solid rgba(201,150,60,0.3);padding-left:12px;}
+    .stat-bar{border-left:2px solid rgba(29,110,245,0.3);padding-left:12px;}
 
     /* pipeline card */
     .pipeline-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px;font-size:12px;}
-    .pipeline-card:hover{border-color:rgba(201,150,60,0.2);}
+    .pipeline-card:hover{border-color:rgba(29,110,245,0.2);}
 
     /* mobile bottom nav safe area */
     .mobile-bottom-nav{padding-bottom:env(safe-area-inset-bottom,0px);}
     .main-content-mobile{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px));}
 
     /* cookie banner */
-    #cookie-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(0deg,#0e0c08,#12100d);border-top:1px solid rgba(201,150,60,0.25);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    #cookie-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(0deg,#0e0c08,#12100d);border-top:1px solid rgba(29,110,245,0.25);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
     #cookie-banner p{font-size:13px;color:#8a8070;margin:0;line-height:1.5;}
     #cookie-banner a{color:#c9963c;}
     #cookie-accept{background:linear-gradient(135deg,#c9963c,#e8b96e);color:#08080f;font-weight:600;font-size:13px;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -158,22 +158,18 @@ function getUserTarifs(){
     deplacement:ct.deplacement!=null?Number(ct.deplacement):0,
   };
 }
-const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
-const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Intervention','Retouche','Réalisé','Livraison','Facturé','Payé'];
+const PROPERTY_TYPES=['Résidentiel','Maison','Appartement','Villa','Commerce','Bureau','Copropriété','Autre'];
+const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Planifié','En cours','Réalisé','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
   'Prospect':'bg-gray-500/20 text-gray-400',
   'Devis envoyé':'bg-blue-500/20 text-blue-400',
   'Accepté':'bg-green-500/20 text-green-400',
-  'Intervention':'bg-orange-500/20 text-orange-400',
-  'Retouche':'bg-purple-500/20 text-purple-400',
-  'Livraison':'bg-cyan-500/20 text-cyan-400',
+  'Planifié':'bg-orange-500/20 text-orange-400',
+  'En cours':'bg-purple-500/20 text-purple-400',
+  'Réalisé':'bg-cyan-500/20 text-cyan-400',
   'Facturé':'bg-yellow-500/20 text-yellow-400',
   'Payé':'bg-emerald-500/20 text-emerald-400',
-  'À confirmer':'bg-yellow-500/20 text-yellow-400',
-  'Confirmé':'bg-blue-500/20 text-blue-400',
-  'Réalisé':'bg-green-500/20 text-green-400',
-  'Livré':'bg-purple-500/20 text-purple-400',
   'En attente':'bg-gray-500/20 text-gray-400',
   'Envoyé':'bg-blue-500/20 text-blue-400',
   'Refusé':'bg-red-500/20 text-red-400',
@@ -283,7 +279,7 @@ const Modal=({title,onClose,children,size='md'})=>(
 );
 const StatCard=({label,value,sub,icon})=>(
   <Card className="flex items-center gap-4">
-    <div className="text-2xl w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(201,150,60,0.1)',border:'1px solid rgba(201,150,60,0.2)'}}>{icon}</div>
+    <div className="text-2xl w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(29,110,245,0.1)',border:'1px solid rgba(29,110,245,0.2)'}}>{icon}</div>
     <div>
       <div className="text-xl font-bold" style={{color:'var(--gold-light)'}}>{value}</div>
       <div className="text-sm" style={{color:'var(--muted)'}}>{label}</div>
@@ -638,7 +634,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
               <Input label="Téléphone" value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))}/>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Input label="Nom agent immobilier" value={form.agent} onChange={v=>setForm(f=>({...f,agent:v}))}/>
+              <Input label="Nom du contact" value={form.agent} onChange={v=>setForm(f=>({...f,agent:v}))}/>
               <Input label="Email agent" type="email" value={form.agent_email} onChange={v=>setForm(f=>({...f,agent_email:v}))}/>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -788,9 +784,10 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
-function calcDevis(form, tarifs=TARIFS){
-  const ht=(tarifs.surface[form.surface]||0)+(tarifs.photos[+form.photos]||0)+(tarifs.visite[form.visite]||0)+(tarifs.drone[form.drone]||0)+(tarifs.retouche[form.retouche]||0)+(Number(form.deplacement)||0);
-  return {ht, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
+function calcDevis(form){
+  const mainOeuvre=(Number(form.heures)||0)*(Number(form.taux_horaire)||TARIFS.horaire);
+  const ht=mainOeuvre+(Number(form.fournitures)||0)+(Number(form.deplacement)||0)+(Number(form.urgence)||0);
+  return {ht:Math.round(ht*100)/100, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
 }
 
 function exportPDF(q,client,mission,{returnBase64=false}={}){
@@ -1061,7 +1058,7 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     if(ti.retouche[quote.retouche]>0)rows.push(['Retouches '+quote.retouche,ti.retouche[quote.retouche]]);
     if(Number(quote.deplacement)>0)rows.push(['Forfait déplacement',Number(quote.deplacement)]);
   }
-  if(rows.length===0)rows.push(['Prestation de photographie immobilière',inv.ht]);
+  if(rows.length===0)rows.push(['Prestation de maintenance',inv.ht]);
 
   doc.setFont('helvetica','normal');
   rows.forEach(([label,val],i)=>{
@@ -1226,12 +1223,11 @@ function exportFacturX(inv,client,mission){
 
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
-  const [userTarifs,setUserTarifs]=useState(getUserTarifs);
-  const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',surface:'50-100',photos:20,visite:'non',drone:'non',retouche:'standard',deplacement:t.deplacement};};
+  const defaultForm=()=>({client_id:'',mission_id:'',type_service:'Piscine',heures:1,taux_horaire:TARIFS.horaire,fournitures:0,deplacement:TARIFS.deplacement,urgence:0,description:''});
   const [form,setForm]=useState(defaultForm);
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
-  const calc=useMemo(()=>calcDevis(form,userTarifs),[form,userTarifs]);
+  const calc=useMemo(()=>calcDevis(form),[form]);
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
   const save=async()=>{
@@ -1260,7 +1256,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Devis</h1>
-        <Btn onClick={()=>{const t=getUserTarifs();setUserTarifs(t);setForm(defaultForm());setModal('new');}}>+ Nouveau devis</Btn>
+        <Btn onClick={()=>{setForm(defaultForm());setModal('new');}}>+ Nouveau devis</Btn>
       </div>
       <div className="space-y-3">
         {sorted.length===0&&<p className="text-gray-500 text-sm">Aucun devis</p>}
@@ -1315,48 +1311,28 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <Select label="Client *" value={form.client_id} onChange={v=>setForm(f=>({...f,client_id:v,mission_id:''}))}
                 options={[{value:'',label:'Sélectionner…'},...clients.map(c=>({value:c.id,label:c.name}))]}/>
               {form.client_id&&(
-                <Select label="Mission liée" value={form.mission_id} onChange={v=>setForm(f=>({...f,mission_id:v}))}
+                <Select label="Intervention liée" value={form.mission_id} onChange={v=>setForm(f=>({...f,mission_id:v}))}
                   options={[{value:'',label:'Aucune'},...clientMissions.map(m=>({value:m.id,label:m.address}))]}/>
               )}
-              {/* Packs pré-remplis */}
-              <div className="mb-2">
-                <div className="text-xs text-gray-400 mb-2">Charger un pack</div>
-                <div className="flex gap-2">
-                  {Object.entries(PACKS).map(([key,pack])=>(
-                    <button key={key} onClick={()=>{const{label:_,...fields}=pack;setForm(f=>({...f,...fields}));}}
-                      className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-amber-500/20 border border-gray-700 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 rounded-lg transition-all">
-                      {pack.label}
-                    </button>
-                  ))}
-                </div>
+              <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
+                options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
+              <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtre, recharge gaz, remplacement joint…"/>
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Durée (heures)" type="number" value={String(form.heures||1)} onChange={v=>setForm(f=>({...f,heures:Number(v)||0}))} placeholder="1"/>
+                <Input label="Taux horaire (€ HT)" type="number" value={String(form.taux_horaire||TARIFS.horaire)} onChange={v=>setForm(f=>({...f,taux_horaire:Number(v)||0}))} placeholder="55"/>
               </div>
-              <Select label="Surface du bien" value={form.surface} onChange={v=>setForm(f=>({...f,surface:v}))}
-                options={[
-                  {value:'<50',label:`Moins de 50 m² — ${fmtMoney(userTarifs.surface['<50'])}`},
-                  {value:'50-100',label:`50 à 100 m² — ${fmtMoney(userTarifs.surface['50-100'])}`},
-                  {value:'100-200',label:`100 à 200 m² — ${fmtMoney(userTarifs.surface['100-200'])}`},
-                  {value:'>200',label:`Plus de 200 m² — ${fmtMoney(userTarifs.surface['>200'])}`},
-                ]}/>
-              <Select label="Nombre de photos" value={String(form.photos)} onChange={v=>setForm(f=>({...f,photos:+v}))}
-                options={[10,20,30,50].map(n=>{const e=userTarifs.photos[n];return{value:String(n),label:n+' photos'+(e>0?' (+'+fmtMoney(e)+')':'')}})}/>
-              <Select label="Visite virtuelle 360°" value={form.visite} onChange={v=>setForm(f=>({...f,visite:v}))}
-                options={[{value:'non',label:'Non'},{value:'oui',label:`Oui (+${fmtMoney(userTarifs.visite.oui)})`}]}/>
-              <Select label="Prise de vue drone" value={form.drone} onChange={v=>setForm(f=>({...f,drone:v}))}
-                options={[{value:'non',label:'Non'},{value:'oui',label:`Oui (+${fmtMoney(userTarifs.drone.oui)})`}]}/>
-              <Select label="Niveau de retouche" value={form.retouche} onChange={v=>setForm(f=>({...f,retouche:v}))}
-                options={[{value:'standard',label:'Standard'},{value:'premium',label:`Premium (+${fmtMoney(userTarifs.retouche.premium)})`}]}/>
-              <Input label={`Forfait déplacement (€ HT)`} value={String(form.deplacement||0)} onChange={v=>setForm(f=>({...f,deplacement:Number(v)||0}))} placeholder="0"/>
+              <Input label="Fournitures / matériaux (€ HT)" type="number" value={String(form.fournitures||0)} onChange={v=>setForm(f=>({...f,fournitures:Number(v)||0}))} placeholder="0"/>
+              <Input label="Forfait déplacement (€ HT)" type="number" value={String(form.deplacement||TARIFS.deplacement)} onChange={v=>setForm(f=>({...f,deplacement:Number(v)||0}))} placeholder="30"/>
+              <Input label="Majoration urgence (€ HT)" type="number" value={String(form.urgence||0)} onChange={v=>setForm(f=>({...f,urgence:Number(v)||0}))} placeholder="0"/>
             </div>
             <div>
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
-                <h3 className="font-semibold mb-4 text-amber-400">Récapitulatif</h3>
+                <h3 className="font-semibold mb-4" style={{color:'var(--gold-light)'}}>Récapitulatif</h3>
                 {[
-                  ['Forfait surface ('+form.surface+'m²)',userTarifs.surface[form.surface]],
-                  ['Photos ('+form.photos+')',userTarifs.photos[+form.photos]],
-                  ['Visite virtuelle',userTarifs.visite[form.visite]],
-                  ['Drone',userTarifs.drone[form.drone]],
-                  ['Retouches '+form.retouche,userTarifs.retouche[form.retouche]],
-                  ...(form.deplacement>0?[['Forfait déplacement',Number(form.deplacement)]]:[] ),
+                  ['Main d\'œuvre ('+form.heures+'h × '+form.taux_horaire+'€)',(form.heures||0)*(form.taux_horaire||TARIFS.horaire)],
+                  ['Fournitures / matériaux',Number(form.fournitures)||0],
+                  ['Déplacement',Number(form.deplacement)||0],
+                  ...(form.urgence>0?[['Majoration urgence',Number(form.urgence)]]:[] ),
                 ].map(([l,v])=>(
                   <div key={l} className="flex justify-between text-sm py-1.5 border-b border-gray-700">
                     <span className="text-gray-400">{l}</span><span className={v>0?'text-white':'text-gray-600'}>{fmtMoney(v)}</span>
@@ -1366,7 +1342,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                   <div className="flex justify-between text-sm"><span className="text-gray-400">Total HT</span><span>{fmtMoney(calc.ht)}</span></div>
                   <div className="flex justify-between text-sm"><span className="text-gray-400">TVA 20%</span><span>{fmtMoney(calc.tva)}</span></div>
                   <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-700">
-                    <span className="text-amber-400">Total TTC</span><span className="text-amber-400">{fmtMoney(calc.ttc)}</span>
+                    <span style={{color:'var(--gold-light)'}}>Total TTC</span><span style={{color:'var(--gold-light)'}}>{fmtMoney(calc.ttc)}</span>
                   </div>
                 </div>
               </div>
@@ -1713,7 +1689,7 @@ function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user,hideTit
         <Btn onClick={()=>{setForm({name:'',contacts:'',notes:''});setModal('new');}}>+ Nouvelle agence</Btn>
       </div>}
       <div className="grid gap-3">
-        {agencies.length===0&&<p className="text-gray-500 text-sm">Aucune agence. Ajoutez vos partenaires immobiliers.</p>}
+        {agencies.length===0&&<p className="text-gray-500 text-sm">Aucune agence. Ajoutez vos partenaires.</p>}
         {agencies.map(a=>(
           <Card key={a.id} className="hover:border-gray-700 transition-colors">
             <div className="flex items-center justify-between gap-4">
@@ -2177,7 +2153,7 @@ function AccountingPage({invoices, quotes, clients, missions}) {
 function AdminPage({user}) {
   // In demo mode, user.role is checked from localStorage profile
   const profile = store.get('pii_profile', {});
-  const isAdmin = profile.role === 'admin' || (user && (user.email === 'admin@photoimmo.pro' || user.email === 'cyrilleduc2000@gmail.com'));
+  const isAdmin = profile.role === 'admin' || (user && (user.email === 'admin@habitat-maintenance.fr' || user.email === 'cyrilleduc2000@gmail.com'));
 
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -2657,14 +2633,14 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
   return(
     <>
       {sideOpen&&<div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={()=>setSideOpen(false)}/>}
-      <aside className={`fixed top-0 left-0 h-full w-56 z-30 flex flex-col transition-transform ${sideOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0`} style={{background:'linear-gradient(180deg,#0e0c08 0%,#100e09 100%)',borderRight:'1px solid rgba(201,150,60,0.18)'}}>
+      <aside className={`fixed top-0 left-0 h-full w-56 z-30 flex flex-col transition-transform ${sideOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0`} style={{background:'linear-gradient(180deg,#0e0c08 0%,#100e09 100%)',borderRight:'1px solid rgba(29,110,245,0.18)'}}>
         <div className="p-5" style={{borderBottom:'1px solid var(--border)'}}>
           <div className="flex items-center gap-3">
             <div className="aperture w-9 h-9 flex-shrink-0" style={{width:'36px',height:'36px'}}>
-              <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'11px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
+              <span style={{fontFamily:'Inter,system-ui,sans-serif',fontWeight:700,fontSize:'11px',color:'#08080f',position:'relative',zIndex:1}}>HM</span>
             </div>
             <div>
-              <div style={{fontFamily:'Playfair Display,serif',fontWeight:600,fontSize:'14px',color:'var(--text)'}}>Habitat Maintenance</div>
+              <div style={{fontFamily:'Inter,system-ui,sans-serif',fontWeight:600,fontSize:'14px',color:'var(--text)'}}>Habitat Maintenance</div>
               <div style={{fontSize:'11px',color:'var(--gold)',letterSpacing:'0.05em'}}>Pro</div>
             </div>
           </div>
@@ -2677,7 +2653,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
             <button key={n.id} onClick={()=>{setPage(n.id);setSideOpen(false);}}
               className="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
               style={page===n.id
-                ?{background:'rgba(201,150,60,0.12)',color:'var(--gold-light)',fontWeight:500,border:'1px solid rgba(201,150,60,0.25)',boxShadow:'inset 0 0 16px rgba(201,150,60,0.06)'}
+                ?{background:'rgba(29,110,245,0.12)',color:'var(--gold-light)',fontWeight:500,border:'1px solid rgba(29,110,245,0.25)',boxShadow:'inset 0 0 16px rgba(29,110,245,0.06)'}
                 :{color:'var(--muted)',border:'1px solid transparent'}
               }
               onMouseEnter={e=>{if(page!==n.id){e.currentTarget.style.background='var(--surface2)';e.currentTarget.style.color='var(--text)';}}}
@@ -2688,7 +2664,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
             </button>
           ))}
         </nav>
-        <div className="p-4" style={{borderTop:'1px solid rgba(201,150,60,0.15)',fontSize:'11px',color:'rgba(201,150,60,0.4)',letterSpacing:'0.05em'}}>Habitat Maintenance · v1.0</div>
+        <div className="p-4" style={{borderTop:'1px solid rgba(29,110,245,0.15)',fontSize:'11px',color:'rgba(29,110,245,0.4)',letterSpacing:'0.05em'}}>Habitat Maintenance · v1.0</div>
       </aside>
     </>
   );
@@ -2703,7 +2679,7 @@ const BOTTOM_NAV=[
 ];
 function MobileBottomNav({page,setPage,setSideOpen}){
   return(
-    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 lg:hidden flex items-stretch" style={{background:'linear-gradient(180deg,#0e0c08 0%,#100e09 100%)',borderTop:'1px solid rgba(201,150,60,0.18)'}}>
+    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 lg:hidden flex items-stretch" style={{background:'linear-gradient(180deg,#0e0c08 0%,#100e09 100%)',borderTop:'1px solid rgba(29,110,245,0.18)'}}>
       {BOTTOM_NAV.map(n=>(
         <button key={n.id} onClick={()=>setPage(n.id)} className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-2 transition-colors" style={page===n.id?{color:'var(--gold-light)'}:{color:'var(--muted)'}}>
           <span className="text-xl leading-none">{n.icon}</span>
@@ -2741,7 +2717,7 @@ function ResetPasswordPage({onDone}){
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px'}}>
-            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
+            <span style={{fontFamily:'Inter,system-ui,sans-serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>HM</span>
           </div>
           <h1 className="font-display text-2xl font-bold mb-1" style={{color:'var(--text)'}}>Nouveau mot de passe</h1>
           <p className="text-sm" style={{color:'var(--muted)'}}>Choisissez un mot de passe sécurisé</p>
@@ -2805,11 +2781,11 @@ function Login({onLogin}){
 
   return(
     <div className="min-h-screen flex items-center justify-center p-4" style={{background:'var(--bg)'}}>
-      <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(ellipse at 50% 30%,rgba(201,150,60,0.06) 0%,transparent 65%)'}}/>
+      <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(ellipse at 50% 30%,rgba(29,110,245,0.06) 0%,transparent 65%)'}}/>
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
-          <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px',boxShadow:'0 0 40px rgba(201,150,60,0.2)'}}>
-            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
+          <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px',boxShadow:'0 0 40px rgba(29,110,245,0.2)'}}>
+            <span style={{fontFamily:'Inter,system-ui,sans-serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>HM</span>
           </div>
           <h1 className="font-display text-3xl font-bold mb-1" style={{color:'var(--text)'}}>Habitat Maintenance</h1>
           <p className="text-sm" style={{color:'var(--muted)'}}>Gestion pour techniciens immobiliers</p>
@@ -2820,7 +2796,7 @@ function Login({onLogin}){
             <button onClick={()=>setTab('signup')} className="flex-1 text-sm py-2 rounded-lg transition-all font-medium" style={tab==='signup'?{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}:{color:'var(--muted)',border:'1px solid transparent'}}>Créer un compte</button>
           </div>
           <form onSubmit={submit} className="space-y-4">
-            <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="photo@studio.fr" required/>
+            <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="contact@example.fr" required/>
             <Input label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" required/>
             {msg.text&&<p className={`text-sm ${msg.type==='success'?'text-green-400':'text-red-400'}`}>{msg.text}</p>}
             <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-semibold text-sm btn-gold-primary disabled:opacity-50">
@@ -2958,16 +2934,7 @@ function App(){
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
   if(resetMode)return <ResetPasswordPage onDone={()=>setResetMode(false)}/>;
-  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadSubscription(u.id);loadAllData(u.id);}}}/>;
-  if(sb&&subscription===null)return(
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-gray-500 text-sm animate-pulse">Chargement…</div>
-    </div>
-  );
-  const isOwner=user&&(user.email==='cyrilleduc2000@gmail.com'||user.email==='admin@photoimmo.pro');
-  if(sb&&!isActive()&&!isOwner)return <UpgradeModal user={user}/>;
-
-  const days=trialDaysLeft();
+  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadAllData(u.id);}}}/>;
 
   const renderPage=()=>{
     switch(page){
@@ -2988,17 +2955,13 @@ function App(){
       <Sidebar page={page} setPage={setPage} sideOpen={sideOpen} setSideOpen={setSideOpen} profile={profile} user={user}/>
       <MobileBottomNav page={page} setPage={setPage} setSideOpen={setSideOpen}/>
       <div className="lg:ml-56">
-        {days!==null&&<TrialBanner daysLeft={days} user={user}/>}
         <header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3" style={{background:'rgba(5,5,8,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)'}}>
           <button onClick={()=>setSideOpen(true)} className="lg:hidden flex items-center justify-center rounded-lg" style={{color:'var(--muted)',width:'44px',height:'44px',flexShrink:0}} onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--muted)'}>☰</button>
           <span className="text-sm font-medium" style={{color:'var(--muted)'}}>{NAV.find(n=>n.id===page)?.icon} {NAV.find(n=>n.id===page)?.label}</span>
           {sb&&(
             <div className="ml-auto flex items-center gap-4">
-              {subscription?.status==='active'&&(
-                <button onClick={manageSubscription} className="text-xs transition-colors" style={{color:'var(--muted)'}} onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--muted)'}>Abonnement</button>
-              )}
               <span className="text-xs hidden sm:block" style={{color:'#3a3a55'}}>{user?.email}</span>
-              <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="text-xs transition-colors px-3 py-1.5 rounded-lg" style={{color:'var(--muted)',border:'1px solid var(--border)'}} onMouseEnter={e=>{e.currentTarget.style.color='var(--text)';e.currentTarget.style.borderColor='rgba(201,150,60,0.3)';}} onMouseLeave={e=>{e.currentTarget.style.color='var(--muted)';e.currentTarget.style.borderColor='var(--border)';}}>Déconnexion</button>
+              <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="text-xs transition-colors px-3 py-1.5 rounded-lg" style={{color:'var(--muted)',border:'1px solid var(--border)'}} onMouseEnter={e=>{e.currentTarget.style.color='var(--text)';e.currentTarget.style.borderColor='rgba(29,110,245,0.3)';}} onMouseLeave={e=>{e.currentTarget.style.color='var(--muted)';e.currentTarget.style.borderColor='var(--border)';}}>Déconnexion</button>
             </div>
           )}
         </header>
