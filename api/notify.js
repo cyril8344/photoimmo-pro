@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
 
   const templates = {
     gallery_ready: {
-      subject: (d) => `Vos photos sont disponibles — ${d.address || 'PhotoImmo Pro'}`,
+      subject: (d) => `Vos photos sont disponibles — ${d.address || 'Habitat Maintenance'}`,
       html: (d) => `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vos photos sont prêtes</title></head>
 <body style="margin:0;padding:0;background:#f4f3ef;font-family:Georgia,'Times New Roman',serif;">
@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
       <td align="center">
         <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:8px 18px;margin-bottom:12px;">
           <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;letter-spacing:0.05em;">PI</span>
-          <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;letter-spacing:0.02em;">PhotoImmo Pro</span>
+          <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;letter-spacing:0.02em;">Habitat Maintenance</span>
         </div>
         <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:bold;color:#fff;margin:0;line-height:1.2;">Vos photos sont prêtes</div>
       </td>
@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
 
   <!-- Footer -->
   <tr><td style="background:#1c1c28;border-radius:0 0 14px 14px;padding:24px 40px;text-align:center;">
-    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">PhotoImmo Pro</p>
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">Habitat Maintenance</p>
     <p style="font-family:Arial,sans-serif;font-size:12px;color:#6b6b7a;margin:0;line-height:1.6;">Photographie immobilière professionnelle</p>
   </td></tr>
 
@@ -99,11 +99,11 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     quote_sent: {
-      subject: (d) => `📄 Devis ${d.num} — PhotoImmo Pro`,
+      subject: (d) => `📄 Devis ${d.num} — Habitat Maintenance`,
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
           <div style="background:#c9963c;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
-            <h1 style="color:#0f1117;margin:0;font-size:22px;font-weight:bold;">📸 PhotoImmo Pro</h1>
+            <h1 style="color:#0f1117;margin:0;font-size:22px;font-weight:bold;">📸 Habitat Maintenance</h1>
           </div>
           <h2 style="color:#f5be64;margin-top:0;">Votre devis est disponible</h2>
           <p>Bonjour ${d.client_name},</p>
@@ -124,7 +124,7 @@ module.exports = async function handler(req, res) {
           <p style="text-align:center;color:#6b7280;font-size:13px;">Ou vous pouvez retourner ce devis signé avec la mention <em>"Bon pour accord"</em>.</p>
           ` : `<p>Pour l'accepter, retournez-le signé avec la mention <em>"Bon pour accord"</em> accompagné d'un acompte de 30 %.</p>`}
           <p style="color:#6b7280;font-size:12px;margin-top:30px;border-top:1px solid #374151;padding-top:15px;">
-            PhotoImmo Pro — Photographie immobilière professionnelle<br/>
+            Habitat Maintenance — Photographie immobilière professionnelle<br/>
             Ce devis a été généré automatiquement, ne pas répondre directement à cet email.
           </p>
         </div>`,
@@ -138,14 +138,14 @@ module.exports = async function handler(req, res) {
           <p>Nous n'avons pas encore reçu votre réponse concernant le devis <strong>${d.num}</strong> d'un montant de <strong>${d.ttc} € TTC</strong>.</p>
           <p>Ce devis expire le <strong>${d.expires}</strong>.</p>
           <p>N'hésitez pas à nous contacter pour toute question.</p>
-          <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
+          <p style="color:#6b7280;font-size:12px;">Habitat Maintenance</p>
         </div>`,
     },
-    shooting_reminder: {
-      subject: '📷 Rappel : shooting demain à votre adresse',
+    intervention_reminder: {
+      subject: '📷 Rappel : intervention demain à votre adresse',
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
-          <h2 style="color:#f59e0b;">Votre shooting est demain</h2>
+          <h2 style="color:#f59e0b;">Votre intervention est demain</h2>
           <p>Bonjour ${d.client_name},</p>
           <p>Rappel : votre séance photo est prévue <strong>demain</strong> :</p>
           <ul>
@@ -156,7 +156,7 @@ module.exports = async function handler(req, res) {
         </div>`,
     },
     gallery_not_downloaded: {
-      subject: (d) => `Vos photos vous attendent — ${d.address || 'PhotoImmo Pro'}`,
+      subject: (d) => `Vos photos vous attendent — ${d.address || 'Habitat Maintenance'}`,
       html: (d) => `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vos photos vous attendent</title></head>
 <body style="margin:0;padding:0;background:#f4f3ef;font-family:Georgia,'Times New Roman',serif;">
@@ -166,7 +166,7 @@ module.exports = async function handler(req, res) {
   <tr><td style="background:linear-gradient(135deg,#c9963c 0%,#e8b96e 50%,#c9963c 100%);border-radius:14px 14px 0 0;padding:32px 40px;text-align:center;">
     <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:12px;padding:8px 18px;margin-bottom:12px;">
       <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;letter-spacing:0.05em;">PI</span>
-      <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;">PhotoImmo Pro</span>
+      <span style="font-family:Georgia,serif;font-size:14px;font-weight:bold;color:#fff;margin-left:8px;">Habitat Maintenance</span>
     </div>
     <div style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#fff;margin:0;">Vos photos vous attendent encore</div>
   </td></tr>
@@ -185,7 +185,7 @@ module.exports = async function handler(req, res) {
     <p style="font-family:Arial,sans-serif;font-size:13px;color:#8a8a9a;margin:0;line-height:1.6;">Ce lien est personnel et privé — il vous est destiné exclusivement.</p>
   </td></tr>
   <tr><td style="background:#1c1c28;border-radius:0 0 14px 14px;padding:24px 40px;text-align:center;">
-    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">PhotoImmo Pro</p>
+    <p style="font-family:Arial,sans-serif;font-size:13px;color:#c9963c;font-weight:600;margin:0 0 6px;">Habitat Maintenance</p>
     <p style="font-family:Arial,sans-serif;font-size:12px;color:#6b6b7a;margin:0;">Photographie immobilière professionnelle</p>
   </td></tr>
 </table>
@@ -202,15 +202,15 @@ module.exports = async function handler(req, res) {
           <p>Sauf erreur de notre part, la facture <strong>${d.num}</strong> d'un montant de <strong>${d.ttc} € TTC</strong> est toujours en attente de règlement.</p>
           <p>Date d'échéance : <strong>${d.due_date}</strong></p>
           <p>Merci de procéder au règlement dans les meilleurs délais.</p>
-          <p style="color:#6b7280;font-size:12px;">PhotoImmo Pro</p>
+          <p style="color:#6b7280;font-size:12px;">Habitat Maintenance</p>
         </div>`,
     },
     invoice_sent: {
-      subject: (d) => `📋 Votre facture ${d.num} — PhotoImmo Pro`,
+      subject: (d) => `📋 Votre facture ${d.num} — Habitat Maintenance`,
       html: (d) => `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
           <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
-            <h1 style="color:#000;margin:0;font-size:24px;">📋 PhotoImmo Pro</h1>
+            <h1 style="color:#000;margin:0;font-size:24px;">📋 Habitat Maintenance</h1>
           </div>
           <h2 style="color:#f59e0b;">Votre facture est disponible</h2>
           <p>Bonjour ${d.client_name},</p>
@@ -224,7 +224,7 @@ module.exports = async function handler(req, res) {
           </div>
           <p>Merci de procéder au règlement avant la date d'échéance indiquée.</p>
           <p style="color:#6b7280;font-size:12px;margin-top:30px;border-top:1px solid #374151;padding-top:15px;">
-            PhotoImmo Pro — Photographie immobilière professionnelle<br/>
+            Habitat Maintenance — Photographie immobilière professionnelle<br/>
             Pénalités de retard applicables en cas de retard de paiement.
           </p>
         </div>`,
@@ -236,7 +236,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const emailPayload = {
-      from: process.env.EMAIL_FROM || 'PhotoImmo Pro <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'Habitat Maintenance <onboarding@resend.dev>',
       to: [to],
       subject: typeof template.subject === 'function' ? template.subject(data || {}) : template.subject,
       html: template.html(data || {}),

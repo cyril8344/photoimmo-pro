@@ -1,4 +1,4 @@
--- PhotoImmo Pro – Supabase Schema
+-- Habitat Maintenance – Supabase Schema
 -- Run this in your Supabase SQL editor
 
 create table clients (
