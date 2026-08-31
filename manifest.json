@@ -1,7 +1,7 @@
 {
-  "name": "PhotoImmo Pro",
-  "short_name": "PhotoImmo",
-  "description": "Gestion professionnelle de photographie immobilière",
+  "name": "Habitat Maintenance",
+  "short_name": "Habitat Maintenance",
+  "description": "Gestion de micro-entreprise : piscine, climatisation, électricité, plomberie",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0906",

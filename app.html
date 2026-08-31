@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
-  <title>PhotoImmo Pro</title>
+  <title>Habitat Maintenance</title>
   <link rel="manifest" href="/manifest.json"/>
   <meta name="theme-color" content="#0a0906"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="PhotoImmo"/>
+  <meta name="apple-mobile-web-app-title" content="Habitat Maintenance"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -135,18 +135,17 @@ const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '
 const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 
 const TVA = 0.20;
+const SERVICE_TYPES = ['Piscine','Climatisation','Électricité','Plomberie','Multi-services'];
 const PACKS = {
-  essentiel: { surface:'50-100', photos:20, visite:'non', drone:'non', retouche:'standard', label:'Pack Essentiel' },
-  confort:   { surface:'100-200', photos:30, visite:'oui', drone:'non', retouche:'standard', label:'Pack Confort' },
-  premium:   { surface:'>200', photos:50, visite:'oui', drone:'oui', retouche:'premium', label:'Pack Premium' },
+  piscine:      { type:'Piscine', label:'Entretien Piscine' },
+  climatisation:{ type:'Climatisation', label:'Entretien Clim' },
+  electricite:  { type:'Électricité', label:'Intervention Électricité' },
+  plomberie:    { type:'Plomberie', label:'Intervention Plomberie' },
 };
 const TARIFS = {
-  surface: {'<50':200,'50-100':300,'100-200':450,'>200':600},
-  photos:  {10:0,20:80,30:150,50:280},
-  visite:  {non:0,oui:350},
-  drone:   {non:0,oui:250},
-  retouche:{standard:0,premium:120},
-  deplacement:0,
+  horaire: 55,
+  deplacement: 30,
+  urgence: 50,
 };
 function getUserTarifs(){
   const ct=(store.get('pii_profile',{})).custom_tarifs||{};
@@ -160,13 +159,13 @@ function getUserTarifs(){
   };
 }
 const PROPERTY_TYPES=['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
-const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Réalisé','Livraison','Facturé','Payé'];
+const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Intervention','Retouche','Réalisé','Livraison','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
   'Prospect':'bg-gray-500/20 text-gray-400',
   'Devis envoyé':'bg-blue-500/20 text-blue-400',
   'Accepté':'bg-green-500/20 text-green-400',
-  'Shooting':'bg-orange-500/20 text-orange-400',
+  'Intervention':'bg-orange-500/20 text-orange-400',
   'Retouche':'bg-purple-500/20 text-purple-400',
   'Livraison':'bg-cyan-500/20 text-cyan-400',
   'Facturé':'bg-yellow-500/20 text-yellow-400',
@@ -317,7 +316,7 @@ function Dashboard({clients,missions,quotes,invoices}){
   const getClient=id=>clients.find(c=>c.id===id);
 
   // Pipeline kanban simplifié
-  const PIPELINE_STATUSES=['Prospect','Devis envoyé','Accepté','Shooting','Retouche','Livraison'];
+  const PIPELINE_STATUSES=['Prospect','Devis envoyé','Accepté','Intervention','Retouche','Livraison'];
   const pipelineGroups=PIPELINE_STATUSES.map(s=>({status:s,items:missions.filter(m=>m.status===s)}));
 
   // CA 6 derniers mois
@@ -804,7 +803,7 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   const lightGray=[180,180,190];
   const veryLightGray=[240,240,245];
   const profile=store.get('pii_profile',{});
-  const companyName=profile.company_name||'PhotoImmo Pro';
+  const companyName=profile.company_name||'Habitat Maintenance';
   const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   const validUntil=new Date(q.created_at);validUntil.setDate(validUntil.getDate()+30);
 
@@ -917,7 +916,7 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à la livraison des fichiers.',
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
-    'Clause de propriété intellectuelle : les fichiers restent la propriété du photographe jusqu\'au paiement intégral.',
+    'Clause de propriété intellectuelle : les fichiers restent la propriété du technicien jusqu\'au paiement intégral.',
     'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
@@ -988,7 +987,7 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   const lightGray=[180,180,190];
   const veryLightGray=[240,240,245];
   const profile=store.get('pii_profile',{});
-  const companyName=profile.company_name||'PhotoImmo Pro';
+  const companyName=profile.company_name||'Habitat Maintenance';
   const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   const isPaid=inv.status==='Payée'||inv.status==='Payé';
 
@@ -1100,7 +1099,7 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
     'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
-    'Clause de propriété intellectuelle : les fichiers restent la propriété du photographe jusqu\'au paiement intégral.',
+    'Clause de propriété intellectuelle : les fichiers restent la propriété du technicien jusqu\'au paiement intégral.',
     'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
@@ -1176,7 +1175,7 @@ function exportFacturX(inv,client,mission){
   <rsm:SupplyChainTradeTransaction>
     <ram:ApplicableHeaderTradeAgreement>
       <ram:SellerTradeParty>
-        <ram:Name>${escXml(p.company_name||'PhotoImmo Pro')}</ram:Name>
+        <ram:Name>${escXml(p.company_name||'Habitat Maintenance')}</ram:Name>
         ${siret?`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${siret}</ram:ID></ram:SpecifiedLegalOrganization>`:''}
         <ram:PostalTradeAddress>
           <ram:LineOne>${escXml(p.address||'')}</ram:LineOne>
@@ -1620,7 +1619,7 @@ function UpgradeModal({user}){
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-black font-bold text-2xl mx-auto mb-4">PI</div>
           <h1 className="text-2xl font-bold">Votre essai est terminé</h1>
-          <p className="text-gray-400 mt-2 text-sm">Abonnez-vous pour continuer à utiliser PhotoImmo Pro et accéder à toutes vos données.</p>
+          <p className="text-gray-400 mt-2 text-sm">Abonnez-vous pour continuer à utiliser Habitat Maintenance et accéder à toutes vos données.</p>
         </div>
         <div className="flex justify-center mb-6">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-1 flex gap-1">
@@ -2646,12 +2645,12 @@ function PortfolioPage({user}) {
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:'📊',label:'Dashboard'},
-  {id:'clients',icon:'👥',label:'Clients & Agences'},
-  {id:'missions',icon:'📅',label:'Missions'},
+  {id:'clients',icon:'👥',label:'Clients'},
+  {id:'missions',icon:'🔧',label:'Interventions'},
   {id:'quotes',icon:'📄',label:'Devis'},
-  {id:'delivery',icon:'🖼️',label:'Livraisons'},
+  {id:'delivery',icon:'📋',label:'Rapports'},
   {id:'invoices',icon:'🧾',label:'Factures & Compta'},
-  {id:'portfolio',icon:'🌐',label:'Mon Portfolio'},
+  {id:'portfolio',icon:'🌐',label:'Ma Vitrine'},
   {id:'admin',icon:'⚙️',label:'Admin',adminOnly:true},
 ];
 function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
@@ -2665,7 +2664,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
               <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'11px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
             </div>
             <div>
-              <div style={{fontFamily:'Playfair Display,serif',fontWeight:600,fontSize:'14px',color:'var(--text)'}}>PhotoImmo</div>
+              <div style={{fontFamily:'Playfair Display,serif',fontWeight:600,fontSize:'14px',color:'var(--text)'}}>Habitat Maintenance</div>
               <div style={{fontSize:'11px',color:'var(--gold)',letterSpacing:'0.05em'}}>Pro</div>
             </div>
           </div>
@@ -2689,7 +2688,7 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
             </button>
           ))}
         </nav>
-        <div className="p-4" style={{borderTop:'1px solid rgba(201,150,60,0.15)',fontSize:'11px',color:'rgba(201,150,60,0.4)',letterSpacing:'0.05em'}}>PhotoImmo Pro · v1.0</div>
+        <div className="p-4" style={{borderTop:'1px solid rgba(201,150,60,0.15)',fontSize:'11px',color:'rgba(201,150,60,0.4)',letterSpacing:'0.05em'}}>Habitat Maintenance · v1.0</div>
       </aside>
     </>
   );
@@ -2698,8 +2697,8 @@ function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
 // ─── MOBILE BOTTOM NAV ────────────────────────────────────────────────────────
 const BOTTOM_NAV=[
   {id:'dashboard',icon:'📊',label:'Dashboard'},
-  {id:'missions',icon:'📅',label:'Missions'},
-  {id:'delivery',icon:'🖼️',label:'Livraisons'},
+  {id:'missions',icon:'🔧',label:'Interventions'},
+  {id:'delivery',icon:'📋',label:'Rapports'},
   {id:'clients',icon:'👥',label:'Clients'},
 ];
 function MobileBottomNav({page,setPage,setSideOpen}){
@@ -2812,8 +2811,8 @@ function Login({onLogin}){
           <div className="aperture w-16 h-16 mx-auto mb-5 flex items-center justify-center" style={{width:'64px',height:'64px',borderRadius:'16px',boxShadow:'0 0 40px rgba(201,150,60,0.2)'}}>
             <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>PI</span>
           </div>
-          <h1 className="font-display text-3xl font-bold mb-1" style={{color:'var(--text)'}}>PhotoImmo Pro</h1>
-          <p className="text-sm" style={{color:'var(--muted)'}}>Gestion pour photographes immobiliers</p>
+          <h1 className="font-display text-3xl font-bold mb-1" style={{color:'var(--text)'}}>Habitat Maintenance</h1>
+          <p className="text-sm" style={{color:'var(--muted)'}}>Gestion pour techniciens immobiliers</p>
         </div>
         <div className="rounded-2xl p-6" style={{background:'var(--surface)',border:'1px solid var(--border)',boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
           <div className="flex rounded-xl p-1 mb-5" style={{background:'var(--surface2)',border:'1px solid var(--border)'}}>
@@ -3009,7 +3008,7 @@ function App(){
           <a href="/legal/cgv.html" target="_blank">CGV</a>
           <a href="/legal/cgu.html" target="_blank">CGU</a>
           <a href="/legal/confidentialite.html" target="_blank">Confidentialité</a>
-          <span>© 2025 PhotoImmo Pro</span>
+          <span>© 2025 Habitat Maintenance</span>
         </footer>
       </div>
     </div>

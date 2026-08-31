@@ -8,10 +8,10 @@ module.exports = async function handler(req, res) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return res.status(500).json({ error: 'Resend API key not configured' });
 
-  const { name, email, phone, address, type, message, photographer_slug } = req.body || {};
+  const { name, email, phone, address, type, message, technicienr_slug } = req.body || {};
 
-  if (!name || !email || !photographer_slug) {
-    return res.status(400).json({ error: 'Champs requis manquants : name, email, photographer_slug' });
+  if (!name || !email || !technicienr_slug) {
+    return res.status(400).json({ error: 'Champs requis manquants : name, email, technicienr_slug' });
   }
 
   // Validate email format
@@ -19,8 +19,8 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Format email invalide' });
   }
 
-  // Look up photographer email via Supabase (optional — falls back to notifications@)
-  let photographerEmail = 'notifications@photoimmo.pro';
+  // Look up technicienr email via Supabase (optional — falls back to notifications@)
+  let technicienrEmail = 'notifications@photoimmo.pro';
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
     try {
       const { createClient } = require('@supabase/supabase-js');
@@ -28,11 +28,11 @@ module.exports = async function handler(req, res) {
       const { data: profileData } = await sb
         .from('user_profiles')
         .select('user_id')
-        .eq('portfolio_slug', photographer_slug)
+        .eq('portfolio_slug', technicienr_slug)
         .single();
       if (profileData?.user_id) {
         const { data: userData } = await sb.auth.admin.getUserById(profileData.user_id);
-        if (userData?.user?.email) photographerEmail = userData.user.email;
+        if (userData?.user?.email) technicienrEmail = userData.user.email;
       }
     } catch (_) {
       // Fall through to default email
@@ -47,14 +47,14 @@ module.exports = async function handler(req, res) {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'PhotoImmo Pro <notifications@photoimmo.pro>',
-        to: [photographerEmail],
+        from: 'Habitat Maintenance <notifications@photoimmo.pro>',
+        to: [technicienrEmail],
         reply_to: email,
         subject: `📩 Nouveau contact portfolio — ${name}`,
         html: `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
             <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
-              <h1 style="color:#000;margin:0;font-size:24px;">📸 PhotoImmo Pro</h1>
+              <h1 style="color:#000;margin:0;font-size:24px;">📸 Habitat Maintenance</h1>
             </div>
             <h2 style="color:#f59e0b;">Nouveau contact depuis votre portfolio</h2>
             <div style="background:#1a1d27;border-radius:12px;padding:20px;margin:20px 0;">
@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
             </div>
             ` : ''}
             <p style="color:#6b7280;font-size:12px;margin-top:20px;">
-              Contact via le portfolio : ${photographer_slug}
+              Contact via le portfolio : ${technicienr_slug}
             </p>
           </div>
         `,

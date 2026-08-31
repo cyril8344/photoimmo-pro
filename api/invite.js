@@ -59,17 +59,17 @@ module.exports = async function handler(req, res) {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'PhotoImmo Pro <notifications@photoimmo.pro>',
+        from: 'Habitat Maintenance <notifications@photoimmo.pro>',
         to: [email],
-        subject: '🎉 Invitation à rejoindre PhotoImmo Pro',
+        subject: '🎉 Invitation à rejoindre Habitat Maintenance',
         html: `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e5e7eb;padding:40px;border-radius:16px;">
             <div style="background:#f59e0b;padding:20px;border-radius:12px;text-align:center;margin-bottom:30px;">
-              <h1 style="color:#000;margin:0;font-size:24px;">📸 PhotoImmo Pro</h1>
+              <h1 style="color:#000;margin:0;font-size:24px;">📸 Habitat Maintenance</h1>
             </div>
             <h2 style="color:#f59e0b;">Vous avez été invité !</h2>
             <p>Bonjour,</p>
-            <p>Un administrateur vous invite à rejoindre PhotoImmo Pro, la plateforme de gestion pour photographes immobiliers.</p>
+            <p>Un administrateur vous invite à rejoindre Habitat Maintenance, la plateforme de gestion pour techniciens immobiliers.</p>
             ${inviteUrl ? `
             <div style="text-align:center;margin:30px 0;">
               <a href="${inviteUrl}" style="background:#f59e0b;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;">
@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
               </a>
             </div>
             ` : ''}
-            <p style="color:#6b7280;font-size:12px;">Ce lien expire dans 24 heures. PhotoImmo Pro</p>
+            <p style="color:#6b7280;font-size:12px;">Ce lien expire dans 24 heures. Habitat Maintenance</p>
           </div>
         `,
       }),
