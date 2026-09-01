@@ -2820,9 +2820,7 @@ function Login({onLogin}){
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App(){
-  const [authed,setAuthed]=useState(false);
-  const [user,setUser]=useState(null);
-  const [subscription,setSubscription]=useState(sb?null:{status:'trialing',trial_ends_at:new Date(Date.now()+14*86400000).toISOString()});
+  const [user]=useState(null);
   const [page,setPage]=useState('dashboard');
   const [resetMode,setResetMode]=useState(false);
   const [sideOpen,setSideOpen]=useState(false);
@@ -2874,22 +2872,7 @@ function App(){
     }
   };
 
-  useEffect(()=>{
-    // Détecte immédiatement le token recovery dans l'URL avant tout chargement async
-    if(window.location.hash.includes('type=recovery')){
-      setResetMode(true);
-    }
-    if(!sb)return;
-    sb.auth.getSession().then(async({data:{session}})=>{
-      if(session){setUser(session.user);setAuthed(true);await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}
-    });
-    const{data:{subscription:authSub}}=sb.auth.onAuthStateChange(async(event,session)=>{
-      if(event==='PASSWORD_RECOVERY'){setResetMode(true);return;}
-      if(session){setUser(session.user);setAuthed(true);if(event==='SIGNED_IN'&&!window.location.hash.includes('type=recovery')){await loadProfile(session.user.id);await loadSubscription(session.user.id);loadAllData(session.user.id);}}
-      else{setUser(null);setAuthed(false);setSubscription(null);}
-    });
-    return()=>authSub.unsubscribe();
-  },[]);
+  useEffect(()=>{ /* auth removed — app runs without login */ },[]);
 
   const updateMissionStatus=async(missionId,newStatus)=>{
     if(!missionId)return;
@@ -2933,8 +2916,6 @@ function App(){
   // NOTE: loadSubscription is defined above (as const) so it is in scope here.
   // The onLogin callback is only invoked after the component has fully rendered,
   // so loadSubscription is accessible via closure at call time.
-  if(resetMode)return <ResetPasswordPage onDone={()=>setResetMode(false)}/>;
-  if(!authed)return <Login onLogin={async(u)=>{setAuthed(true);if(u&&sb){setUser(u);await loadProfile(u.id);loadAllData(u.id);}}}/>;
 
   const renderPage=()=>{
     switch(page){
@@ -2958,12 +2939,6 @@ function App(){
         <header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3" style={{background:'rgba(5,5,8,0.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)'}}>
           <button onClick={()=>setSideOpen(true)} className="lg:hidden flex items-center justify-center rounded-lg" style={{color:'var(--muted)',width:'44px',height:'44px',flexShrink:0}} onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--muted)'}>☰</button>
           <span className="text-sm font-medium" style={{color:'var(--muted)'}}>{NAV.find(n=>n.id===page)?.icon} {NAV.find(n=>n.id===page)?.label}</span>
-          {sb&&(
-            <div className="ml-auto flex items-center gap-4">
-              <span className="text-xs hidden sm:block" style={{color:'#3a3a55'}}>{user?.email}</span>
-              <button onClick={()=>{sb.auth.signOut();setAuthed(false);}} className="text-xs transition-colors px-3 py-1.5 rounded-lg" style={{color:'var(--muted)',border:'1px solid var(--border)'}} onMouseEnter={e=>{e.currentTarget.style.color='var(--text)';e.currentTarget.style.borderColor='rgba(29,110,245,0.3)';}} onMouseLeave={e=>{e.currentTarget.style.color='var(--muted)';e.currentTarget.style.borderColor='var(--border)';}}>Déconnexion</button>
-            </div>
-          )}
         </header>
         <main className="main-content-mobile lg:!pb-8 p-4 lg:p-8 max-w-5xl mx-auto">{renderPage()}</main>
         <footer className="app-footer hidden lg:flex">
