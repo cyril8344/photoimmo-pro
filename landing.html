@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Gérez vos clients, missions, devis et livraisons photo en un seul outil. Conçu pour les techniciens immobiliers."/>
-  <title>Habitat Maintenance — Gestion pour techniciens immobiliers</title>
+  <meta name="description" content="Gérez vos clients, interventions, devis et rapports de maintenance en un seul outil. Conçu pour les techniciens indépendants."/>
+  <title>Habitat Maintenance — Gestion pour techniciens indépendants</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
-      --gold: #c9963c;
-      --gold-light: #e8b96e;
+      --gold: #1d6ef5;
+      --gold-light: #5ca3f8;
       --bg: #08080f;
       --surface: #0f0f1a;
       --surface2: #16162a;
@@ -72,23 +72,23 @@
       border: 1px solid var(--border);
       transition: border-color 0.3s, transform 0.3s;
     }
-    .card-premium:hover { border-color: rgba(201,150,60,0.3); transform: translateY(-2px); }
+    .card-premium:hover { border-color: rgba(29,110,245,0.3); transform: translateY(-2px); }
     .card-gold {
-      background: linear-gradient(135deg, rgba(201,150,60,0.12) 0%, rgba(201,150,60,0.04) 100%);
-      border: 1px solid rgba(201,150,60,0.3);
+      background: linear-gradient(135deg, rgba(29,110,245,0.12) 0%, rgba(29,110,245,0.04) 100%);
+      border: 1px solid rgba(29,110,245,0.3);
     }
 
     /* Buttons */
     .btn-gold {
-      background: linear-gradient(135deg, #c9963c 0%, #e8b96e 50%, #c9963c 100%);
+      background: linear-gradient(135deg, #1d6ef5 0%, #5ca3f8 50%, #1d6ef5 100%);
       background-size: 200% 100%;
       color: #08080f; font-weight: 600;
       transition: background-position 0.4s, box-shadow 0.3s;
-      box-shadow: 0 0 40px rgba(201,150,60,0.25);
+      box-shadow: 0 0 40px rgba(29,110,245,0.25);
     }
     .btn-gold:hover {
       background-position: 100% 0;
-      box-shadow: 0 0 60px rgba(201,150,60,0.4);
+      box-shadow: 0 0 60px rgba(29,110,245,0.4);
     }
     .btn-outline {
       border: 1px solid rgba(255,255,255,0.15);
@@ -96,9 +96,9 @@
       transition: border-color 0.3s, color 0.3s, background 0.3s;
     }
     .btn-outline:hover {
-      border-color: rgba(201,150,60,0.5);
+      border-color: rgba(29,110,245,0.5);
       color: var(--gold-light);
-      background: rgba(201,150,60,0.05);
+      background: rgba(29,110,245,0.05);
     }
 
     /* Divider */
@@ -109,7 +109,7 @@
 
     /* Gradient text */
     .gradient-text {
-      background: linear-gradient(135deg, #e8b96e 0%, #c9963c 50%, #f0c070 100%);
+      background: linear-gradient(135deg, #5ca3f8 0%, #1d6ef5 50%, #f0c070 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
@@ -117,8 +117,8 @@
     /* Feature icon */
     .feature-icon {
       width: 48px; height: 48px; border-radius: 12px;
-      background: linear-gradient(135deg, rgba(201,150,60,0.15), rgba(201,150,60,0.05));
-      border: 1px solid rgba(201,150,60,0.2);
+      background: linear-gradient(135deg, rgba(29,110,245,0.15), rgba(29,110,245,0.05));
+      border: 1px solid rgba(29,110,245,0.2);
       display: flex; align-items: center; justify-content: center;
       font-size: 20px;
     }
@@ -139,7 +139,7 @@
       background: #0a0a14;
       border: 1px solid var(--border);
       border-radius: 16px;
-      box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03), 0 0 80px rgba(201,150,60,0.08);
+      box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03), 0 0 80px rgba(29,110,245,0.08);
       overflow: hidden;
       min-width: 680px;
     }
@@ -147,7 +147,7 @@
     .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
 
     /* Stats ticker */
-    .stat-box { border-left: 2px solid rgba(201,150,60,0.4); }
+    .stat-box { border-left: 2px solid rgba(29,110,245,0.4); }
 
     /* Testimonial */
     .testimonial-card {
@@ -158,11 +158,11 @@
     .testimonial-card::before {
       content: '"'; font-family: 'Playfair Display', serif;
       position: absolute; top: 12px; left: 20px;
-      font-size: 64px; color: rgba(201,150,60,0.15); line-height: 1;
+      font-size: 64px; color: rgba(29,110,245,0.15); line-height: 1;
     }
 
     /* Glow */
-    .glow-gold { box-shadow: 0 0 80px rgba(201,150,60,0.15); }
+    .glow-gold { box-shadow: 0 0 80px rgba(29,110,245,0.15); }
 
     /* FAQ */
     details summary { list-style: none; cursor: pointer; }
@@ -183,8 +183,8 @@
     /* Number badge */
     .num-badge {
       width: 32px; height: 32px; border-radius: 50%;
-      background: rgba(201,150,60,0.1);
-      border: 1px solid rgba(201,150,60,0.2);
+      background: rgba(29,110,245,0.1);
+      border: 1px solid rgba(29,110,245,0.2);
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; font-weight: 600; color: var(--gold-light);
     }
@@ -208,8 +208,8 @@
       <a href="#faq" class="text-sm text-[var(--muted)] hover:text-white transition-colors tracking-wide">FAQ</a>
     </div>
     <div class="flex items-center gap-4">
-      <a href="/app" class="text-sm text-[var(--muted)] hover:text-white transition-colors hidden sm:block tracking-wide">Connexion</a>
-      <a href="/app" class="btn-gold px-5 py-2.5 rounded-xl text-sm font-semibold">Essai gratuit →</a>
+      <a href="/app" class="text-sm text-[var(--muted)] hover:text-white transition-colors hidden sm:block tracking-wide">Accéder</a>
+      <a href="/app" class="btn-gold px-5 py-2.5 rounded-xl text-sm font-semibold">Ouvrir l'app →</a>
     </div>
   </div>
 </nav>
@@ -221,27 +221,27 @@
   <div class="hero-grain"></div>
 
   <!-- Ambient light -->
-  <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] opacity-20 pointer-events-none" style="background:radial-gradient(ellipse,rgba(201,150,60,0.4) 0%,transparent 70%);"></div>
+  <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] opacity-20 pointer-events-none" style="background:radial-gradient(ellipse,rgba(29,110,245,0.4) 0%,transparent 70%);"></div>
 
   <div class="relative z-10 text-center max-w-4xl mx-auto">
 
-    <div class="anim-1 inline-flex items-center gap-2.5 mb-8 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase" style="background:rgba(201,150,60,0.08);border:1px solid rgba(201,150,60,0.2);color:var(--gold-light);">
+    <div class="anim-1 inline-flex items-center gap-2.5 mb-8 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase" style="background:rgba(29,110,245,0.08);border:1px solid rgba(29,110,245,0.2);color:var(--gold-light);">
       <span style="width:6px;height:6px;border-radius:50%;background:var(--gold-light);display:inline-block;animation:bounce 2s infinite;"></span>
-      14 jours d'essai gratuit · Sans carte bancaire
+      Application gratuite · Accès immédiat, sans inscription
     </div>
 
     <h1 class="anim-2 font-display text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
-      L'outil qui libère<br/>
-      <span class="gradient-text">votre talent photo</span>
+      L'outil qui simplifie<br/>
+      <span class="gradient-text">votre micro-entreprise</span>
     </h1>
 
     <p class="anim-3 text-lg md:text-xl text-[var(--muted)] mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-      Clients, missions, devis, galeries de livraison. Tout ce qu'un technicien de maintenance indépendant devrait avoir — sans la paperasse.
+      Clients, interventions, devis, rapports. Tout ce qu'un technicien de maintenance indépendant devrait avoir — sans la paperasse.
     </p>
 
     <div class="anim-4 flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
       <a href="/app" class="btn-gold px-8 py-4 rounded-xl text-base w-full sm:w-auto text-center">
-        Commencer gratuitement →
+        Accéder à l'application →
       </a>
       <a href="#demo" class="btn-outline px-8 py-4 rounded-xl text-base w-full sm:w-auto text-center">
         Voir l'interface ↓
@@ -251,16 +251,16 @@
     <!-- Social proof -->
     <div class="anim-4 flex flex-wrap justify-center gap-8 text-sm">
       <div class="stat-box pl-4">
-        <div class="text-2xl font-display font-bold text-white">14 j</div>
-        <div class="text-[var(--muted)] text-xs">Essai gratuit</div>
+        <div class="text-2xl font-display font-bold text-white">Gratuit</div>
+        <div class="text-[var(--muted)] text-xs">Accès complet</div>
       </div>
       <div class="stat-box pl-4">
         <div class="text-2xl font-display font-bold text-white">0 €</div>
-        <div class="text-[var(--muted)] text-xs">Sans CB requise</div>
+        <div class="text-[var(--muted)] text-xs">Sans inscription</div>
       </div>
       <div class="stat-box pl-4">
         <div class="text-2xl font-display font-bold text-white">∞</div>
-        <div class="text-[var(--muted)] text-xs">Clients & missions</div>
+        <div class="text-[var(--muted)] text-xs">Clients & devis</div>
       </div>
     </div>
   </div>
@@ -288,7 +288,7 @@
           <div class="mockup-dot bg-green-500/50"></div>
         </div>
         <div class="flex-1 flex justify-center">
-          <div class="px-4 py-1 rounded-md text-xs text-[var(--muted)] font-mono" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);">photoimmo.pro/app</div>
+          <div class="px-4 py-1 rounded-md text-xs text-[var(--muted)] font-mono" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);">habitat-maintenance.app</div>
         </div>
       </div>
 
@@ -297,15 +297,15 @@
         <!-- Sidebar -->
         <div class="flex-shrink-0 flex flex-col" style="width:180px;background:#0a0a14;border-right:1px solid var(--border);">
           <div class="p-4 flex items-center gap-2.5" style="border-bottom:1px solid var(--border);">
-            <div style="width:28px;height:28px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08080f;flex-shrink:0;">PI</div>
+            <div style="width:28px;height:28px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08080f;flex-shrink:0;">HM</div>
             <div>
               <div class="text-xs font-semibold text-white">Habitat Maintenance</div>
               <div class="text-xs" style="color:var(--muted);">Pro</div>
             </div>
           </div>
           <nav class="p-3 space-y-0.5 flex-1">
-            <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style="background:rgba(201,150,60,0.12);">
-              <svg width="14" height="14" fill="none" stroke="#c9963c" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style="background:rgba(29,110,245,0.12);">
+              <svg width="14" height="14" fill="none" stroke="#1d6ef5" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
               <span class="text-xs font-medium" style="color:var(--gold-light);">Dashboard</span>
             </div>
             <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-white/5">
@@ -322,7 +322,7 @@
             </div>
             <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-white/5">
               <svg width="14" height="14" fill="none" stroke="#7a7a9a" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-              <span class="text-xs" style="color:var(--muted);">Galeries</span>
+              <span class="text-xs" style="color:var(--muted);">Rapports</span>
             </div>
           </nav>
         </div>
@@ -334,7 +334,7 @@
               <div class="font-display font-semibold text-white">Tableau de bord</div>
               <div class="text-xs mt-0.5" style="color:var(--muted);">Bienvenue · Juin 2026</div>
             </div>
-            <div class="px-3 py-1.5 rounded-lg text-xs font-medium" style="background:rgba(201,150,60,0.1);color:var(--gold-light);border:1px solid rgba(201,150,60,0.2);">● Essai actif — 11j</div>
+            <div class="px-3 py-1.5 rounded-lg text-xs font-medium" style="background:rgba(29,110,245,0.1);color:var(--gold-light);border:1px solid rgba(29,110,245,0.2);">● Actif</div>
           </div>
 
           <!-- Stats -->
@@ -342,12 +342,12 @@
             <div class="rounded-xl p-3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);">
               <div class="text-xs mb-2" style="color:var(--muted);">Missions / mois</div>
               <div class="text-xl font-display font-bold text-white">12</div>
-              <div class="text-xs mt-1" style="color:rgba(201,150,60,0.8);">↑ +3 ce mois</div>
+              <div class="text-xs mt-1" style="color:rgba(29,110,245,0.8);">↑ +3 ce mois</div>
             </div>
             <div class="rounded-xl p-3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);">
               <div class="text-xs mb-2" style="color:var(--muted);">CA accepté</div>
               <div class="text-xl font-display font-bold" style="color:var(--gold-light);">4 320 €</div>
-              <div class="text-xs mt-1" style="color:rgba(201,150,60,0.8);">↑ +12%</div>
+              <div class="text-xs mt-1" style="color:rgba(29,110,245,0.8);">↑ +12%</div>
             </div>
             <div class="rounded-xl p-3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);">
               <div class="text-xs mb-2" style="color:var(--muted);">Devis en attente</div>
@@ -357,7 +357,7 @@
             <div class="rounded-xl p-3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);">
               <div class="text-xs mb-2" style="color:var(--muted);">Clients actifs</div>
               <div class="text-xl font-display font-bold text-white">24</div>
-              <div class="text-xs mt-1" style="color:rgba(201,150,60,0.8);">↑ +2 ce mois</div>
+              <div class="text-xs mt-1" style="color:rgba(29,110,245,0.8);">↑ +2 ce mois</div>
             </div>
           </div>
 
@@ -369,7 +369,7 @@
                 <div class="flex justify-between items-center">
                   <div>
                     <div class="text-xs text-white">12 rue des Lilas, Paris 15e</div>
-                    <div class="text-xs mt-0.5" style="color:var(--muted);">Martin Dupont</div>
+                    <div class="text-xs mt-0.5" style="color:var(--muted);">M. Lecomte — Piscine</div>
                   </div>
                   <div class="text-right">
                     <div class="text-xs" style="color:var(--gold-light);">15 juin</div>
@@ -379,7 +379,7 @@
                 <div class="flex justify-between items-center pt-2" style="border-top:1px solid var(--border);">
                   <div>
                     <div class="text-xs text-white">45 av. Foch, Lyon</div>
-                    <div class="text-xs mt-0.5" style="color:var(--muted);">Agence Prestige</div>
+                    <div class="text-xs mt-0.5" style="color:var(--muted);">S. Bernard — Clim</div>
                   </div>
                   <div class="text-right">
                     <div class="text-xs" style="color:var(--gold-light);">18 juin</div>
@@ -421,39 +421,39 @@
       <div class="line-deco mx-auto mb-5"></div>
       <p class="text-xs tracking-widest uppercase font-medium mb-4" style="color:var(--gold-light);">Fonctionnalités</p>
       <h2 class="font-display text-4xl md:text-5xl font-bold text-white mb-4">Tout ce qu'il vous faut,<br/>rien de superflu</h2>
-      <p class="text-lg max-w-xl mx-auto" style="color:var(--muted);">Conçu spécifiquement pour les techniciens immobiliers indépendants</p>
+      <p class="text-lg max-w-xl mx-auto" style="color:var(--muted);">Conçu spécifiquement pour les techniciens de maintenance indépendants</p>
     </div>
 
     <div class="grid md:grid-cols-3 gap-4">
       <div class="card-premium rounded-2xl p-6">
         <div class="feature-icon mb-5">👥</div>
         <h3 class="font-display font-semibold text-lg text-white mb-2">Gestion clients</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">Carnet d'adresses complet avec clients et agents immobiliers. Historique missions et devis par client.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">Carnet d'adresses complet : particuliers, copropriétés, gestionnaires. Historique interventions par client.</p>
       </div>
       <div class="card-premium rounded-2xl p-6">
         <div class="feature-icon mb-5">📅</div>
-        <h3 class="font-display font-semibold text-lg text-white mb-2">Planning missions</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">Planifiez et suivez vos interventions. Statuts en temps réel et rappels automatiques par email.</p>
+        <h3 class="font-display font-semibold text-lg text-white mb-2">Planning interventions</h3>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">Planifiez piscine, clim, électricité, plomberie. Suivi des statuts en temps réel du prospect à la facture.</p>
       </div>
       <div class="card-premium rounded-2xl p-6">
         <div class="feature-icon mb-5">📄</div>
         <h3 class="font-display font-semibold text-lg text-white mb-2">Devis PDF pro</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">Devis en quelques clics avec calcul automatique HT/TVA/TTC. Export PDF élégant à signer en ligne.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">Devis en quelques clics : main-d'œuvre, fournitures, déplacement, urgence. Export PDF professionnel.</p>
       </div>
       <div class="card-premium rounded-2xl p-6">
-        <div class="feature-icon mb-5">🖼️</div>
-        <h3 class="font-display font-semibold text-lg text-white mb-2">Galeries privées</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">Livrez via un lien privé sécurisé. Le client visualise et sélectionne ses favoris. Intégration Google Drive.</p>
+        <div class="feature-icon mb-5">📋</div>
+        <h3 class="font-display font-semibold text-lg text-white mb-2">Rapports d'intervention</h3>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">Créez et partagez vos rapports d'intervention. Transformez un rapport en facture en un clic.</p>
       </div>
       <div class="card-premium rounded-2xl p-6">
-        <div class="feature-icon mb-5">📧</div>
-        <h3 class="font-display font-semibold text-lg text-white mb-2">Emails automatiques</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">Galerie prête, rappel mission, envoi devis, relance facture. Tout s'envoie automatiquement.</p>
+        <div class="feature-icon mb-5">💶</div>
+        <h3 class="font-display font-semibold text-lg text-white mb-2">Facturation simplifiée</h3>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">Transformez vos devis acceptés en factures HT/TTC. Suivi des paiements et relances en un clic.</p>
       </div>
       <div class="card-premium rounded-2xl p-6">
         <div class="feature-icon mb-5">📊</div>
         <h3 class="font-display font-semibold text-lg text-white mb-2">Tableau de bord</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);">CA mensuel, missions à venir, devis en attente. Pilotez votre activité en un coup d'œil.</p>
+        <p class="text-sm leading-relaxed" style="color:var(--muted);">CA mensuel, interventions à venir, devis en attente. Pilotez votre activité en un coup d'œil.</p>
       </div>
     </div>
   </div>
@@ -461,7 +461,7 @@
 
 <!-- HOW IT WORKS -->
 <section class="px-6 py-24" style="background:var(--surface);">
-  <div class="divider mb-24" style="background:linear-gradient(to right,transparent,rgba(201,150,60,0.2),transparent);"></div>
+  <div class="divider mb-24" style="background:linear-gradient(to right,transparent,rgba(29,110,245,0.2),transparent);"></div>
   <div class="max-w-4xl mx-auto">
     <div class="text-center mb-16">
       <p class="text-xs tracking-widest uppercase font-medium mb-4" style="color:var(--gold-light);">Comment ça marche</p>
@@ -471,8 +471,8 @@
       <div class="flex gap-6 items-start">
         <div class="num-badge flex-shrink-0">1</div>
         <div class="pt-1">
-          <h3 class="font-semibold text-white mb-1">Créez votre compte</h3>
-          <p class="text-sm" style="color:var(--muted);">14 jours gratuits, sans carte bancaire. Votre espace est prêt en 30 secondes.</p>
+          <h3 class="font-semibold text-white mb-1">Ouvrez l'application</h3>
+          <p class="text-sm" style="color:var(--muted);">Aucune inscription, aucun mot de passe. Cliquez sur « Accéder » et c'est parti en 5 secondes.</p>
         </div>
       </div>
       <div class="flex gap-6 items-start">
@@ -492,8 +492,8 @@
       <div class="flex gap-6 items-start">
         <div class="num-badge flex-shrink-0">4</div>
         <div class="pt-1">
-          <h3 class="font-semibold text-white mb-1">Livrez via galerie privée</h3>
-          <p class="text-sm" style="color:var(--muted);">Photos livrées en galerie sécurisée. Votre client reçoit un lien, sélectionne ses favoris.</p>
+          <h3 class="font-semibold text-white mb-1">Créez votre rapport et facturez</h3>
+          <p class="text-sm" style="color:var(--muted);">Rédigez le rapport d'intervention, générez la facture PDF et suivez le paiement depuis l'appli.</p>
         </div>
       </div>
     </div>
@@ -510,37 +510,37 @@
     <div class="grid md:grid-cols-3 gap-5">
       <div class="testimonial-card rounded-2xl p-6 pt-10">
         <p class="text-sm leading-relaxed mb-5" style="color:var(--muted);">
-          "Avant je perdais des heures à faire mes devis sur Word. Maintenant c'est 5 minutes chrono, et le PDF est vraiment pro."
+          "Avant je perdais des heures à faire mes devis sur Word. Maintenant c'est 5 minutes chrono, le PDF est vraiment pro et mes clients le signent directement."
         </p>
         <div class="flex items-center gap-3">
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--surface2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--bg);">S</div>
           <div>
-            <div class="text-sm font-medium text-white">Sophie M.</div>
-            <div class="text-xs" style="color:var(--muted);">Technicien — Lyon</div>
+            <div class="text-sm font-medium text-white">Sébastien M.</div>
+            <div class="text-xs" style="color:var(--muted);">Entretien piscine — Lyon</div>
           </div>
         </div>
       </div>
       <div class="testimonial-card rounded-2xl p-6 pt-10">
         <p class="text-sm leading-relaxed mb-5" style="color:var(--muted);">
-          "Les galeries de livraison ont totalement changé la façon dont mes clients reçoivent leurs photos. Très professionnel."
+          "Le suivi des missions de A à Z est parfait. Je sais exactement où j'en suis avec chaque client, que ce soit pour la clim ou l'électricité."
         </p>
         <div class="flex items-center gap-3">
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,var(--surface2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">T</div>
           <div>
             <div class="text-sm font-medium text-white">Thomas R.</div>
-            <div class="text-xs" style="color:var(--muted);">Technicien — Paris</div>
+            <div class="text-xs" style="color:var(--muted);">Multi-services — Paris</div>
           </div>
         </div>
       </div>
       <div class="testimonial-card rounded-2xl p-6 pt-10">
         <p class="text-sm leading-relaxed mb-5" style="color:var(--muted);">
-          "Je recommande à tous les techniciens immo indépendants. Simple, rapide, et ça me donne une image très sérieuse."
+          "Simple, rapide, ça me donne une image très sérieuse. Mes clients voient que je suis organisé dès le premier devis."
         </p>
         <div class="flex items-center gap-3">
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,var(--surface2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">C</div>
           <div>
             <div class="text-sm font-medium text-white">Camille D.</div>
-            <div class="text-xs" style="color:var(--muted);">Technicien — Bordeaux</div>
+            <div class="text-xs" style="color:var(--muted);">Plomberie & Électricité — Bordeaux</div>
           </div>
         </div>
       </div>
@@ -550,52 +550,31 @@
 
 <!-- PRICING -->
 <section id="tarifs" class="px-6 py-24" style="background:var(--surface);">
-  <div class="divider mb-24" style="background:linear-gradient(to right,transparent,rgba(201,150,60,0.2),transparent);"></div>
+  <div class="divider mb-24" style="background:linear-gradient(to right,transparent,rgba(29,110,245,0.2),transparent);"></div>
   <div class="max-w-3xl mx-auto">
     <div class="text-center mb-14">
-      <p class="text-xs tracking-widest uppercase font-medium mb-4" style="color:var(--gold-light);">Tarifs</p>
+      <p class="text-xs tracking-widest uppercase font-medium mb-4" style="color:var(--gold-light);">Accès</p>
       <h2 class="font-display text-4xl md:text-5xl font-bold text-white mb-4">Simple et transparent</h2>
-      <p style="color:var(--muted);">Commencez gratuitement, sans carte bancaire.</p>
+      <p style="color:var(--muted);">Application gratuite, sans inscription requise.</p>
     </div>
-    <div class="grid md:grid-cols-2 gap-5">
-      <div class="card-premium rounded-2xl p-8">
-        <div class="font-display font-semibold text-xl text-white mb-1">Essai gratuit</div>
-        <div class="text-sm mb-8" style="color:var(--muted);">14 jours, accès complet</div>
-        <div class="text-5xl font-display font-bold text-white mb-1">0 €</div>
-        <div class="text-sm mb-8" style="color:var(--muted);">Sans carte bancaire</div>
-        <a href="/app" class="block text-center py-3 rounded-xl text-sm font-medium mb-8 btn-outline">
-          Commencer l'essai →
-        </a>
-        <ul class="space-y-3 text-sm" style="color:var(--muted);">
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Toutes les fonctionnalités</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Clients illimités</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Missions et devis illimités</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Galeries de livraison</li>
-        </ul>
-      </div>
+    <div class="max-w-md mx-auto">
       <div class="card-gold rounded-2xl p-8 relative overflow-hidden">
-        <div class="absolute -top-px left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold tracking-widest uppercase rounded-b-lg" style="background:var(--gold);color:var(--bg);">Recommandé</div>
         <div class="absolute bottom-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none" style="background:radial-gradient(circle,var(--gold),transparent);transform:translate(30%,30%);"></div>
-        <div class="font-display font-semibold text-xl text-white mb-1">Pro</div>
-        <div class="text-sm mb-8" style="color:var(--muted);">Accès complet illimité</div>
+        <div class="font-display font-semibold text-xl text-white mb-1">Accès libre</div>
+        <div class="text-sm mb-8" style="color:var(--muted);">Toutes les fonctionnalités, sans restriction</div>
         <div class="flex items-end gap-2 mb-2">
-          <div class="text-5xl font-display font-bold" style="color:var(--gold-light);">29 €</div>
-          <div class="mb-1.5 text-sm" style="color:var(--muted);">/mois</div>
+          <div class="text-5xl font-display font-bold" style="color:var(--gold-light);">Gratuit</div>
         </div>
-        <div class="text-sm mb-8">
-          <span style="color:var(--muted);">ou </span>
-          <span style="color:var(--gold-light);font-weight:600;">249 €/an</span>
-          <span class="ml-2 text-xs px-2 py-0.5 rounded-full" style="background:rgba(34,197,94,0.15);color:#4ade80;">économisez 99 €</span>
-        </div>
+        <div class="text-sm mb-8" style="color:var(--muted);">Aucune carte bancaire requise</div>
         <a href="/app" class="block text-center py-3.5 rounded-xl text-sm font-bold mb-8 btn-gold">
-          Commencer — 14 jours gratuits
+          Accéder à l'application →
         </a>
         <ul class="space-y-3 text-sm text-white/80">
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Toutes les fonctionnalités</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Clients, missions, devis illimités</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Galeries + Google Drive</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Emails automatiques</li>
-          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Support prioritaire</li>
+          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Clients et interventions illimités</li>
+          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Devis PDF professionnels</li>
+          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Rapports d'intervention</li>
+          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Facturation HT/TTC</li>
+          <li class="flex items-center gap-2.5"><span style="color:var(--gold-light);">✓</span> Tableau de bord complet</li>
         </ul>
       </div>
     </div>
@@ -612,38 +591,38 @@
     <div class="space-y-3">
       <details class="card-premium rounded-xl overflow-hidden group">
         <summary class="flex items-center justify-between px-5 py-4 font-medium text-white hover:text-white/80 transition-colors">
-          <span>Faut-il une carte bancaire pour l'essai ?</span>
+          <span>Faut-il créer un compte pour utiliser l'application ?</span>
           <span class="chevron ml-4 flex-shrink-0">+</span>
         </summary>
         <div class="px-5 pb-4 text-sm leading-relaxed" style="color:var(--muted);border-top:1px solid var(--border);padding-top:12px;">
-          Non. L'essai de 14 jours est entièrement gratuit et ne requiert aucune carte bancaire. Vous ne serez facturé qu'après l'essai si vous choisissez de continuer.
+          Non. L'application s'ouvre directement, sans inscription ni mot de passe. Vos données sont sauvegardées localement dans votre navigateur.
         </div>
       </details>
       <details class="card-premium rounded-xl overflow-hidden">
         <summary class="flex items-center justify-between px-5 py-4 font-medium text-white hover:text-white/80 transition-colors">
-          <span>Mes données sont-elles sécurisées ?</span>
+          <span>Mes données sont-elles conservées ?</span>
           <span class="chevron ml-4 flex-shrink-0">+</span>
         </summary>
         <div class="px-5 pb-4 text-sm leading-relaxed" style="color:var(--muted);border-top:1px solid var(--border);padding-top:12px;">
-          Oui. Chaque compte est isolé par des règles de sécurité (RLS). Vos données ne sont jamais accessibles par d'autres utilisateurs. Les paiements sont gérés par Stripe, certifié PCI-DSS.
+          Vos données sont stockées dans votre navigateur (localStorage). Elles persistent entre les sessions sur le même appareil. Pensez à exporter régulièrement vos devis et factures en PDF.
         </div>
       </details>
       <details class="card-premium rounded-xl overflow-hidden">
         <summary class="flex items-center justify-between px-5 py-4 font-medium text-white hover:text-white/80 transition-colors">
-          <span>Puis-je annuler à tout moment ?</span>
+          <span>Quels types d'interventions puis-je gérer ?</span>
           <span class="chevron ml-4 flex-shrink-0">+</span>
         </summary>
         <div class="px-5 pb-4 text-sm leading-relaxed" style="color:var(--muted);border-top:1px solid var(--border);padding-top:12px;">
-          Oui, sans engagement ni préavis. Annulez depuis votre portail en un clic. Vous conservez l'accès jusqu'à la fin de la période payée.
+          Piscine, climatisation, électricité, plomberie, multi-services. Vous pouvez créer des devis avec taux horaire, fournitures, déplacement et majoration urgence.
         </div>
       </details>
       <details class="card-premium rounded-xl overflow-hidden">
         <summary class="flex items-center justify-between px-5 py-4 font-medium text-white hover:text-white/80 transition-colors">
-          <span>Plusieurs techniciens peuvent-ils utiliser l'app ?</span>
+          <span>L'application fonctionne-t-elle sur mobile ?</span>
           <span class="chevron ml-4 flex-shrink-0">+</span>
         </summary>
         <div class="px-5 pb-4 text-sm leading-relaxed" style="color:var(--muted);border-top:1px solid var(--border);padding-top:12px;">
-          Chaque abonnement est individuel. Chaque technicien crée son propre compte Pro avec ses propres données totalement isolées.
+          Oui, l'interface est entièrement responsive. Vous pouvez l'utiliser sur smartphone ou tablette depuis votre navigateur, y compris sur chantier.
         </div>
       </details>
     </div>
@@ -652,15 +631,15 @@
 
 <!-- FOOTER CTA -->
 <section class="px-6 py-32 relative overflow-hidden" style="background:var(--surface);">
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] pointer-events-none opacity-20" style="background:radial-gradient(ellipse,rgba(201,150,60,0.5),transparent 70%);"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] pointer-events-none opacity-20" style="background:radial-gradient(ellipse,rgba(29,110,245,0.5),transparent 70%);"></div>
   <div class="relative z-10 max-w-2xl mx-auto text-center">
     <div class="aperture mx-auto mb-8" style="width:64px;height:64px;border-radius:16px;"></div>
     <h2 class="font-display text-4xl md:text-5xl font-bold text-white mb-5">Prêt à professionnaliser<br/>votre activité ?</h2>
-    <p class="text-lg mb-10" style="color:var(--muted);">Rejoignez les techniciens immobiliers qui font confiance à Habitat Maintenance.</p>
+    <p class="text-lg mb-10" style="color:var(--muted);">Gérez piscine, clim, électricité et plomberie avec un seul outil conçu pour votre métier.</p>
     <a href="/app" class="inline-block btn-gold px-10 py-4 rounded-xl text-base font-bold">
-      Démarrer l'essai gratuit →
+      Accéder à l'application →
     </a>
-    <p class="text-xs mt-5" style="color:var(--muted);">Sans carte bancaire · 14 jours gratuits · Annulation à tout moment</p>
+    <p class="text-xs mt-5" style="color:var(--muted);">Gratuit · Accès immédiat · Aucune inscription</p>
   </div>
 </section>
 
