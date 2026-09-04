@@ -2422,13 +2422,9 @@ function PortfolioPage({user}) {
             </button>
             <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="font-medium" style={{color:'var(--gold)'}}>active</span>:<span className="text-gray-500">inactive</span>}</span>
           </div>
-          {publicUrl ? (
-            <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>
-              {profile.portfolio_enabled?'🔗 Voir ma vitrine':'👁 Prévisualiser'}
-            </Btn>
-          ) : (
-            <span className="text-xs text-gray-500">Entrez un slug URL pour prévisualiser</span>
-          )}
+          <Btn variant="secondary" size="sm" onClick={()=>window.open('portfolio.html?preview','_blank')}>
+            👁 Prévisualiser ma vitrine
+          </Btn>
         </div>
       </Card>
 
