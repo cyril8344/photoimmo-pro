@@ -1,496 +1,476 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="referrer" content="strict-origin-when-cross-origin"/>
-  <title>Portfolio — PhotoImmo Pro</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vitrine — Habitat Maintenance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config={theme:{extend:{colors:{accent:'#c9963c',gold:'#c9963c','gold-light':'#e8b96e'}}}}</script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --gold: #c9963c;
-      --gold-light: #e8b96e;
-      --bg: #08080f;
-      --surface: #0f0f1a;
-      --surface2: #16162a;
-      --border: #1e1e35;
-      --text: #f0ede8;
-      --muted: #7a7a9a;
+    :root{
+      --bg:#ECEAE4;--surface:#F8F7F3;--surface-2:#F0EEE9;
+      --blue:#1741B8;--blue-mid:#2553D4;
+      --blue-dim:rgba(23,65,184,0.09);--blue-line:rgba(23,65,184,0.18);
+      --text:#161621;--muted:#696978;--border:#D5D2C8;
     }
-    * { box-sizing: border-box; }
-    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
-    h1,h2,h3,.font-display{font-family:'Playfair Display',Georgia,serif;}
-    .fade-in{animation:fadeIn .5s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-    ::-webkit-scrollbar{width:6px;}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    @media(prefers-color-scheme:dark){
+      :root:not([data-theme="light"]){
+        --bg:#111318;--surface:#1A1D26;--surface-2:#20242F;
+        --blue:#4070F0;--blue-mid:#5585FF;
+        --blue-dim:rgba(64,112,240,0.12);--blue-line:rgba(64,112,240,0.22);
+        --text:#E6E4DE;--muted:#8A8A9A;--border:#2A2D3A;
+      }
+    }
+    :root[data-theme="dark"]{
+      --bg:#111318;--surface:#1A1D26;--surface-2:#20242F;
+      --blue:#4070F0;--blue-mid:#5585FF;
+      --blue-dim:rgba(64,112,240,0.12);--blue-line:rgba(64,112,240,0.22);
+      --text:#E6E4DE;--muted:#8A8A9A;--border:#2A2D3A;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    img{max-width:100%;display:block;}
 
-    .aperture{width:44px;height:44px;position:relative;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;}
-    .aperture::before{content:'';position:absolute;width:20px;height:20px;border-radius:50%;border:2px solid rgba(0,0,0,0.7);box-shadow:inset 0 0 0 4px rgba(0,0,0,0.3);}
+    /* ── Header ── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+    .header-inner{display:flex;align-items:center;justify-content:space-between;height:58px;max-width:1080px;margin:0 auto;padding:0 24px;}
+    .brand{display:flex;align-items:center;gap:11px;text-decoration:none;}
+    .brand-mark{width:34px;height:34px;border-radius:5px;background:var(--blue);color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .brand-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);line-height:1.25;}
+    .brand-name small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);letter-spacing:.05em;}
+    .back-btn{font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;border:1px solid var(--border);transition:color .15s,background .15s;}
+    .back-btn:hover{color:var(--text);background:var(--surface-2);}
 
-    .nav-blur{background:rgba(8,8,15,0.75);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,0.06);}
+    /* ── Hero ── */
+    .hero{background:var(--surface);border-bottom:3px solid var(--blue);}
+    .hero-inner{display:grid;grid-template-columns:1fr 340px;max-width:1080px;margin:0 auto;}
+    .hero-copy{padding:48px 40px 48px 24px;border-right:1px solid var(--border);}
+    .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:12px;}
+    .hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(24px,3.5vw,40px);line-height:1.08;text-wrap:balance;margin-bottom:16px;}
+    .hero-title em{color:var(--blue);font-style:normal;}
+    .hero-sub{font-size:15px;color:var(--muted);line-height:1.72;max-width:420px;margin-bottom:22px;}
+    .hero-chips{display:flex;flex-wrap:wrap;gap:7px;}
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:12px;font-weight:500;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-line);}
+    .hero-stats{background:var(--bg);}
+    .stat-cell{padding:20px 26px;border-bottom:1px solid var(--border);}
+    .stat-cell:last-child{border-bottom:none;}
+    .stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--blue);line-height:1;font-variant-numeric:tabular-nums;margin-bottom:3px;}
+    .stat-label{font-size:12px;color:var(--muted);font-weight:500;}
 
-    .card-premium{background:var(--surface);border:1px solid var(--border);transition:border-color .3s, transform .3s;}
-    .card-premium:hover{border-color:rgba(201,150,60,0.3);transform:translateY(-2px);}
+    /* ── Sections ── */
+    .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+    section{padding:56px 0;}
+    section:nth-child(even){background:var(--surface);}
+    .section-head{margin-bottom:30px;}
+    .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(19px,2.4vw,26px);color:var(--text);text-wrap:balance;}
+    .rule{width:28px;height:2px;background:var(--blue);margin-top:10px;}
+    .section-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:30px;}
 
-    .btn-gold{background:linear-gradient(135deg,#c9963c 0%,#e8b96e 50%,#c9963c 100%);background-size:200% 100%;color:#08080f;font-weight:600;transition:background-position .4s, box-shadow .3s;box-shadow:0 0 30px rgba(201,150,60,0.2);}
-    .btn-gold:hover{background-position:100% 0;box-shadow:0 0 45px rgba(201,150,60,0.35);}
+    /* ── Services ── */
+    .services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+    .svc{background:var(--surface);padding:28px;transition:background .2s;}
+    .svc:hover{background:var(--surface-2);}
+    .svc-icon{width:42px;height:42px;border-radius:8px;background:var(--blue-dim);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--blue);}
+    .svc-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:7px;}
+    .svc-desc{font-size:13.5px;color:var(--muted);line-height:1.68;margin-bottom:14px;}
+    .svc-tasks{display:flex;flex-wrap:wrap;gap:5px;}
+    .task{font-size:11px;padding:3px 8px;border-radius:3px;background:var(--bg);color:var(--muted);border:1px solid var(--border);}
 
-    .gradient-text{background:linear-gradient(135deg,#e8b96e 0%,#c9963c 50%,#f0c070 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    /* ── Réalisations ── */
+    .reals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .real-item{border-radius:5px;overflow:hidden;position:relative;border:1px solid var(--border);}
+    .real-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;}
+    .real-placeholder{width:100%;aspect-ratio:4/3;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;}
+    .real-label{position:absolute;bottom:0;left:0;right:0;padding:24px 12px 10px;background:linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 100%);}
+    .real-cat{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);font-weight:600;margin-bottom:2px;}
+    .real-caption{font-size:12.5px;color:#fff;font-weight:500;}
+    .no-reals{text-align:center;padding:40px;color:var(--muted);font-size:14px;background:var(--surface-2);border-radius:6px;border:1px dashed var(--border);}
 
-    .feature-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,rgba(201,150,60,0.15),rgba(201,150,60,0.05));border:1px solid rgba(201,150,60,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;}
+    /* ── Témoignages ── */
+    .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .testi{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:20px;}
+    .stars{margin-bottom:10px;color:var(--blue);font-size:13px;}
+    .testi-text{font-size:13px;color:var(--text);line-height:1.72;font-style:italic;margin-bottom:14px;}
+    .testi-author{display:flex;align-items:center;gap:10px;}
+    .testi-avatar{width:32px;height:32px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--blue);flex-shrink:0;}
+    .testi-name{font-weight:600;font-size:13px;}
+    .testi-date{font-size:11.5px;color:var(--muted);}
+    .no-testi{text-align:center;padding:32px;color:var(--muted);font-size:14px;}
 
-    .testimonial-card{background:var(--surface);border:1px solid var(--border);position:relative;}
-    .testimonial-card::before{content:'"';font-family:'Playfair Display',serif;position:absolute;top:8px;left:18px;font-size:56px;color:rgba(201,150,60,0.15);line-height:1;}
+    /* ── Tarifs ── */
+    .tarifs-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+    .tarifs-table{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+    .tarif-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);}
+    .tarif-row:last-child{border-bottom:none;}
+    .tarif-name{font-size:14px;font-weight:500;}
+    .tarif-price{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--blue);font-variant-numeric:tabular-nums;white-space:nowrap;}
+    .tarifs-note{background:var(--blue-dim);border:1px solid var(--blue-line);border-radius:6px;padding:18px 20px;}
+    .tarifs-note-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13.5px;color:var(--blue);margin-bottom:10px;}
+    .tarifs-note ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+    .tarifs-note li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.5;}
+    .tarifs-note li::before{content:'→';color:var(--blue);font-weight:600;flex-shrink:0;margin-top:1px;}
+    .tarifs-note small{display:block;font-size:11.5px;color:var(--muted);margin-top:12px;}
 
-    .line-deco{width:48px;height:2px;background:linear-gradient(to right,var(--gold),transparent);}
-    .divider{height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);}
+    /* ── Réseaux sociaux ── */
+    .social-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+    .social-link{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:500;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);transition:border-color .15s;}
+    .social-link:hover{border-color:var(--blue);color:var(--blue);}
 
-    .tab-pill{border:1px solid var(--border);color:var(--muted);background:var(--surface2);}
-    .tab-pill.active{background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);color:#08080f;border-color:transparent;font-weight:600;}
+    /* ── CTA ── */
+    .cta-section{background:var(--blue);padding:52px 24px;text-align:center;}
+    .cta-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(20px,2.8vw,30px);color:#fff;text-wrap:balance;margin-bottom:10px;}
+    .cta-sub{font-size:15px;color:rgba(255,255,255,.8);margin-bottom:26px;}
+    .cta-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .btn-w{background:#fff;color:var(--blue);padding:12px 24px;border-radius:4px;font-weight:700;font-size:14px;text-decoration:none;transition:opacity .15s;}
+    .btn-w:hover{opacity:.9;}
+    .btn-ghost{border:1.5px solid rgba(255,255,255,.4);color:#fff;padding:11px 22px;border-radius:4px;font-weight:600;font-size:14px;text-decoration:none;transition:border-color .15s;}
+    .btn-ghost:hover{border-color:rgba(255,255,255,.7);}
+    .cta-detail{font-size:12px;color:rgba(255,255,255,.5);margin-top:14px;}
 
-    input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
-    input::placeholder,textarea::placeholder{color:var(--muted);}
-    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,150,60,0.15);}
+    /* ── Footer ── */
+    footer{background:var(--surface);border-top:1px solid var(--border);padding:18px 24px;}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1080px;margin:0 auto;font-size:12.5px;color:var(--muted);}
+    .preview-banner{background:var(--blue-dim);border-bottom:1px solid var(--blue-line);padding:8px 24px;text-align:center;font-size:12.5px;color:var(--blue);}
+    .preview-banner a{color:var(--blue);font-weight:600;text-decoration:underline;}
+
+    /* ── Responsive ── */
+    @media(max-width:860px){
+      .hero-inner{grid-template-columns:1fr;}
+      .hero-copy{padding:32px 24px 24px;border-right:none;border-bottom:1px solid var(--border);}
+      .hero-stats{display:grid;grid-template-columns:repeat(2,1fr);}
+      .services-grid{grid-template-columns:1fr;}
+      .reals-grid{grid-template-columns:repeat(2,1fr);}
+      .testi-grid{grid-template-columns:1fr;}
+      .tarifs-wrap{grid-template-columns:1fr;}
+    }
+    @media(max-width:520px){
+      .reals-grid{grid-template-columns:1fr;}
+    }
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
   </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useRef}=React;
 
-const SB_URL  = typeof __SUPABASE_URL__  !== 'undefined' ? __SUPABASE_URL__  : '';
-const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '';
-const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+<!-- Banner preview si depuis l'app -->
+<div class="preview-banner" id="previewBanner" hidden>
+  ⚡ Mode prévisualisation — <a href="/app">Retour à l'application</a> pour modifier vos données
+</div>
 
-const PHOTO_CATEGORIES = ['Appartements','Maisons','Villas','Commerces','Drone','Visite virtuelle'];
-const PROPERTY_TYPES = ['Appartement','Maison','Villa','Commerce','Bureau','Terrain','Autre'];
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a class="brand" href="#">
+      <div class="brand-mark" id="headerMark">HM</div>
+      <div class="brand-name" id="headerName">
+        Habitat Maintenance
+        <small>Technicien indépendant</small>
+      </div>
+    </a>
+    <a class="back-btn" href="/app" id="backBtn">
+      ← Retour à l'application
+    </a>
+  </div>
+</header>
 
-// ─── STARS ────────────────────────────────────────────────────────────────────
-const Stars = ({rating}) => (
-  <span style={{color:'var(--gold-light)'}}>
-    {'★'.repeat(Math.max(0, Math.min(5, rating||0)))}
-    <span style={{color:'var(--border)'}}>{'★'.repeat(5 - Math.max(0, Math.min(5, rating||0)))}</span>
-  </span>
-);
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="eyebrow" id="heroZone">Technicien de maintenance</div>
+      <h1 class="hero-title" id="heroTitle">
+        Entretien &amp; dépannage<br/>
+        <em>piscine, clim, électricité</em><br/>
+        et plomberie
+      </h1>
+      <p class="hero-sub" id="heroBio">Intervenant indépendant pour les particuliers et copropriétés. Devis gratuit, réponse sous 24h.</p>
+      <div class="hero-chips">
+        <span class="chip">✓ Devis gratuit</span>
+        <span class="chip">✓ Intervention rapide</span>
+        <span class="chip" id="siretChip" hidden></span>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-cell">
+        <div class="stat-num" id="statPhotos">—</div>
+        <div class="stat-label">réalisations</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="statAvis">—</div>
+        <div class="stat-label">avis clients</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="statTarif">55 €</div>
+        <div class="stat-label">taux horaire HT</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="statContact">📞</div>
+        <div class="stat-label" id="statContactLabel">Contact</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-// ─── SOCIAL LINKS ─────────────────────────────────────────────────────────────
-const SOCIAL_META = {
-  instagram: {label:'Instagram', path:'M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7z M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z M17 6.7a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z'},
-  facebook: {label:'Facebook', path:'M12 2a10 10 0 1 0 1.5 19.9v-7h-2v-2.7h2v-2c0-2 1.2-3.1 3-3.1.9 0 1.7.07 2 .1v2.3h-1.4c-1.1 0-1.3.5-1.3 1.3v1.7h2.6l-.4 2.7h-2.2v7A10 10 0 0 0 12 2z'},
-  linkedin: {label:'LinkedIn', path:'M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05c.53-1 1.84-2.05 3.78-2.05 4.05 0 4.8 2.6 4.8 6V21h-4v-5.7c0-1.36-.02-3.1-1.9-3.1-1.9 0-2.2 1.48-2.2 3v5.8h-4z'},
-  tiktok: {label:'TikTok', path:'M14 3h3a5.5 5.5 0 0 0 5 5v3a8.5 8.5 0 0 1-5-1.6V15a6 6 0 1 1-6-6c.34 0 .67.03 1 .08V12.2a3 3 0 1 0 2 2.83z'},
-  website: {label:'Site web', path:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z'},
-};
-function SocialLinks({social}) {
-  const entries = Object.entries(social || {}).filter(([key, url]) => url && SOCIAL_META[key]);
-  if (!entries.length) return null;
-  return (
-    <div className="flex items-center justify-center gap-3">
-      {entries.map(([key, url]) => (
-        <a key={key} href={url} target="_blank" rel="noopener noreferrer" title={SOCIAL_META[key].label}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-          style={{background:'var(--surface2)', border:'1px solid var(--border)', color:'var(--gold-light)'}}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--gold)';e.currentTarget.style.background='rgba(201,150,60,0.1)';}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='var(--surface2)';}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d={SOCIAL_META[key].path}/>
-          </svg>
+<!-- SERVICES -->
+<section id="services">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Prestations</div>
+      <h2 class="section-title">Quatre domaines, un seul interlocuteur</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="services-grid">
+      <div class="svc">
+        <div class="svc-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M2 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M2 18c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M12 3v6M8.5 5.5 12 3l3.5 2.5"/></svg>
+        </div>
+        <div class="svc-name">Piscine</div>
+        <p class="svc-desc">Entretien régulier, traitement de l'eau, hivernage et remise en route. Diagnostic équipements filtration et pompes.</p>
+        <div class="svc-tasks"><span class="task">Traitement eau</span><span class="task">Nettoyage filtre</span><span class="task">Hivernage</span><span class="task">Pompe &amp; robot</span></div>
+      </div>
+      <div class="svc">
+        <div class="svc-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="8" rx="2"/><path d="M7 11v10M17 11v10M12 11v6"/><path d="M5 19h6M13 17h6"/></svg>
+        </div>
+        <div class="svc-name">Climatisation</div>
+        <p class="svc-desc">Installation, entretien annuel et dépannage de systèmes split. Recharge gaz, nettoyage filtres, vérification performances.</p>
+        <div class="svc-tasks"><span class="task">Split mural</span><span class="task">Multi-split</span><span class="task">Entretien annuel</span><span class="task">Recharge gaz</span></div>
+      </div>
+      <div class="svc">
+        <div class="svc-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/></svg>
+        </div>
+        <div class="svc-name">Électricité</div>
+        <p class="svc-desc">Mise aux normes, création de circuits, remplacement de tableau. Interventions courant faible et domotique résidentielle.</p>
+        <div class="svc-tasks"><span class="task">Tableau électrique</span><span class="task">Mise aux normes</span><span class="task">Prises &amp; circuits</span><span class="task">Domotique</span></div>
+      </div>
+      <div class="svc">
+        <div class="svc-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M14 6.5a2.5 2.5 0 0 0-5 0v1H6a2 2 0 0 0-2 2v2h2v2H4v2a2 2 0 0 0 2 2h3.5v1a2.5 2.5 0 0 0 5 0v-1H18a2 2 0 0 0 2-2v-2h-2v-2h2v-2a2 2 0 0 0-2-2h-3.5v-1Z"/></svg>
+        </div>
+        <div class="svc-name">Plomberie</div>
+        <p class="svc-desc">Dépannage urgence, installation sanitaires, remplacement chauffe-eau et adoucisseur. Détection et réparation de fuites.</p>
+        <div class="svc-tasks"><span class="task">Urgence</span><span class="task">Chauffe-eau</span><span class="task">Sanitaires</span><span class="task">Détection fuite</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RÉALISATIONS -->
+<section id="realisations">
+  <div class="wrap">
+    <div class="section-head-row">
+      <div>
+        <div class="eyebrow">Portfolio</div>
+        <h2 class="section-title">Réalisations récentes</h2>
+        <div class="rule"></div>
+      </div>
+      <span style="font-size:13px;color:var(--muted);" id="realsCount"></span>
+    </div>
+    <div id="realsGrid" class="reals-grid"></div>
+  </div>
+</section>
+
+<!-- TÉMOIGNAGES -->
+<section id="temoignages">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Avis clients</div>
+      <h2 class="section-title">Ce qu'ils en disent</h2>
+      <div class="rule"></div>
+    </div>
+    <div id="testiGrid" class="testi-grid"></div>
+  </div>
+</section>
+
+<!-- TARIFS -->
+<section id="tarifs">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Tarifs</div>
+      <h2 class="section-title">Grille tarifaire — HT</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tarifs-wrap">
+      <div class="tarifs-table" id="tarifsTable"></div>
+      <div>
+        <div class="tarifs-note">
+          <div class="tarifs-note-title">Comment ça fonctionne</div>
+          <ul>
+            <li>Devis gratuit et sans engagement avant toute intervention</li>
+            <li>Facturation à l'heure réelle, pas au forfait gonflé</li>
+            <li>Fournitures facturées au prix d'achat avec justificatif</li>
+            <li>Règlement par virement, chèque ou espèces</li>
+          </ul>
+          <small id="zoneNote">Déplacement inclus dans la zone d'intervention.</small>
+        </div>
+        <a href="#contact" class="chip" style="display:inline-flex;margin-top:14px;padding:10px 18px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600;background:var(--blue);color:#fff;border:none;">
+          Demander un devis gratuit →
         </a>
-      ))}
+      </div>
     </div>
-  );
+  </div>
+</section>
+
+<!-- CTA / CONTACT -->
+<div class="cta-section" id="contact">
+  <div class="cta-title">Un projet ou une urgence ?</div>
+  <p class="cta-sub">Devis gratuit sous 24 heures, sans engagement.</p>
+  <div class="cta-actions" id="ctaActions">
+    <span class="btn-w" style="cursor:default;">📞 Téléphone non renseigné</span>
+  </div>
+  <p class="cta-detail">Lundi – Samedi · 8h – 19h · Interventions urgentes disponibles</p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--text);">
+      <div class="brand-mark" id="footerMark" style="width:26px;height:26px;font-size:10px;border-radius:4px;">HM</div>
+      <span id="footerName">Habitat Maintenance</span>
+      <span id="footerSiret"></span>
+    </div>
+    <div id="footerZone">© 2026</div>
+  </div>
+</footer>
+
+<script>
+// ── Lecture localStorage ──────────────────────────────────
+const store = {
+  get: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+};
+
+const profile    = store.get('pii_profile', {});
+const photos     = store.get('pii_portfolio_photos', []);
+const testimons  = store.get('pii_testimonials', []);
+const TARIFS     = { horaire: 55, deplacement: 30, urgence: 50 };
+const ct         = profile.custom_tarifs || {};
+const tarifs     = {
+  horaire:    ct.horaire    ?? TARIFS.horaire,
+  deplacement: ct.deplacement ?? TARIFS.deplacement,
+  urgence:    ct.urgence    ?? TARIFS.urgence,
+};
+
+// Preview mode si ouvert depuis l'app
+const isPreview = document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview');
+if (isPreview) document.getElementById('previewBanner').hidden = false;
+
+// ── Utilitaires ───────────────────────────────────────────
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function initials(name) {
+  return (name || 'HM').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'HM';
+}
+function fmt(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }); } catch { return d; }
 }
 
-// ─── CONTACT FORM ─────────────────────────────────────────────────────────────
-function ContactForm({slug, photographerName}) {
-  const [form, setForm] = useState({name:'',email:'',phone:'',address:'',type:'Appartement',message:''});
-  const [status, setStatus] = useState('idle'); // idle | sending | success | error
-  const [errMsg, setErrMsg] = useState('');
+// ── Header ────────────────────────────────────────────────
+const companyName = profile.company_name || 'Habitat Maintenance';
+document.getElementById('headerMark').textContent = initials(companyName);
+document.getElementById('headerName').innerHTML =
+  `${esc(companyName)}<small>Technicien indépendant</small>`;
+document.getElementById('footerMark').textContent = initials(companyName);
+document.getElementById('footerName').textContent = companyName;
+document.title = `${companyName} — Vitrine`;
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.name || !form.email) return;
-    setStatus('sending');
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({...form, photographer_slug: slug})
-      });
-      const r = await res.json();
-      if (r.success) { setStatus('success'); setForm({name:'',email:'',phone:'',address:'',type:'Appartement',message:''}); }
-      else { setErrMsg(r.error || 'Erreur'); setStatus('error'); }
-    } catch(err) {
-      setErrMsg(err.message);
-      setStatus('error');
-    }
-  };
+// ── Hero ──────────────────────────────────────────────────
+if (profile.zone) document.getElementById('heroZone').textContent = profile.zone;
+if (profile.bio)  document.getElementById('heroBio').textContent = profile.bio;
 
-  if (status === 'success') {
-    return (
-      <div className="text-center py-12">
-        <div className="text-5xl mb-4">✅</div>
-        <h3 className="text-xl font-bold mb-2" style={{color:'var(--text)'}}>Demande envoyée !</h3>
-        <p style={{color:'var(--muted)'}}>{photographerName} vous contactera très prochainement.</p>
-        <button onClick={()=>setStatus('idle')} className="mt-4 text-sm hover:underline" style={{color:'var(--gold-light)'}}>Envoyer une autre demande</button>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Nom complet *</label>
-          <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} required
-            className="w-full rounded-lg text-sm px-3 py-2.5"/>
-        </div>
-        <div>
-          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Email *</label>
-          <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} required
-            className="w-full rounded-lg text-sm px-3 py-2.5"/>
-        </div>
-        <div>
-          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Téléphone</label>
-          <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))}
-            className="w-full rounded-lg text-sm px-3 py-2.5"/>
-        </div>
-        <div>
-          <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Type de bien</label>
-          <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
-            className="w-full rounded-lg text-sm px-3 py-2.5">
-            {PROPERTY_TYPES.map(t=><option key={t}>{t}</option>)}
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Adresse du bien</label>
-        <input value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="12 rue des Lilas, 75015 Paris"
-          className="w-full rounded-lg text-sm px-3 py-2.5"/>
-      </div>
-      <div>
-        <label className="block text-sm mb-1" style={{color:'var(--muted)'}}>Message</label>
-        <textarea value={form.message} onChange={e=>setForm(f=>({...f,message:e.target.value}))} rows={4}
-          placeholder="Décrivez votre projet..."
-          className="w-full rounded-lg text-sm px-3 py-2.5 resize-none"/>
-      </div>
-      {status==='error' && <p className="text-sm" style={{color:'#f87171'}}>{errMsg}</p>}
-      <button type="submit" disabled={status==='sending'}
-        className="btn-gold w-full disabled:opacity-60 py-3 rounded-xl">
-        {status==='sending' ? 'Envoi en cours…' : 'Envoyer la demande de devis'}
-      </button>
-    </form>
-  );
+if (profile.siret) {
+  const c = document.getElementById('siretChip');
+  c.hidden = false;
+  c.textContent = `SIRET ${profile.siret}`;
 }
 
-// ─── PORTFOLIO APP ────────────────────────────────────────────────────────────
-function PortfolioApp() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [photos, setPhotos] = useState([]);
-  const [testimonials, setTestimonials] = useState([]);
-  const [activePhotoTab, setActivePhotoTab] = useState('Tous');
+document.getElementById('statPhotos').textContent = photos.length || '—';
+document.getElementById('statAvis').textContent = testimons.length || '—';
+document.getElementById('statTarif').textContent = `${tarifs.horaire} €`;
 
-  // Extract slug from URL: /portfolio/[slug]
-  const slug = window.location.pathname.split('/portfolio/')[1]?.split('/')[0] || '';
+if (profile.phone) {
+  document.getElementById('statContact').textContent = profile.phone;
+  document.getElementById('statContactLabel').textContent = 'Téléphone';
+}
 
-  useEffect(() => {
-    // Update meta tags dynamically
-    document.title = profile ? `${profile.company_name || 'Portfolio'} — PhotoImmo Pro` : 'Portfolio — PhotoImmo Pro';
-  }, [profile]);
+// Zone footer
+if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 · ${profile.zone}`;
+if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
 
-  useEffect(() => {
-    if (!slug) {
-      setError('Aucun portfolio trouvé pour cette URL.');
-      setLoading(false);
-      return;
-    }
+// ── Réalisations ──────────────────────────────────────────
+const grid = document.getElementById('realsGrid');
+const count = document.getElementById('realsCount');
 
-    if (sb) {
-      loadFromSupabase();
-    } else {
-      loadDemoData();
-    }
-  }, [slug]);
-
-  const loadFromSupabase = async () => {
-    try {
-      // Load profile
-      const { data: profileData, error: profileErr } = await sb
-        .from('user_profiles')
-        .select('*')
-        .eq('portfolio_slug', slug)
-        .eq('portfolio_enabled', true)
-        .single();
-
-      if (profileErr || !profileData) {
-        setError('Portfolio introuvable ou désactivé.');
-        setLoading(false);
-        return;
+if (photos.length === 0) {
+  grid.innerHTML = `<div class="no-reals" style="grid-column:1/-1;">
+    Aucune photo pour l'instant. Ajoutez vos réalisations depuis l'onglet <strong>Ma Vitrine</strong> de l'application.
+  </div>`;
+} else {
+  count.textContent = `${photos.length} réalisation${photos.length > 1 ? 's' : ''}`;
+  grid.innerHTML = photos.map(p => `
+    <div class="real-item">
+      ${p.url
+        ? `<img class="real-img" src="${esc(p.url)}" alt="${esc(p.caption || p.category)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">`
+        : ''
       }
-      setProfile(profileData);
-
-      // Load photos
-      const { data: photosData } = await sb
-        .from('portfolio_photos')
-        .select('*')
-        .eq('user_id', profileData.user_id)
-        .order('display_order', {ascending: true});
-      setPhotos(photosData || []);
-
-      // Load testimonials
-      const { data: testimonialsData } = await sb
-        .from('testimonials')
-        .select('*')
-        .eq('user_id', profileData.user_id)
-        .order('date', {ascending: false});
-      setTestimonials(testimonialsData || []);
-
-      setLoading(false);
-    } catch(err) {
-      setError('Erreur lors du chargement du portfolio.');
-      setLoading(false);
-    }
-  };
-
-  const loadDemoData = () => {
-    // Try localStorage first (for testing own portfolio)
-    const localProfile = JSON.parse(localStorage.getItem('pii_profile') || '{}');
-    if (localProfile.portfolio_slug === slug || !slug) {
-      setProfile({
-        company_name: localProfile.company_name || 'Studio Photo Demo',
-        siret: localProfile.siret || '',
-        address: localProfile.address || 'Paris, France',
-        phone: localProfile.phone || '06 00 00 00 00',
-        bio: localProfile.bio || 'Photographe immobilier professionnel spécialisé dans la mise en valeur de biens immobiliers. Passionné par la lumière naturelle et les espaces de vie.',
-        zone: localProfile.zone || 'Paris et Île-de-France',
-        portfolio_enabled: true,
-      });
-      setPhotos(JSON.parse(localStorage.getItem('pii_portfolio_photos') || '[]'));
-      setTestimonials(JSON.parse(localStorage.getItem('pii_testimonials') || '[]'));
-    } else {
-      // Generic demo data
-      setProfile({
-        company_name: 'Studio Lumière Pro',
-        siret: '123 456 789 00012',
-        address: '12 rue des Arts, 75003 Paris',
-        phone: '06 12 34 56 78',
-        bio: 'Photographe immobilier professionnel avec 10 ans d\'expérience. Spécialisé dans la mise en valeur de tous types de biens : appartements, maisons, villas et locaux commerciaux.',
-        zone: 'Paris et Île-de-France',
-        portfolio_enabled: true,
-        social_links: {instagram:'https://instagram.com', facebook:'https://facebook.com', linkedin:'https://linkedin.com'},
-      });
-      setPhotos([
-        {id:'p1', url:'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600', category:'Appartements', caption:'Appartement lumineux 3 pièces'},
-        {id:'p2', url:'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600', category:'Maisons', caption:'Maison avec jardin'},
-        {id:'p3', url:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', category:'Villas', caption:'Villa avec piscine'},
-        {id:'p4', url:'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600', category:'Commerces', caption:'Local commercial centre-ville'},
-        {id:'p5', url:'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600', category:'Appartements', caption:'Studio moderne'},
-        {id:'p6', url:'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600', category:'Maisons', caption:'Maison familiale'},
-      ]);
-      setTestimonials([
-        {id:'t1', client_name:'Martin Dupont', rating:5, comment:'Excellent travail, photos magnifiques qui ont grandement aidé à vendre rapidement notre appartement !', date:'2026-05-15'},
-        {id:'t2', client_name:'Sophie Bernard', rating:5, comment:'Professionnel et ponctuel. Les photos étaient livrées en 48h, avec des retouches impeccables.', date:'2026-04-20'},
-        {id:'t3', client_name:'Agence Prestige', rating:4, comment:'Très bon travail sur nos biens de luxe. Nous faisons régulièrement appel à ses services.', date:'2026-03-10'},
-      ]);
-    }
-    setLoading(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" style={{borderColor:'var(--gold-light)',borderTopColor:'transparent'}}/>
-          <p style={{color:'var(--muted)'}}>Chargement du portfolio…</p>
-        </div>
+      <div class="real-placeholder"${p.url ? ' hidden' : ''}>${esc(p.category || 'Réalisation')}</div>
+      <div class="real-label">
+        <div class="real-cat">${esc(p.category || '')}</div>
+        <div class="real-caption">${esc(p.caption || '')}</div>
       </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold mb-2" style={{color:'var(--text)'}}>Portfolio introuvable</h1>
-          <p style={{color:'var(--muted)'}}>{error || 'Ce portfolio n\'existe pas ou a été désactivé.'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const initials = (profile.company_name || 'PI').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  const filteredPhotos = activePhotoTab === 'Tous' ? photos : photos.filter(p => p.category === activePhotoTab);
-  const photoCategories = ['Tous', ...PHOTO_CATEGORIES.filter(cat => photos.some(p => p.category === cat))];
-
-  const PACKS_PUBLIC = [
-    {icon:'🏠', label:'Pack Essentiel', desc:'20 photos • 50-100 m²', price:'À partir de 380 €'},
-    {icon:'🏡', label:'Pack Confort', desc:'30 photos + visite virtuelle • 100-200 m²', price:'À partir de 800 €'},
-    {icon:'🏰', label:'Pack Premium', desc:'50 photos + visite + drone • >200 m²', price:'À partir de 1 200 €'},
-  ];
-
-  return (
-    <div className="min-h-screen" style={{background:'var(--bg)'}}>
-      {/* HEADER */}
-      <header className="nav-blur sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="aperture flex-shrink-0">
-              <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'12px',color:'#08080f',position:'relative',zIndex:1}}>{initials}</span>
-            </div>
-            <div>
-              <div className="font-display font-semibold" style={{color:'var(--text)'}}>{profile.company_name}</div>
-              {profile.zone && <div className="text-xs" style={{color:'var(--muted)'}}>📍 {profile.zone}</div>}
-            </div>
-          </div>
-          <a href="#contact" className="btn-gold px-5 py-2 rounded-lg text-sm">
-            Demander un devis
-          </a>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-10 space-y-16 fade-in">
-
-        {/* HERO / ABOUT */}
-        <section className="text-center py-12 relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none opacity-20" style={{background:'radial-gradient(ellipse,rgba(201,150,60,0.5),transparent 70%)'}}/>
-          <div className="aperture w-24 h-24 mx-auto mb-6 relative" style={{width:'96px',height:'96px',borderRadius:'24px'}}>
-            <span style={{fontFamily:'Playfair Display,serif',fontWeight:700,fontSize:'32px',color:'#08080f',position:'relative',zIndex:1}}>{initials}</span>
-          </div>
-          <h1 className="font-display text-4xl font-bold mb-3 gradient-text">{profile.company_name}</h1>
-          <div className="line-deco mx-auto mb-4"/>
-          {profile.zone && <p className="font-medium mb-4" style={{color:'var(--gold-light)'}}>📍 {profile.zone}</p>}
-          {profile.bio && <p className="max-w-2xl mx-auto text-lg leading-relaxed" style={{color:'var(--muted)'}}>{profile.bio}</p>}
-          <div className="flex items-center justify-center gap-6 mt-6 text-sm" style={{color:'var(--muted)'}}>
-            {profile.phone && <span>📞 {profile.phone}</span>}
-            {profile.siret && <span>SIRET : {profile.siret}</span>}
-          </div>
-          <div className="mt-6">
-            <SocialLinks social={profile.social_links}/>
-          </div>
-        </section>
-
-        <div className="divider"/>
-
-        {/* PORTFOLIO PHOTOS */}
-        {photos.length > 0 && (
-          <section>
-            <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Mes réalisations</h2>
-
-            {/* Category tabs */}
-            {photoCategories.length > 2 && (
-              <div className="flex gap-2 flex-wrap justify-center mb-6">
-                {photoCategories.map(cat => (
-                  <button key={cat} onClick={() => setActivePhotoTab(cat)}
-                    className={`tab-pill px-4 py-1.5 rounded-full text-sm transition-all ${activePhotoTab===cat?'active':''}`}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {filteredPhotos.map(p => (
-                <div key={p.id} className="card-premium group relative rounded-xl overflow-hidden aspect-[4/3]">
-                  <img src={p.url} alt={p.caption || p.category}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={e=>{e.target.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%2316162a" width="400" height="300"/><text fill="%237a7a9a" x="200" y="150" text-anchor="middle" dy=".3em" font-size="16" font-family="sans-serif">Photo</text></svg>';}}/>
-                  {p.caption && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-sm font-medium" style={{color:'var(--text)'}}>{p.caption}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="divider"/>
-
-        {/* PRESTATIONS */}
-        <section>
-          <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Mes prestations</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {PACKS_PUBLIC.map(pack => (
-              <div key={pack.label} className="card-premium rounded-2xl p-6 text-center">
-                <div className="feature-icon mx-auto mb-3">{pack.icon}</div>
-                <h3 className="font-display font-bold text-lg mb-2" style={{color:'var(--text)'}}>{pack.label}</h3>
-                <p className="text-sm mb-4" style={{color:'var(--muted)'}}>{pack.desc}</p>
-                <div className="font-bold text-lg" style={{color:'var(--gold-light)'}}>{pack.price}</div>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-sm mt-4" style={{color:'var(--muted)'}}>Tarifs sur devis selon la surface et les prestations choisies.</p>
-        </section>
-
-        {/* TESTIMONIALS */}
-        {testimonials.length > 0 && (
-          <section>
-            <h2 className="font-display text-2xl font-bold mb-6 text-center" style={{color:'var(--text)'}}>Avis clients</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {testimonials.map(t => (
-                <div key={t.id} className="testimonial-card rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm" style={{background:'rgba(201,150,60,0.12)',color:'var(--gold-light)'}}>{t.client_name[0]}</div>
-                      <div className="font-semibold" style={{color:'var(--text)'}}>{t.client_name}</div>
-                    </div>
-                    <Stars rating={t.rating}/>
-                  </div>
-                  <p className="text-sm leading-relaxed" style={{color:'var(--muted)'}}>"{t.comment}"</p>
-                  {t.date && <p className="text-xs mt-3" style={{color:'var(--border)'}}>{new Date(t.date).toLocaleDateString('fr-FR', {month:'long',year:'numeric'})}</p>}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="divider"/>
-
-        {/* CONTACT / DEVIS FORM */}
-        <section id="contact" className="card-premium rounded-3xl p-8">
-          <div className="text-center mb-8">
-            <h2 className="font-display text-2xl font-bold mb-2" style={{color:'var(--text)'}}>Demander un devis gratuit</h2>
-            <p style={{color:'var(--muted)'}}>Réponse sous 24 heures</p>
-          </div>
-          <div className="max-w-xl mx-auto">
-            <ContactForm slug={slug} photographerName={profile.company_name}/>
-          </div>
-        </section>
-
-      </main>
-
-      {/* FOOTER */}
-      <footer className="mt-16 py-8" style={{background:'#050508',borderTop:'1px solid var(--border)'}}>
-        <div className="max-w-5xl mx-auto px-4 text-center text-sm">
-          <div className="font-display font-bold text-lg mb-2" style={{color:'var(--text)'}}>{profile.company_name}</div>
-          <div className="flex items-center justify-center gap-4 flex-wrap" style={{color:'var(--muted)'}}>
-            {profile.phone && <span>📞 {profile.phone}</span>}
-            {profile.address && <span>📍 {profile.address}</span>}
-            {profile.siret && <span>SIRET : {profile.siret}</span>}
-          </div>
-          <div className="mt-4 text-xs" style={{color:'var(--border)'}}>
-            Propulsé par <a href="/" className="hover:underline" style={{color:'var(--gold-light)'}}>PhotoImmo Pro</a>
-          </div>
-        </div>
-      </footer>
     </div>
-  );
+  `).join('');
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<PortfolioApp/>);
+// ── Témoignages ───────────────────────────────────────────
+const tGrid = document.getElementById('testiGrid');
+if (testimons.length === 0) {
+  tGrid.innerHTML = `<p class="no-testi" style="grid-column:1/-1;">Aucun témoignage pour l'instant.</p>`;
+} else {
+  tGrid.innerHTML = testimons.map(t => `
+    <div class="testi">
+      <div class="stars">${'★'.repeat(Math.max(1, Math.min(5, t.rating || 5)))}</div>
+      <p class="testi-text">"${esc(t.comment || '')}"</p>
+      <div class="testi-author">
+        <div class="testi-avatar">${esc(initials(t.client_name))}</div>
+        <div>
+          <div class="testi-name">${esc(t.client_name)}</div>
+          <div class="testi-date">${fmt(t.date)}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Tarifs ────────────────────────────────────────────────
+const rows = [
+  ['Main-d\'œuvre', `${tarifs.horaire} € / heure`],
+  ['Forfait déplacement', `${tarifs.deplacement} €`],
+  ['Majoration urgence', `+ ${tarifs.urgence} €`],
+  ['Fournitures / matériaux', 'Au coût réel'],
+  ['TVA', '20 %'],
+];
+document.getElementById('tarifsTable').innerHTML = rows.map(([name, price]) => `
+  <div class="tarif-row">
+    <span class="tarif-name">${esc(name)}</span>
+    <span class="tarif-price">${esc(price)}</span>
+  </div>
+`).join('');
+
+if (profile.zone) document.getElementById('zoneNote').textContent =
+  `Tarifs applicables dans la zone : ${profile.zone}. Au-delà, déplacement majoré selon distance.`;
+
+// ── CTA contact ───────────────────────────────────────────
+const ctaEl = document.getElementById('ctaActions');
+const actions = [];
+if (profile.phone) actions.push(`<a href="tel:${esc(profile.phone)}" class="btn-w">📞 ${esc(profile.phone)}</a>`);
+const sl = profile.social_links || {};
+if (sl.website) actions.push(`<a href="${esc(sl.website)}" class="btn-ghost" target="_blank" rel="noopener">🌐 Site web</a>`);
+if (!actions.length) actions.push(`<span class="btn-w" style="cursor:default;opacity:.6;">📞 Téléphone non renseigné</span>`);
+ctaEl.innerHTML = actions.join('');
 </script>
 </body>
 </html>

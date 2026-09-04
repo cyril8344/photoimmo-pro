@@ -150,15 +150,12 @@ const TARIFS = {
 function getUserTarifs(){
   const ct=(store.get('pii_profile',{})).custom_tarifs||{};
   return {
-    surface:{...TARIFS.surface,...(ct.surface||{})},
-    photos:{...TARIFS.photos,...(ct.photos||{})},
-    visite:{...TARIFS.visite,...(ct.visite||{})},
-    drone:{...TARIFS.drone,...(ct.drone||{})},
-    retouche:{...TARIFS.retouche,...(ct.retouche||{})},
-    deplacement:ct.deplacement!=null?Number(ct.deplacement):0,
+    horaire:ct.horaire!=null?Number(ct.horaire):TARIFS.horaire,
+    deplacement:ct.deplacement!=null?Number(ct.deplacement):TARIFS.deplacement,
+    urgence:ct.urgence!=null?Number(ct.urgence):TARIFS.urgence,
   };
 }
-const PROPERTY_TYPES=['Résidentiel','Maison','Appartement','Villa','Commerce','Bureau','Copropriété','Autre'];
+const PROPERTY_TYPES=['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
 const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Planifié','En cours','Réalisé','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
@@ -221,13 +218,13 @@ function seedDemo(){
   ];
   const missionDate=new Date();missionDate.setDate(missionDate.getDate()+3);
   const missions=[
-    {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Appartement',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'3 pièces, lumineux',created_at:today()},
-    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Villa',date:today(),status:'Réalisé',notes:'Maison avec piscine',created_at:today()},
-    {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Commerce',date:today(),status:'Livré',notes:'',created_at:today()},
+    {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Piscine',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'Entretien annuel + hivernage',created_at:today()},
+    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage split + recharge gaz',created_at:today()},
+    {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Électricité',date:today(),status:'Livré',notes:'Mise aux normes tableau électrique',created_at:today()},
   ];
   const quotes=[
-    {id:uid(),client_id:clients[0].id,mission_id:missions[0].id,surface:'50-100',photos:20,visite:'oui',drone:'non',retouche:'standard',ht:730,ttc:876,status:'Envoyé',num:'DEV-001',created_at:today()},
-    {id:uid(),client_id:clients[1].id,mission_id:missions[1].id,surface:'>200',photos:50,visite:'oui',drone:'oui',retouche:'premium',ht:1430,ttc:1716,status:'Accepté',num:'DEV-002',created_at:today()},
+    {id:uid(),client_id:clients[0].id,mission_id:missions[0].id,type_service:'Piscine',heures:3,taux_horaire:55,fournitures:80,deplacement:30,urgence:0,ht:275,tva:55,ttc:330,status:'Envoyé',num:'DEV-001',created_at:today()},
+    {id:uid(),client_id:clients[1].id,mission_id:missions[1].id,type_service:'Climatisation',heures:4,taux_horaire:55,fournitures:120,deplacement:30,urgence:50,ht:400,tva:80,ttc:480,status:'Accepté',num:'DEV-002',created_at:today()},
   ];
   store.set('pii_clients',clients);
   store.set('pii_missions',missions);
@@ -312,7 +309,7 @@ function Dashboard({clients,missions,quotes,invoices}){
   const getClient=id=>clients.find(c=>c.id===id);
 
   // Pipeline kanban simplifié
-  const PIPELINE_STATUSES=['Prospect','Devis envoyé','Accepté','Intervention','Retouche','Livraison'];
+  const PIPELINE_STATUSES=['Prospect','Devis envoyé','Accepté','Planifié','En cours','Réalisé'];
   const pipelineGroups=PIPELINE_STATUSES.map(s=>({status:s,items:missions.filter(m=>m.status===s)}));
 
   // CA 6 derniers mois
@@ -455,7 +452,7 @@ function Dashboard({clients,missions,quotes,invoices}){
 
         {/* Top agences */}
         <Card>
-          <h3 className="font-semibold mb-4">🏆 Top agences / clients</h3>
+          <h3 className="font-semibold mb-4">🏆 Top clients</h3>
           {topAgencies.length===0?<p className="text-gray-500 text-sm">Pas encore de données</p>:(
             <div className="space-y-3">
               {topAgencies.map(([name,total],i)=>(
@@ -572,11 +569,11 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
   if(subTab==='agencies') return(
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Clients & Agences</h1>
+        <h1 className="text-2xl font-bold">Clients</h1>
       </div>
       <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
         <button onClick={()=>setSubTab('clients')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>👥 Clients</button>
-        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>🏢 Agences</button>
+        <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>🏢 Organismes</button>
       </div>
       <AgenciesPage agencies={agencies} setAgencies={setAgencies} clients={clients} missions={missions} quotes={quotes} user={user} hideTitle={true}/>
     </div>
@@ -585,7 +582,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
   return(
     <div className="fade-in space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Clients & Agences</h1>
+        <h1 className="text-2xl font-bold">Clients</h1>
         <div className="flex gap-2 flex-wrap">
           <label className="cursor-pointer px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg">
             📥 Importer CSV<input type="file" accept=".csv" className="hidden" onChange={importCSV}/>
@@ -596,7 +593,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
       </div>
       <div className="flex rounded-xl p-1" style={{background:'var(--surface2)',border:'1px solid var(--border)',width:'fit-content'}}>
         <button className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{background:'var(--surface)',color:'var(--text)',border:'1px solid var(--border)'}}>👥 Clients</button>
-        <button onClick={()=>setSubTab('agencies')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>🏢 Agences</button>
+        <button onClick={()=>setSubTab('agencies')} className="text-sm px-4 py-1.5 rounded-lg transition-all font-medium" style={{color:'var(--muted)',border:'1px solid transparent'}}>🏢 Organismes</button>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un client…"
         className="w-full max-w-sm rounded-lg border border-gray-700 bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
@@ -612,7 +609,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
                 <div className="min-w-0">
                   <div className="font-medium truncate">{c.name}</div>
                   <div className="text-xs text-gray-500 truncate">{c.email}{c.phone?` · ${c.phone}`:''}</div>
-                  {c.agent&&<div className="text-xs text-gray-600 truncate">Agent : {c.agent}</div>}
+                  {c.agent&&<div className="text-xs text-gray-600 truncate">Contact : {c.agent}</div>}
                   <div className="text-xs text-gray-600 sm:hidden mt-0.5">{cm} mission{cm!==1?'s':''} · {cq} devis</div>
                 </div>
               </div>
@@ -635,7 +632,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <Input label="Nom du contact" value={form.agent} onChange={v=>setForm(f=>({...f,agent:v}))}/>
-              <Input label="Email agent" type="email" value={form.agent_email} onChange={v=>setForm(f=>({...f,agent_email:v}))}/>
+              <Input label="Email contact" type="email" value={form.agent_email} onChange={v=>setForm(f=>({...f,agent_email:v}))}/>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
@@ -794,8 +791,8 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const dark=[15,17,23];
-  const amber=[201,150,60];
-  const amberLight=[245,190,100];
+  const amber=[29,110,245];
+  const amberLight=[100,160,255];
   const white=[255,255,255];
   const lightGray=[180,180,190];
   const veryLightGray=[240,240,245];
@@ -843,18 +840,18 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   if(client?.email){doc.text(client.email,14,cy);cy+=5;}
   if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
 
-  // ── Bloc bien immobilier
+  // ── Bloc intervention
   if(mission){
     cy+=3;
     doc.setFont('helvetica','bold');doc.setTextColor(...amber);doc.setFontSize(8);
-    doc.text('BIEN IMMOBILIER',14,cy);cy+=6;
+    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=6;
     doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
     doc.setTextColor(80,80,80);
     doc.text(`Type : ${mission.type||'—'}  |  Date : ${fmt(mission.date)}`,14,cy);
   }
 
-  // ── Séparateur doré
+  // ── Séparateur
   const tableY=Math.max(cy||0,ey||0)+10;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
@@ -865,14 +862,12 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
   y+=8;
 
-  const t=getUserTarifs();
+  const mainOeuvre=(Number(q.heures)||0)*(Number(q.taux_horaire)||TARIFS.horaire);
   const rows=[
-    ['Forfait de base (surface '+q.surface+'m²)',t.surface[q.surface]],
-    ['Photos ('+q.photos+' prises de vue)',t.photos[+q.photos]],
-    ['Visite virtuelle 360°',t.visite[q.visite]],
-    ['Prise de vue drone',t.drone[q.drone]],
-    ['Retouches '+q.retouche,t.retouche[q.retouche]],
+    ...(mainOeuvre>0?[['Main-d\'œuvre ('+q.heures+'h × '+q.taux_horaire+'€/h)',mainOeuvre]]:[] ),
+    ...(Number(q.fournitures)>0?[['Fournitures / matériaux',Number(q.fournitures)]]:[] ),
     ...(Number(q.deplacement)>0?[['Forfait déplacement',Number(q.deplacement)]]:[] ),
+    ...(Number(q.urgence)>0?[['Majoration urgence',Number(q.urgence)]]:[] ),
   ].filter(r=>r[1]>0);
 
   doc.setFont('helvetica','normal');
@@ -978,8 +973,8 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const dark=[15,17,23];
-  const amber=[201,150,60];
-  const amberLight=[245,190,100];
+  const amber=[29,110,245];
+  const amberLight=[100,160,255];
   const white=[255,255,255];
   const lightGray=[180,180,190];
   const veryLightGray=[240,240,245];
@@ -1024,20 +1019,20 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
   if(client?.email){doc.text(client.email,14,cy);cy+=5;}
   if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
-  if(client?.agent){doc.text('Agent : '+client.agent,14,cy);cy+=5;}
+  if(client?.agent){doc.text('Contact : '+client.agent,14,cy);cy+=5;}
 
-  // ── Bloc bien immobilier
+  // ── Bloc intervention
   if(mission){
     cy+=3;
     doc.setFont('helvetica','bold');doc.setTextColor(...amber);doc.setFontSize(8);
-    doc.text('BIEN IMMOBILIER',14,cy);cy+=6;
+    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=6;
     doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
     doc.setTextColor(80,80,80);
     doc.text(`Type : ${mission.type||'—'}  |  Date : ${fmt(mission.date)}`,14,cy);
   }
 
-  // ── Séparateur doré
+  // ── Séparateur
   const tableY=Math.max(cy||0,ey||0)+10;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
@@ -1050,13 +1045,11 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
 
   const rows=[];
   if(quote){
-    const ti=getUserTarifs();
-    if(ti.surface[quote.surface]>0)rows.push(['Forfait de base (surface '+quote.surface+'m²)',ti.surface[quote.surface]]);
-    if(ti.photos[+quote.photos]>0)rows.push(['Photos ('+quote.photos+' prises de vue)',ti.photos[+quote.photos]]);
-    if(ti.visite[quote.visite]>0)rows.push(['Visite virtuelle 360°',ti.visite[quote.visite]]);
-    if(ti.drone[quote.drone]>0)rows.push(['Prise de vue drone',ti.drone[quote.drone]]);
-    if(ti.retouche[quote.retouche]>0)rows.push(['Retouches '+quote.retouche,ti.retouche[quote.retouche]]);
+    const mo=(Number(quote.heures)||0)*(Number(quote.taux_horaire)||TARIFS.horaire);
+    if(mo>0)rows.push(['Main-d\'œuvre ('+quote.heures+'h × '+quote.taux_horaire+'€/h)',mo]);
+    if(Number(quote.fournitures)>0)rows.push(['Fournitures / matériaux',Number(quote.fournitures)]);
     if(Number(quote.deplacement)>0)rows.push(['Forfait déplacement',Number(quote.deplacement)]);
+    if(Number(quote.urgence)>0)rows.push(['Majoration urgence',Number(quote.urgence)]);
   }
   if(rows.length===0)rows.push(['Prestation de maintenance',inv.ht]);
 
@@ -1474,9 +1467,9 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
   return(
     <div className="fade-in space-y-5">
       {toast&&<div className="fixed top-4 right-4 z-50 bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium shadow-lg">{toast}</div>}
-      <h1 className="text-2xl font-bold">Livraisons</h1>
+      <h1 className="text-2xl font-bold">Rapports d'intervention</h1>
       <div className="space-y-3">
-        {done.length===0&&<p className="text-gray-500 text-sm">Aucune mission réalisée — passez une mission en statut "Réalisé" pour créer sa galerie.</p>}
+        {done.length===0&&<p className="text-gray-500 text-sm">Aucune intervention réalisée — passez une intervention en statut "Réalisé" pour créer son rapport.</p>}
         {done.map(m=>{
           const cl=getClient(m.client_id);
           const g=getGallery(m.id);
@@ -1491,14 +1484,14 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   {!g?(
-                    <Btn size="sm" onClick={()=>createGallery(m)}>🖼️ Créer galerie</Btn>
+                    <Btn size="sm" onClick={()=>createGallery(m)}>📋 Créer rapport</Btn>
                   ):(
                     <>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${g.ready?'bg-green-500/20 text-green-400':'bg-gray-700 text-gray-400'}`}>
-                          {g.ready?'✓ Publiée':'Brouillon'}
+                          {g.ready?'✓ Rapport partagé':'Brouillon'}
                         </span>
-                        <span className="text-xs text-gray-500">{g.photos_count||0} photo{(g.photos_count||0)!==1?'s':''}</span>
+                        <span className="text-xs text-gray-500">{g.photos_count||0} pièce{(g.photos_count||0)!==1?'s jointes':' jointe'}</span>
                       </div>
                       <div className="flex gap-1 flex-wrap justify-end">
                         <Btn size="sm" variant="ghost" onClick={()=>openGallery(g)}>✏️ Gérer</Btn>
@@ -1520,7 +1513,7 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
       </div>
 
       {viewGallery&&(
-        <Modal title={`Galerie — ${currentMission?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
+        <Modal title={`Rapport — ${currentMission?.address||''}`} onClose={()=>setViewGallery(null)} size="xl">
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <label className={`cursor-pointer ${uploading?'opacity-50 pointer-events-none':''}`}>
@@ -1529,7 +1522,7 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
                   {uploading?'⏳ Upload en cours…':'+ Ajouter des photos'}
                 </span>
               </label>
-              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {selCount} sélectionnée{selCount!==1?'s':''} par le client</span>
+              <span className="text-xs text-gray-500">{photos.length} photo{photos.length!==1?'s':''} · {selCount} attachée{selCount!==1?'s':''}</span>
             </div>
 
             {loadingPhotos?(
@@ -1537,7 +1530,7 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
             ):photos.length===0?(
               <div className="text-center py-16 text-gray-600">
                 <div className="text-5xl mb-3">🖼️</div>
-                <p>Aucune photo encore. Cliquez pour en ajouter.</p>
+                <p>Aucune pièce jointe. Ajoutez des photos ou documents.</p>
               </div>
             ):(
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
@@ -1555,14 +1548,14 @@ function DeliveryPage({missions,clients,galleries,setGalleries,user,updateMissio
               </div>
             )}
 
-            <p className="text-xs text-gray-500">Les photos avec ✓ ont été sélectionnées par votre client depuis son lien de livraison.</p>
+            <p className="text-xs text-gray-500">Les pièces jointes avec ✓ ont été marquées comme vues par le client.</p>
             <div className="flex items-center gap-2 pt-2 border-t border-gray-800 flex-wrap">
-              <Btn size="sm" variant="ghost" onClick={()=>copyLink(viewGallery.token)}>🔗 Copier le lien client</Btn>
+              <Btn size="sm" variant="ghost" onClick={()=>copyLink(viewGallery.token)}>🔗 Copier le lien rapport</Btn>
               {!viewGallery.ready&&(
-                <Btn size="sm" onClick={()=>toggleReady(viewGallery.id)}>Publier la galerie</Btn>
+                <Btn size="sm" onClick={()=>toggleReady(viewGallery.id)}>Partager le rapport</Btn>
               )}
               {viewGallery.ready&&(
-                <span className="text-xs text-green-400 ml-auto">✓ Galerie publiée — le lien est actif</span>
+                <span className="text-xs text-green-400 ml-auto">✓ Rapport partagé — le lien est actif</span>
               )}
             </div>
           </div>
@@ -1682,7 +1675,7 @@ function AgenciesPage({agencies,setAgencies,clients,missions,quotes,user,hideTit
   return(
     <div className={hideTitle?'space-y-5':'fade-in space-y-5'}>
       {!hideTitle&&<div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Agences</h1>
+        <h1 className="text-2xl font-bold">Organismes</h1>
         <Btn onClick={()=>{setForm({name:'',contacts:'',notes:''});setModal('new');}}>+ Nouvelle agence</Btn>
       </div>}
       {hideTitle&&<div className="flex justify-end">
@@ -2279,12 +2272,12 @@ function PortfolioPage({user}) {
   const [testimonials, setTestimonials] = useState(() => store.get('pii_testimonials', []));
   const [photoModal, setPhotoModal] = useState(false);
   const [testimonialModal, setTestimonialModal] = useState(false);
-  const [photoForm, setPhotoForm] = useState({url:'', category:'Appartements', caption:''});
+  const [photoForm, setPhotoForm] = useState({url:'', category:'Piscine', caption:''});
   const [testimonialForm, setTestimonialForm] = useState({client_name:'', rating:5, comment:'', date:today()});
   const [toast, setToast] = useState('');
   const syncTimer = useRef(null);
 
-  const PHOTO_CATEGORIES = ['Appartements','Maisons','Villas','Commerces','Drone','Visite virtuelle'];
+  const PHOTO_CATEGORIES = ['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
   const SOCIAL_NETWORKS = [
     {key:'instagram', label:'Instagram', placeholder:'https://instagram.com/votre-compte'},
     {key:'facebook', label:'Facebook', placeholder:'https://facebook.com/votre-page'},
@@ -2349,7 +2342,7 @@ function PortfolioPage({user}) {
       store.set('pii_portfolio_photos', u);
     }
     setPhotoModal(false);
-    setPhotoForm({url:'', category:'Appartements', caption:''});
+    setPhotoForm({url:'', category:'Piscine', caption:''});
   };
 
   const deletePhoto = async id => {
@@ -2395,7 +2388,7 @@ function PortfolioPage({user}) {
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium shadow-lg">{toast}</div>
       )}
-      <h1 className="text-2xl font-bold">🌐 Mon Portfolio</h1>
+      <h1 className="text-2xl font-bold">🌐 Ma Vitrine</h1>
 
       {/* Settings */}
       <Card>
@@ -2410,31 +2403,28 @@ function PortfolioPage({user}) {
           <div>
             <label className="block text-xs text-gray-400 mb-1">Slug URL</label>
             <input value={profile.portfolio_slug||''} onChange={e=>saveProfile({portfolio_slug:slugify(e.target.value)})}
-              placeholder="mon-studio-photo" className="w-full rounded-lg border text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
-            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">/portfolio/{profile.portfolio_slug}</div>}
+              placeholder="habitat-maintenance" className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
+            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">/vitrine/{profile.portfolio_slug}</div>}
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Bio</label>
             <textarea value={profile.bio||''} onChange={e=>saveProfile({bio:e.target.value})} rows={3}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500 resize-none" placeholder="Votre présentation..."/>
           </div>
-          <Input label="Zone géographique" value={profile.zone||''} onChange={v=>saveProfile({zone:v})} placeholder="Paris et Île-de-France"/>
+          <Input label="Zone d'intervention" value={profile.zone||''} onChange={v=>saveProfile({zone:v})} placeholder="Ex: Bordeaux et Gironde"/>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-gray-800 gap-3">
           <div className="flex items-center gap-3">
             <button onClick={()=>saveProfile({portfolio_enabled:!profile.portfolio_enabled})}
-              className={`relative w-11 h-6 rounded-full transition-colors ${profile.portfolio_enabled?'bg-amber-500':'bg-gray-700'}`}>
+              className={`relative w-11 h-6 rounded-full transition-colors ${profile.portfolio_enabled?'':'bg-gray-700'}`}
+              style={profile.portfolio_enabled?{backgroundColor:'var(--gold)'}:{}}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${profile.portfolio_enabled?'translate-x-6':'translate-x-1'}`}/>
             </button>
-            <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="text-amber-400 font-medium">active</span>:<span className="text-gray-500">inactive</span>}</span>
+            <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="font-medium" style={{color:'var(--gold)'}}>active</span>:<span className="text-gray-500">inactive</span>}</span>
           </div>
-          {publicUrl ? (
-            <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl,'_blank')}>
-              {profile.portfolio_enabled?'🔗 Voir ma page':'👁 Prévisualiser'}
-            </Btn>
-          ) : (
-            <span className="text-xs text-gray-500">Entrez un slug URL pour prévisualiser</span>
-          )}
+          <Btn variant="secondary" size="sm" onClick={()=>window.open('portfolio.html?preview','_blank')}>
+            👁 Prévisualiser ma vitrine
+          </Btn>
         </div>
       </Card>
 
@@ -2443,75 +2433,34 @@ function PortfolioPage({user}) {
         <h3 className="font-semibold mb-1">💰 Mes Tarifs</h3>
         <p className="text-xs text-gray-500 mb-4">Ces tarifs s'appliquent automatiquement à tous vos nouveaux devis. Laissez vide pour utiliser les tarifs par défaut.</p>
         {(()=>{
-          const ct=(profile.custom_tarifs||{});
-          const saveTarif=(path,val)=>{
-            const prev=profile.custom_tarifs||{};
-            let next;
-            if(Array.isArray(path)){
-              const [cat,key]=path;
-              next={...prev,[cat]:{...(prev[cat]||{}),[key]:val===''?undefined:Number(val)||0}};
-            } else {
-              next={...prev,[path]:val===''?undefined:Number(val)||0};
-            }
+          const c=profile.custom_tarifs||{};
+          const saveTarif=(key,val)=>{
+            const next={...c,[key]:val===''?undefined:Number(val)||0};
             saveProfile({custom_tarifs:next});
           };
-          const def=TARIFS;
-          const c=ct;
           return (
-            <div className="space-y-5">
-              <div>
-                <div className="text-xs font-semibold text-amber-400 mb-2">Surface du bien (€ HT)</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {['<50','50-100','100-200','>200'].map(k=>(
-                    <div key={k}>
-                      <label className="block text-xs text-gray-500 mb-1">{k} m²</label>
-                      <input type="number" placeholder={def.surface[k]} value={(c.surface||{})[k]!=null?(c.surface||{})[k]:''}
-                        onChange={e=>saveTarif(['surface',k],e.target.value)}
-                        className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-amber-400 mb-2">Supplément photos (€ HT)</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {[10,20,30,50].map(k=>(
-                    <div key={k}>
-                      <label className="block text-xs text-gray-500 mb-1">{k} photos</label>
-                      <input type="number" placeholder={def.photos[k]} value={(c.photos||{})[k]!=null?(c.photos||{})[k]:''}
-                        onChange={e=>saveTarif(['photos',String(k)],e.target.value)}
-                        className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Visite virtuelle 360° (€ HT)</label>
-                  <input type="number" placeholder={def.visite.oui} value={(c.visite||{}).oui!=null?(c.visite||{}).oui:''}
-                    onChange={e=>saveTarif(['visite','oui'],e.target.value)}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                  <label className="block text-xs text-gray-500 mb-1">Taux horaire main-d'œuvre (€ HT/h)</label>
+                  <input type="number" placeholder={TARIFS.horaire} value={c.horaire!=null?c.horaire:''}
+                    onChange={e=>saveTarif('horaire',e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none" style={{borderColor:'var(--gold)'}}/>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Drone (€ HT)</label>
-                  <input type="number" placeholder={def.drone.oui} value={(c.drone||{}).oui!=null?(c.drone||{}).oui:''}
-                    onChange={e=>saveTarif(['drone','oui'],e.target.value)}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                  <label className="block text-xs text-gray-500 mb-1">Forfait déplacement (€ HT)</label>
+                  <input type="number" placeholder={TARIFS.deplacement} value={c.deplacement!=null?c.deplacement:''}
+                    onChange={e=>saveTarif('deplacement',e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Retouche premium (€ HT)</label>
-                  <input type="number" placeholder={def.retouche.premium} value={(c.retouche||{}).premium!=null?(c.retouche||{}).premium:''}
-                    onChange={e=>saveTarif(['retouche','premium'],e.target.value)}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
+                  <label className="block text-xs text-gray-500 mb-1">Supplément urgence (€ HT)</label>
+                  <input type="number" placeholder={TARIFS.urgence} value={c.urgence!=null?c.urgence:''}
+                    onChange={e=>saveTarif('urgence',e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Forfait déplacement par défaut (€ HT, ajouté à chaque devis)</label>
-                <input type="number" placeholder="0" value={c.deplacement!=null?c.deplacement:''}
-                  onChange={e=>saveTarif('deplacement',e.target.value)}
-                  className="w-full md:w-48 rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:border-amber-500"/>
-              </div>
-              <p className="text-xs text-gray-600">Les champs vides utilisent les tarifs par défaut : surface 200–600€, visite 350€, drone 250€, retouche premium 120€.</p>
+              <p className="text-xs text-gray-600">Valeurs par défaut : taux horaire {TARIFS.horaire}€, déplacement {TARIFS.deplacement}€, urgence {TARIFS.urgence}€.</p>
             </div>
           );
         })()}
@@ -2526,13 +2475,13 @@ function PortfolioPage({user}) {
               onChange={v=>saveSocial(net.key, v)} placeholder={net.placeholder}/>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-3">Ces liens apparaîtront sur votre page portfolio publique.</p>
+        <p className="text-xs text-gray-500 mt-3">Ces liens apparaîtront sur votre page vitrine publique.</p>
       </Card>
 
       {/* Portfolio Photos */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Photos portfolio ({photos.length})</h3>
+          <h3 className="font-semibold">Photos réalisations ({photos.length})</h3>
           <Btn size="sm" onClick={()=>setPhotoModal(true)}>+ Ajouter une photo</Btn>
         </div>
         {photos.length === 0 && <p className="text-gray-500 text-sm">Aucune photo. Ajoutez des photos de vos réalisations.</p>}
@@ -2541,7 +2490,7 @@ function PortfolioPage({user}) {
             <div key={p.id} className="relative group rounded-lg overflow-hidden border border-gray-700">
               <img src={p.url} alt={p.caption} className="w-full h-32 object-cover" onError={e=>e.target.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="80" viewBox="0 0 100 80"><rect fill="%23374151" width="100" height="80"/><text fill="%236b7280" x="50" y="40" text-anchor="middle" dy=".3em" font-family="sans-serif">Image</text></svg>'}/>
               <div className="p-2 bg-gray-800">
-                <div className="text-xs text-amber-400">{p.category}</div>
+                <div className="text-xs" style={{color:'var(--gold)'}}>{p.category}</div>
                 <div className="text-xs text-gray-400 truncate">{p.caption}</div>
               </div>
               <button onClick={()=>deletePhoto(p.id)} className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
@@ -2575,11 +2524,11 @@ function PortfolioPage({user}) {
       </Card>
 
       {photoModal && (
-        <Modal title="Ajouter une photo" onClose={()=>setPhotoModal(false)}>
+        <Modal title="Ajouter une photo de réalisation" onClose={()=>setPhotoModal(false)}>
           <div className="space-y-3">
             <Input label="URL de la photo" value={photoForm.url} onChange={v=>setPhotoForm(f=>({...f,url:v}))} placeholder="https://..."/>
-            <Select label="Catégorie" value={photoForm.category} onChange={v=>setPhotoForm(f=>({...f,category:v}))} options={PHOTO_CATEGORIES}/>
-            <Input label="Légende" value={photoForm.caption} onChange={v=>setPhotoForm(f=>({...f,caption:v}))} placeholder="Description de la photo"/>
+            <Select label="Type de service" value={photoForm.category} onChange={v=>setPhotoForm(f=>({...f,category:v}))} options={PHOTO_CATEGORIES}/>
+            <Input label="Légende" value={photoForm.caption} onChange={v=>setPhotoForm(f=>({...f,caption:v}))} placeholder="Description de la réalisation"/>
             <div className="flex justify-end gap-2 pt-2">
               <Btn variant="secondary" onClick={()=>setPhotoModal(false)}>Annuler</Btn>
               <Btn onClick={addPhoto}>Ajouter</Btn>
@@ -2788,7 +2737,7 @@ function Login({onLogin}){
             <span style={{fontFamily:'Inter,system-ui,sans-serif',fontWeight:700,fontSize:'20px',color:'#08080f',position:'relative',zIndex:1}}>HM</span>
           </div>
           <h1 className="font-display text-3xl font-bold mb-1" style={{color:'var(--text)'}}>Habitat Maintenance</h1>
-          <p className="text-sm" style={{color:'var(--muted)'}}>Gestion pour techniciens immobiliers</p>
+          <p className="text-sm" style={{color:'var(--muted)'}}>Gestion pour techniciens de maintenance</p>
         </div>
         <div className="rounded-2xl p-6" style={{background:'var(--surface)',border:'1px solid var(--border)',boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
           <div className="flex rounded-xl p-1 mb-5" style={{background:'var(--surface2)',border:'1px solid var(--border)'}}>
