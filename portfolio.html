@@ -38,26 +38,26 @@
     .header-inner{display:flex;align-items:center;justify-content:space-between;height:58px;max-width:1080px;margin:0 auto;padding:0 24px;}
     .brand{display:flex;align-items:center;gap:11px;text-decoration:none;}
     .brand-mark{width:34px;height:34px;border-radius:5px;background:var(--blue);color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-    .brand-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);line-height:1.25;}
-    .brand-name small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);letter-spacing:.05em;}
+    .brand-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .brand-name small{display:block;font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.04em;}
     .back-btn{font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;border:1px solid var(--border);transition:color .15s,background .15s;}
     .back-btn:hover{color:var(--text);background:var(--surface-2);}
 
     /* ── Hero ── */
-    .hero{background:var(--surface);border-bottom:3px solid var(--blue);}
+    .hero{background:var(--bg);border-bottom:3px solid var(--blue);}
     .hero-inner{display:grid;grid-template-columns:1fr 340px;max-width:1080px;margin:0 auto;}
     .hero-copy{padding:48px 40px 48px 24px;border-right:1px solid var(--border);}
     .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:12px;}
-    .hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(24px,3.5vw,40px);line-height:1.08;text-wrap:balance;margin-bottom:16px;}
+    .hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(20px,3.5vw,40px);line-height:1.1;text-wrap:balance;margin-bottom:16px;}
     .hero-title em{color:var(--blue);font-style:normal;}
-    .hero-sub{font-size:15px;color:var(--muted);line-height:1.72;max-width:420px;margin-bottom:22px;}
+    .hero-sub{font-size:14px;color:var(--muted);line-height:1.65;max-width:420px;margin-bottom:22px;}
     .hero-chips{display:flex;flex-wrap:wrap;gap:7px;}
     .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:12px;font-weight:500;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-line);}
-    .hero-stats{background:var(--bg);}
-    .stat-cell{padding:20px 26px;border-bottom:1px solid var(--border);}
+    .hero-stats{background:var(--surface);}
+    .stat-cell{padding:16px 20px;border-bottom:1px solid var(--border);}
     .stat-cell:last-child{border-bottom:none;}
-    .stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--blue);line-height:1;font-variant-numeric:tabular-nums;margin-bottom:3px;}
-    .stat-label{font-size:12px;color:var(--muted);font-weight:500;}
+    .stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(16px,4vw,26px);color:var(--blue);line-height:1.1;font-variant-numeric:tabular-nums;margin-bottom:3px;word-break:break-all;}
+    .stat-label{font-size:11px;color:var(--muted);font-weight:500;}
 
     /* ── Sections ── */
     .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
@@ -138,17 +138,21 @@
     /* ── Responsive ── */
     @media(max-width:860px){
       .hero-inner{grid-template-columns:1fr;}
-      .hero-copy{padding:32px 24px 24px;border-right:none;border-bottom:1px solid var(--border);}
+      .hero-copy{padding:24px 20px 20px;border-right:none;border-bottom:1px solid var(--border);}
       .hero-stats{display:grid;grid-template-columns:repeat(2,1fr);}
       .services-grid{grid-template-columns:1fr;}
       .reals-grid{grid-template-columns:repeat(2,1fr);}
       .testi-grid{grid-template-columns:1fr;}
       .tarifs-wrap{grid-template-columns:1fr;}
+      .header-inner{padding:0 16px;height:52px;}
+      .brand-name{max-width:140px;}
+      .back-btn{font-size:12px;padding:5px 10px;}
     }
     @media(max-width:520px){
       .reals-grid{grid-template-columns:1fr;}
     }
     @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+    [hidden]{display:none!important;}
   </style>
 </head>
 <body>
