@@ -219,7 +219,7 @@ function seedDemo(){
   const missionDate=new Date();missionDate.setDate(missionDate.getDate()+3);
   const missions=[
     {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Piscine',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'Entretien annuel + hivernage',created_at:today()},
-    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage split + recharge gaz',created_at:today()},
+    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage split + vérification performances',created_at:today()},
     {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Électricité',date:today(),status:'Livré',notes:'Mise aux normes tableau électrique',created_at:today()},
   ];
   const quotes=[
@@ -1309,7 +1309,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               )}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
-              <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtre, recharge gaz, remplacement joint…"/>
+              <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Durée (heures)" type="number" value={String(form.heures||1)} onChange={v=>setForm(f=>({...f,heures:Number(v)||0}))} placeholder="1"/>
                 <Input label="Taux horaire (€ HT)" type="number" value={String(form.taux_horaire||TARIFS.horaire)} onChange={v=>setForm(f=>({...f,taux_horaire:Number(v)||0}))} placeholder="55"/>
