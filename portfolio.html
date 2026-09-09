@@ -99,19 +99,6 @@
     .testi-date{font-size:11.5px;color:var(--muted);}
     .no-testi{text-align:center;padding:32px;color:var(--muted);font-size:14px;}
 
-    /* ── Tarifs ── */
-    .tarifs-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
-    .tarifs-table{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-    .tarif-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);}
-    .tarif-row:last-child{border-bottom:none;}
-    .tarif-name{font-size:14px;font-weight:500;}
-    .tarif-price{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--blue);font-variant-numeric:tabular-nums;white-space:nowrap;}
-    .tarifs-note{background:var(--blue-dim);border:1px solid var(--blue-line);border-radius:6px;padding:18px 20px;}
-    .tarifs-note-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13.5px;color:var(--blue);margin-bottom:10px;}
-    .tarifs-note ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
-    .tarifs-note li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.5;}
-    .tarifs-note li::before{content:'→';color:var(--blue);font-weight:600;flex-shrink:0;margin-top:1px;}
-    .tarifs-note small{display:block;font-size:11.5px;color:var(--muted);margin-top:12px;}
 
     /* ── Réseaux sociaux ── */
     .social-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
@@ -149,7 +136,6 @@
       .section-title{font-size:17px;font-weight:700;}
       .services-grid{grid-template-columns:1fr;}
       .testi-grid{grid-template-columns:1fr;}
-      .tarifs-wrap{grid-template-columns:1fr;}
       .header-inner{padding:0 14px;height:50px;}
       .brand-name{max-width:130px;}
       .back-btn{font-size:12px;padding:5px 9px;}
@@ -211,8 +197,8 @@
         <div class="stat-label">avis clients</div>
       </div>
       <div class="stat-cell">
-        <div class="stat-num" id="statTarif">55 €</div>
-        <div class="stat-label">taux horaire HT</div>
+        <div class="stat-num">Gratuit</div>
+        <div class="stat-label">devis sur demande</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num" id="statContact">📞</div>
@@ -280,34 +266,6 @@
   </div>
 </section>
 
-<!-- TARIFS -->
-<section id="tarifs">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Tarifs</div>
-      <h2 class="section-title">Grille tarifaire — HT</h2>
-      <div class="rule"></div>
-    </div>
-    <div class="tarifs-wrap">
-      <div class="tarifs-table" id="tarifsTable"></div>
-      <div>
-        <div class="tarifs-note">
-          <div class="tarifs-note-title">Comment ça fonctionne</div>
-          <ul>
-            <li>Devis gratuit et sans engagement avant toute intervention</li>
-            <li>Facturation à l'heure réelle, pas au forfait gonflé</li>
-            <li>Fournitures facturées au prix d'achat avec justificatif</li>
-            <li>Règlement par virement, chèque ou espèces</li>
-          </ul>
-          <small id="zoneNote">Déplacement inclus dans la zone d'intervention.</small>
-        </div>
-        <a href="#contact" class="chip" style="display:inline-flex;margin-top:14px;padding:10px 18px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600;background:var(--blue);color:#fff;border:none;">
-          Demander un devis gratuit →
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- CTA / CONTACT -->
 <div class="cta-section" id="contact">
@@ -340,13 +298,6 @@ const store = {
 const profile    = store.get('pii_profile', {});
 const photos     = store.get('pii_portfolio_photos', []);
 const testimons  = store.get('pii_testimonials', []);
-const TARIFS     = { horaire: 55, deplacement: 30, urgence: 50 };
-const ct         = profile.custom_tarifs || {};
-const tarifs     = {
-  horaire:    ct.horaire    ?? TARIFS.horaire,
-  deplacement: ct.deplacement ?? TARIFS.deplacement,
-  urgence:    ct.urgence    ?? TARIFS.urgence,
-};
 
 // Preview mode si ouvert depuis l'app
 const isPreview = document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview');
@@ -385,7 +336,6 @@ if (profile.siret) {
 
 document.getElementById('statPhotos').textContent = photos.length || '—';
 document.getElementById('statAvis').textContent = testimons.length || '—';
-document.getElementById('statTarif').textContent = `${tarifs.horaire} €`;
 
 if (profile.phone) {
   const el = document.getElementById('statContact');
@@ -430,23 +380,6 @@ if (testimons.length === 0) {
   `).join('');
 }
 
-// ── Tarifs ────────────────────────────────────────────────
-const rows = [
-  ['Main-d\'œuvre', `${tarifs.horaire} € / heure`],
-  ['Forfait déplacement', `${tarifs.deplacement} €`],
-  ['Majoration urgence', `+ ${tarifs.urgence} €`],
-  ['Fournitures / matériaux', 'Au coût réel'],
-  ['TVA', '20 %'],
-];
-document.getElementById('tarifsTable').innerHTML = rows.map(([name, price]) => `
-  <div class="tarif-row">
-    <span class="tarif-name">${esc(name)}</span>
-    <span class="tarif-price">${esc(price)}</span>
-  </div>
-`).join('');
-
-if (profile.zone) document.getElementById('zoneNote').textContent =
-  `Tarifs applicables dans la zone : ${profile.zone}. Au-delà, déplacement majoré selon distance.`;
 
 // ── CTA contact ───────────────────────────────────────────
 const ctaEl = document.getElementById('ctaActions');
