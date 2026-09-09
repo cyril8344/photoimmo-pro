@@ -369,10 +369,13 @@ if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 �
 if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
 
 // ── Photos de fond sur les cartes domaines ───────────────
+const defaultPhotos = {
+  'Climatisation': 'images/clim.jpg',
+};
 const photoByCategory = {};
 photos.forEach(p => { if (p.category && p.url && !photoByCategory[p.category]) photoByCategory[p.category] = p.url; });
 document.querySelectorAll('.svc[data-cat]').forEach(card => {
-  const url = photoByCategory[card.dataset.cat];
+  const url = photoByCategory[card.dataset.cat] || defaultPhotos[card.dataset.cat];
   if (url) {
     card.style.backgroundImage = `linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.62)),url('${url.replace(/'/g,"\\'")}')`;
     card.classList.add('has-photo');
