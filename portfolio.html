@@ -80,22 +80,13 @@
     .svc-tasks{display:flex;flex-wrap:wrap;gap:5px;}
     .task{font-size:11px;padding:3px 8px;border-radius:3px;background:var(--bg);color:var(--muted);border:1px solid var(--border);}
 
+
     /* ── Service card avec photo fond ── */
     .svc.has-photo{background-size:cover;background-position:center;min-height:220px;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;}
     .svc.has-photo .svc-icon{display:none;}
     .svc.has-photo .svc-name{color:#fff;font-size:17px;text-shadow:0 1px 4px rgba(0,0,0,.4);}
     .svc.has-photo .svc-desc{color:rgba(255,255,255,.82);font-size:12.5px;text-shadow:0 1px 3px rgba(0,0,0,.3);}
     .svc.has-photo .task{background:rgba(255,255,255,.15);color:rgba(255,255,255,.88);border-color:rgba(255,255,255,.25);}
-
-    /* ── Réalisations ── */
-    .reals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-    .real-item{border-radius:5px;overflow:hidden;position:relative;border:1px solid var(--border);}
-    .real-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;}
-    .real-placeholder{width:100%;aspect-ratio:4/3;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;}
-    .real-label{position:absolute;bottom:0;left:0;right:0;padding:24px 12px 10px;background:linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 100%);}
-    .real-cat{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);font-weight:600;margin-bottom:2px;}
-    .real-caption{font-size:12.5px;color:#fff;font-weight:500;}
-    .no-reals{text-align:center;padding:40px;color:var(--muted);font-size:14px;background:var(--surface-2);border-radius:6px;border:1px dashed var(--border);}
 
     /* ── Témoignages ── */
     .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
@@ -157,7 +148,6 @@
       .stat-label{font-size:10.5px;}
       .section-title{font-size:17px;font-weight:700;}
       .services-grid{grid-template-columns:1fr;}
-      .reals-grid{grid-template-columns:repeat(2,1fr);}
       .testi-grid{grid-template-columns:1fr;}
       .tarifs-wrap{grid-template-columns:1fr;}
       .header-inner{padding:0 14px;height:50px;}
@@ -167,7 +157,6 @@
       .back-btn .btn-short{display:inline;}
     }
     @media(max-width:520px){
-      .reals-grid{grid-template-columns:1fr;}
       section{padding:36px 0;}
     }
     @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
@@ -278,20 +267,6 @@
   </div>
 </section>
 
-<!-- RÉALISATIONS -->
-<section id="realisations">
-  <div class="wrap">
-    <div class="section-head-row">
-      <div>
-        <div class="eyebrow">Portfolio</div>
-        <h2 class="section-title">Réalisations récentes</h2>
-        <div class="rule"></div>
-      </div>
-      <span style="font-size:13px;color:var(--muted);" id="realsCount"></span>
-    </div>
-    <div id="realsGrid" class="reals-grid"></div>
-  </div>
-</section>
 
 <!-- TÉMOIGNAGES -->
 <section id="temoignages">
@@ -419,6 +394,11 @@ if (profile.phone) {
   document.getElementById('statContactLabel').textContent = 'Téléphone';
 }
 
+
+// Zone footer
+if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 · ${profile.zone}`;
+if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
+
 // ── Photos de fond sur les cartes domaines ───────────────
 const photoByCategory = {};
 photos.forEach(p => { if (p.category && p.url && !photoByCategory[p.category]) photoByCategory[p.category] = p.url; });
@@ -429,35 +409,6 @@ document.querySelectorAll('.svc[data-cat]').forEach(card => {
     card.classList.add('has-photo');
   }
 });
-
-// Zone footer
-if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 · ${profile.zone}`;
-if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
-
-// ── Réalisations ──────────────────────────────────────────
-const grid = document.getElementById('realsGrid');
-const count = document.getElementById('realsCount');
-
-if (photos.length === 0) {
-  grid.innerHTML = `<div class="no-reals" style="grid-column:1/-1;">
-    Aucune photo pour l'instant. Ajoutez vos réalisations depuis l'onglet <strong>Ma Vitrine</strong> de l'application.
-  </div>`;
-} else {
-  count.textContent = `${photos.length} réalisation${photos.length > 1 ? 's' : ''}`;
-  grid.innerHTML = photos.map(p => `
-    <div class="real-item">
-      ${p.url
-        ? `<img class="real-img" src="${esc(p.url)}" alt="${esc(p.caption || p.category)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">`
-        : ''
-      }
-      <div class="real-placeholder"${p.url ? ' hidden' : ''}>${esc(p.category || 'Réalisation')}</div>
-      <div class="real-label">
-        <div class="real-cat">${esc(p.category || '')}</div>
-        <div class="real-caption">${esc(p.caption || '')}</div>
-      </div>
-    </div>
-  `).join('');
-}
 
 // ── Témoignages ───────────────────────────────────────────
 const tGrid = document.getElementById('testiGrid');
