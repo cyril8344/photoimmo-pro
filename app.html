@@ -153,6 +153,7 @@ function getUserTarifs(){
     horaire:ct.horaire!=null?Number(ct.horaire):TARIFS.horaire,
     deplacement:ct.deplacement!=null?Number(ct.deplacement):TARIFS.deplacement,
     urgence:ct.urgence!=null?Number(ct.urgence):TARIFS.urgence,
+    marge_fournitures:ct.marge_fournitures!=null?Number(ct.marge_fournitures):0,
   };
 }
 const PROPERTY_TYPES=['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
@@ -782,9 +783,13 @@ function MissionsPage({missions,setMissions,clients,user}){
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
 function calcDevis(form){
-  const mainOeuvre=(Number(form.heures)||0)*(Number(form.taux_horaire)||TARIFS.horaire);
-  const ht=mainOeuvre+(Number(form.fournitures)||0)+(Number(form.deplacement)||0)+(Number(form.urgence)||0);
-  return {ht:Math.round(ht*100)/100, tva:Math.round(ht*TVA*100)/100, ttc:Math.round(ht*(1+TVA)*100)/100};
+  const mo=form.mode==='forfait'
+    ?(Number(form.forfait_ht)||0)
+    :(Number(form.heures)||0)*(Number(form.taux_horaire)||TARIFS.horaire);
+  const marge=Number(form.marge_fournitures)||0;
+  const fournitures_vente=Math.round((Number(form.fournitures)||0)*(1+marge/100)*100)/100;
+  const ht=mo+fournitures_vente+(Number(form.deplacement)||0)+(Number(form.urgence)||0);
+  return {ht:Math.round(ht*100)/100,tva:Math.round(ht*TVA*100)/100,ttc:Math.round(ht*(1+TVA)*100)/100,fournitures_vente};
 }
 
 function exportPDF(q,client,mission,{returnBase64=false}={}){
@@ -862,10 +867,14 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
   y+=8;
 
-  const mainOeuvre=(Number(q.heures)||0)*(Number(q.taux_horaire)||TARIFS.horaire);
+  const mainOeuvre=q.mode==='forfait'
+    ?(Number(q.forfait_ht)||0)
+    :(Number(q.heures)||0)*(Number(q.taux_horaire)||TARIFS.horaire);
+  const fournAffiche=Number(q.fournitures_vente)>0?Number(q.fournitures_vente):Number(q.fournitures)||0;
   const rows=[
-    ...(mainOeuvre>0?[['Main-d\'œuvre ('+q.heures+'h × '+q.taux_horaire+'€/h)',mainOeuvre]]:[] ),
-    ...(Number(q.fournitures)>0?[['Fournitures / matériaux',Number(q.fournitures)]]:[] ),
+    ...(q.mode==='forfait'&&mainOeuvre>0?[['Forfait intervention',mainOeuvre]]
+      :mainOeuvre>0?[['Main-d\'œuvre ('+q.heures+'h × '+q.taux_horaire+'€/h)',mainOeuvre]]:[] ),
+    ...(fournAffiche>0?[['Fournitures / matériaux',fournAffiche]]:[] ),
     ...(Number(q.deplacement)>0?[['Forfait déplacement',Number(q.deplacement)]]:[] ),
     ...(Number(q.urgence)>0?[['Majoration urgence',Number(q.urgence)]]:[] ),
   ].filter(r=>r[1]>0);
@@ -1045,9 +1054,11 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
 
   const rows=[];
   if(quote){
-    const mo=(Number(quote.heures)||0)*(Number(quote.taux_horaire)||TARIFS.horaire);
-    if(mo>0)rows.push(['Main-d\'œuvre ('+quote.heures+'h × '+quote.taux_horaire+'€/h)',mo]);
-    if(Number(quote.fournitures)>0)rows.push(['Fournitures / matériaux',Number(quote.fournitures)]);
+    const mo=quote.mode==='forfait'?(Number(quote.forfait_ht)||0):(Number(quote.heures)||0)*(Number(quote.taux_horaire)||TARIFS.horaire);
+    const fournAffiche=Number(quote.fournitures_vente)>0?Number(quote.fournitures_vente):Number(quote.fournitures)||0;
+    if(quote.mode==='forfait'&&mo>0)rows.push(['Forfait intervention',mo]);
+    else if(mo>0)rows.push(['Main-d\'œuvre ('+quote.heures+'h × '+quote.taux_horaire+'€/h)',mo]);
+    if(fournAffiche>0)rows.push(['Fournitures / matériaux',fournAffiche]);
     if(Number(quote.deplacement)>0)rows.push(['Forfait déplacement',Number(quote.deplacement)]);
     if(Number(quote.urgence)>0)rows.push(['Majoration urgence',Number(quote.urgence)]);
   }
@@ -1216,7 +1227,7 @@ function exportFacturX(inv,client,mission){
 
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
-  const defaultForm=()=>({client_id:'',mission_id:'',type_service:'Piscine',heures:1,taux_horaire:TARIFS.horaire,fournitures:0,deplacement:TARIFS.deplacement,urgence:0,description:''});
+  const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',mode:'horaire',heures:1,taux_horaire:t.horaire,forfait_ht:0,fournitures:0,marge_fournitures:t.marge_fournitures,deplacement:t.deplacement,urgence:0,description:''};};
   const [form,setForm]=useState(defaultForm);
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
@@ -1310,11 +1321,27 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Durée (heures)" type="number" value={String(form.heures||1)} onChange={v=>setForm(f=>({...f,heures:Number(v)||0}))} placeholder="1"/>
-                <Input label="Taux horaire (€ HT)" type="number" value={String(form.taux_horaire||TARIFS.horaire)} onChange={v=>setForm(f=>({...f,taux_horaire:Number(v)||0}))} placeholder="55"/>
+              {/* Mode horaire / forfait */}
+              <div className="flex rounded-lg border border-gray-700 overflow-hidden">
+                {['horaire','forfait'].map(m=>(
+                  <button key={m} onClick={()=>setForm(f=>({...f,mode:m}))}
+                    className={"flex-1 py-2 text-sm font-medium transition-colors "+(form.mode===m?"bg-amber-500 text-gray-900":"bg-gray-800 text-gray-400 hover:text-gray-200")}>
+                    {m==='horaire'?'À l\'heure':'Au forfait'}
+                  </button>
+                ))}
               </div>
-              <Input label="Fournitures / matériaux (€ HT)" type="number" value={String(form.fournitures||0)} onChange={v=>setForm(f=>({...f,fournitures:Number(v)||0}))} placeholder="0"/>
+              {form.mode==='horaire'?(
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="Durée (heures)" type="number" value={String(form.heures||1)} onChange={v=>setForm(f=>({...f,heures:Number(v)||0}))} placeholder="1"/>
+                  <Input label="Taux horaire (€ HT)" type="number" value={String(form.taux_horaire||TARIFS.horaire)} onChange={v=>setForm(f=>({...f,taux_horaire:Number(v)||0}))} placeholder="55"/>
+                </div>
+              ):(
+                <Input label="Montant forfait (€ HT)" type="number" value={String(form.forfait_ht||0)} onChange={v=>setForm(f=>({...f,forfait_ht:Number(v)||0}))} placeholder="Ex: 250"/>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Prix achat fournitures (€ HT)" type="number" value={String(form.fournitures||0)} onChange={v=>setForm(f=>({...f,fournitures:Number(v)||0}))} placeholder="0"/>
+                <Input label="Marge fournitures (%)" type="number" value={String(form.marge_fournitures||0)} onChange={v=>setForm(f=>({...f,marge_fournitures:Number(v)||0}))} placeholder="0"/>
+              </div>
               <Input label="Forfait déplacement (€ HT)" type="number" value={String(form.deplacement||TARIFS.deplacement)} onChange={v=>setForm(f=>({...f,deplacement:Number(v)||0}))} placeholder="30"/>
               <Input label="Majoration urgence (€ HT)" type="number" value={String(form.urgence||0)} onChange={v=>setForm(f=>({...f,urgence:Number(v)||0}))} placeholder="0"/>
             </div>
@@ -1322,8 +1349,12 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
                 <h3 className="font-semibold mb-4" style={{color:'var(--gold-light)'}}>Récapitulatif</h3>
                 {[
-                  ['Main d\'œuvre ('+form.heures+'h × '+form.taux_horaire+'€)',(form.heures||0)*(form.taux_horaire||TARIFS.horaire)],
-                  ['Fournitures / matériaux',Number(form.fournitures)||0],
+                  form.mode==='forfait'
+                    ?['Forfait intervention',Number(form.forfait_ht)||0]
+                    :['Main-d\'œuvre ('+form.heures+'h × '+form.taux_horaire+'€)',(form.heures||0)*(form.taux_horaire||TARIFS.horaire)],
+                  form.fournitures>0&&form.marge_fournitures>0
+                    ?['Fournitures (achat '+fmtMoney(form.fournitures)+' +'+form.marge_fournitures+'%)',calc.fournitures_vente||0]
+                    :['Fournitures / matériaux',Number(calc.fournitures_vente)||0],
                   ['Déplacement',Number(form.deplacement)||0],
                   ...(form.urgence>0?[['Majoration urgence',Number(form.urgence)]]:[] ),
                 ].map(([l,v])=>(
@@ -2440,12 +2471,19 @@ function PortfolioPage({user}) {
           };
           return (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Taux horaire main-d'œuvre (€ HT/h)</label>
                   <input type="number" placeholder={TARIFS.horaire} value={c.horaire!=null?c.horaire:''}
                     onChange={e=>saveTarif('horaire',e.target.value)}
                     className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none" style={{borderColor:'var(--gold)'}}/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Marge sur fournitures / pièces (%)</label>
+                  <input type="number" placeholder="0" value={c.marge_fournitures!=null?c.marge_fournitures:''}
+                    onChange={e=>saveTarif('marge_fournitures',e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none" style={{borderColor:'var(--gold)'}}/>
+                  <p className="text-xs text-gray-600 mt-1">Ex: 20 → une pièce achetée 100€ est facturée 120€</p>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Forfait déplacement (€ HT)</label>
