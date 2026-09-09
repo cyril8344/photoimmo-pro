@@ -42,6 +42,7 @@
     .brand-name small{display:block;font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.04em;}
     .back-btn{font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;border:1px solid var(--border);transition:color .15s,background .15s;}
     .back-btn:hover{color:var(--text);background:var(--surface-2);}
+    .back-btn .btn-short{display:none;}
 
     /* ── Hero ── */
     .hero{background:var(--bg);border-bottom:3px solid var(--blue);}
@@ -140,10 +141,10 @@
     @media(max-width:860px){
       .hero-inner{grid-template-columns:1fr;}
       .hero-copy{padding:22px 18px 18px;border-right:none;border-bottom:1px solid var(--border);}
-      .hero-title{font-size:clamp(18px,5.5vw,28px);}
+      .hero-title{font-size:clamp(15px,4.2vw,22px);line-height:1.18;}
       .hero-stats{display:grid;grid-template-columns:repeat(2,1fr);border-left:none;border-top:1px solid var(--border);}
-      .stat-num{font-size:clamp(18px,5vw,24px);}
-      .stat-num.stat-phone{font-size:clamp(12px,3.2vw,16px);letter-spacing:-0.03em;}
+      .stat-num{font-size:clamp(16px,4.5vw,22px);}
+      .stat-num.stat-phone{font-size:clamp(11px,2.8vw,15px);letter-spacing:-0.03em;}
       .services-grid{grid-template-columns:1fr;}
       .reals-grid{grid-template-columns:repeat(2,1fr);}
       .testi-grid{grid-template-columns:1fr;}
@@ -180,7 +181,7 @@
       </div>
     </a>
     <a class="back-btn" href="/app" id="backBtn">
-      <span class="btn-long">← Retour à l'application</span><span class="btn-short" style="display:none;">← App</span>
+      <span class="btn-long">← Retour à l'application</span><span class="btn-short">← App</span>
     </a>
   </div>
 </header>
