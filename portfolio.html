@@ -6,27 +6,33 @@
   <title>Vitrine — Habitat Maintenance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
   <style>
     :root{
-      --bg:#ECEAE4;--surface:#F8F7F3;--surface-2:#F0EEE9;
-      --blue:#1741B8;--blue-mid:#2553D4;
-      --blue-dim:rgba(23,65,184,0.09);--blue-line:rgba(23,65,184,0.18);
-      --text:#161621;--muted:#696978;--border:#D5D2C8;
+      --bg:#EEF2FA;--surface:#F6F8FD;--surface-2:#EBF0F8;
+      --blue:#0E1F42;--blue-mid:#1A3461;
+      --blue-dim:rgba(14,31,66,0.08);--blue-line:rgba(14,31,66,0.18);
+      --accent:#2B7FE8;--accent-dim:rgba(43,127,232,0.10);--accent-line:rgba(43,127,232,0.22);
+      --orange:#E87D2B;
+      --text:#111828;--muted:#566080;--border:#CACED8;
     }
     @media(prefers-color-scheme:dark){
       :root:not([data-theme="light"]){
-        --bg:#111318;--surface:#1A1D26;--surface-2:#20242F;
-        --blue:#4070F0;--blue-mid:#5585FF;
-        --blue-dim:rgba(64,112,240,0.12);--blue-line:rgba(64,112,240,0.22);
-        --text:#E6E4DE;--muted:#8A8A9A;--border:#2A2D3A;
+        --bg:#0B1222;--surface:#111C33;--surface-2:#172040;
+        --blue:#5EADFF;--blue-mid:#7EC0FF;
+        --blue-dim:rgba(94,173,255,0.12);--blue-line:rgba(94,173,255,0.22);
+        --accent:#5EADFF;--accent-dim:rgba(94,173,255,0.12);--accent-line:rgba(94,173,255,0.25);
+        --orange:#F09050;
+        --text:#E4EAF8;--muted:#6A7CA0;--border:#253050;
       }
     }
     :root[data-theme="dark"]{
-      --bg:#111318;--surface:#1A1D26;--surface-2:#20242F;
-      --blue:#4070F0;--blue-mid:#5585FF;
-      --blue-dim:rgba(64,112,240,0.12);--blue-line:rgba(64,112,240,0.22);
-      --text:#E6E4DE;--muted:#8A8A9A;--border:#2A2D3A;
+      --bg:#0B1222;--surface:#111C33;--surface-2:#172040;
+      --blue:#5EADFF;--blue-mid:#7EC0FF;
+      --blue-dim:rgba(94,173,255,0.12);--blue-line:rgba(94,173,255,0.22);
+      --accent:#5EADFF;--accent-dim:rgba(94,173,255,0.12);--accent-line:rgba(94,173,255,0.25);
+      --orange:#F09050;
+      --text:#E4EAF8;--muted:#6A7CA0;--border:#253050;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
@@ -37,7 +43,7 @@
     header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
     .header-inner{display:flex;align-items:center;justify-content:space-between;height:58px;max-width:1080px;margin:0 auto;padding:0 24px;}
     .brand{display:flex;align-items:center;gap:11px;text-decoration:none;}
-    .brand-mark{width:34px;height:34px;border-radius:5px;background:var(--blue);color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .brand-mark{width:34px;height:34px;border-radius:5px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
     .brand-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
     .brand-name small{display:block;font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.04em;}
     .back-btn{font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;border:1px solid var(--border);transition:color .15s,background .15s;}
@@ -48,12 +54,12 @@
     .hero{background:var(--bg);border-bottom:3px solid var(--blue);}
     .hero-inner{display:grid;grid-template-columns:1fr 320px;max-width:1080px;margin:0 auto;}
     .hero-copy{padding:48px 40px 48px 24px;border-right:1px solid var(--border);}
-    .eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:10px;}
+    .eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:10px;}
     .hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(19px,3.2vw,38px);line-height:1.12;text-wrap:balance;margin-bottom:14px;}
-    .hero-title em{color:var(--blue);font-style:normal;}
+    .hero-title em{color:var(--accent);font-style:normal;}
     .hero-sub{font-size:14px;color:var(--muted);line-height:1.6;max-width:420px;margin-bottom:20px;}
     .hero-chips{display:flex;flex-wrap:wrap;gap:6px;}
-    .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:100px;font-size:11.5px;font-weight:500;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-line);}
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:100px;font-size:11.5px;font-weight:500;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-line);}
     .hero-stats{background:var(--surface);border-left:1px solid var(--border);}
     .stat-cell{padding:18px 20px;border-bottom:1px solid var(--border);}
     .stat-cell:last-child{border-bottom:none;}
@@ -74,7 +80,7 @@
     .services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
     .svc{background:var(--surface);padding:28px;transition:background .2s;}
     .svc:hover{background:var(--surface-2);}
-    .svc-icon{width:42px;height:42px;border-radius:8px;background:var(--blue-dim);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--blue);}
+    .svc-icon{width:42px;height:42px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--accent);}
     .svc-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:7px;}
     .svc-desc{font-size:13.5px;color:var(--muted);line-height:1.68;margin-bottom:14px;}
     .svc-tasks{display:flex;flex-wrap:wrap;gap:5px;}
@@ -91,10 +97,10 @@
     /* ── Témoignages ── */
     .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
     .testi{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:20px;}
-    .stars{margin-bottom:10px;color:var(--blue);font-size:13px;}
+    .stars{margin-bottom:10px;color:var(--accent);font-size:13px;}
     .testi-text{font-size:13px;color:var(--text);line-height:1.72;font-style:italic;margin-bottom:14px;}
     .testi-author{display:flex;align-items:center;gap:10px;}
-    .testi-avatar{width:32px;height:32px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--blue);flex-shrink:0;}
+    .testi-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--accent);flex-shrink:0;}
     .testi-name{font-weight:600;font-size:13px;}
     .testi-date{font-size:11.5px;color:var(--muted);}
     .no-testi{text-align:center;padding:32px;color:var(--muted);font-size:14px;}
@@ -103,12 +109,13 @@
     /* ── Réseaux sociaux ── */
     .social-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
     .social-link{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:500;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);transition:border-color .15s;}
-    .social-link:hover{border-color:var(--blue);color:var(--blue);}
+    .social-link:hover{border-color:var(--accent);color:var(--accent);}
 
     /* ── CTA ── */
-    .cta-section{background:var(--blue);padding:52px 24px;text-align:center;}
+    .cta-section{background:var(--blue);padding:52px 24px;text-align:center;position:relative;}
+    .cta-section::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--orange);}
     .cta-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(20px,2.8vw,30px);color:#fff;text-wrap:balance;margin-bottom:10px;}
-    .cta-sub{font-size:15px;color:rgba(255,255,255,.8);margin-bottom:26px;}
+    .cta-sub{font-size:15px;color:rgba(255,255,255,.75);margin-bottom:26px;}
     .cta-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
     .btn-w{background:#fff;color:var(--blue);padding:12px 24px;border-radius:4px;font-weight:700;font-size:14px;text-decoration:none;transition:opacity .15s;}
     .btn-w:hover{opacity:.9;}
@@ -119,8 +126,8 @@
     /* ── Footer ── */
     footer{background:var(--surface);border-top:1px solid var(--border);padding:18px 24px;}
     .footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1080px;margin:0 auto;font-size:12.5px;color:var(--muted);}
-    .preview-banner{background:var(--blue-dim);border-bottom:1px solid var(--blue-line);padding:8px 24px;text-align:center;font-size:12.5px;color:var(--blue);}
-    .preview-banner a{color:var(--blue);font-weight:600;text-decoration:underline;}
+    .preview-banner{background:var(--accent-dim);border-bottom:1px solid var(--accent-line);padding:8px 24px;text-align:center;font-size:12.5px;color:var(--accent);}
+    .preview-banner a{color:var(--accent);font-weight:600;text-decoration:underline;}
 
     /* ── Responsive ── */
     @media(max-width:860px){
@@ -160,7 +167,15 @@
 <header>
   <div class="header-inner">
     <a class="brand" href="#">
-      <div class="brand-mark" id="headerMark">HM</div>
+      <div class="brand-mark" id="headerMark">
+        <svg width="20" height="23" viewBox="0 0 50 58" fill="none" aria-hidden="true">
+          <defs><linearGradient id="hg" x1="10%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="#7EC8FF"/><stop offset="55%" stop-color="#2B7FE8"/><stop offset="100%" stop-color="#0F4FA8"/></linearGradient><clipPath id="hc"><path d="M25 2 C44 14 50 37 25 55 C0 37 6 14 25 2Z"/></clipPath></defs>
+          <path d="M25 2 C44 14 50 37 25 55 C0 37 6 14 25 2Z" fill="url(#hg)"/>
+          <path d="M25 55 C0 37 6 26 25 20 L25 55Z" fill="#1AB870" opacity=".8" clip-path="url(#hc)"/>
+          <path d="M29 10 L17 33 L26 33 L21 51 L37 28 L28 28Z" fill="#FFD600" clip-path="url(#hc)"/>
+          <path d="M25 2 C44 14 50 37 25 55 C0 37 6 14 25 2Z" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.2"/>
+        </svg>
+      </div>
       <div class="brand-name" id="headerName">
         Habitat Maintenance
         <small>Technicien indépendant</small>
@@ -281,7 +296,13 @@
 <footer>
   <div class="footer-inner">
     <div style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--text);">
-      <div class="brand-mark" id="footerMark" style="width:26px;height:26px;font-size:10px;border-radius:4px;">HM</div>
+      <div class="brand-mark" id="footerMark" style="width:26px;height:26px;border-radius:4px;">
+        <svg width="16" height="18" viewBox="0 0 50 58" fill="none" aria-hidden="true">
+          <path d="M25 2 C44 14 50 37 25 55 C0 37 6 14 25 2Z" fill="url(#hg)"/>
+          <path d="M25 55 C0 37 6 26 25 20 L25 55Z" fill="#1AB870" opacity=".8" clip-path="url(#hc)"/>
+          <path d="M29 10 L17 33 L26 33 L21 51 L37 28 L28 28Z" fill="#FFD600" clip-path="url(#hc)"/>
+        </svg>
+      </div>
       <span id="footerName">Habitat Maintenance</span>
       <span id="footerSiret"></span>
     </div>
@@ -317,10 +338,8 @@ function fmt(d) {
 
 // ── Header ────────────────────────────────────────────────
 const companyName = profile.company_name || 'Habitat Maintenance';
-document.getElementById('headerMark').textContent = initials(companyName);
 document.getElementById('headerName').innerHTML =
   `${esc(companyName)}<small>Technicien indépendant</small>`;
-document.getElementById('footerMark').textContent = initials(companyName);
 document.getElementById('footerName').textContent = companyName;
 document.title = `${companyName} — Vitrine`;
 

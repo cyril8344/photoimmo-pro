@@ -795,21 +795,22 @@ function calcDevis(form){
 function exportPDF(q,client,mission,{returnBase64=false}={}){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
-  const dark=[15,17,23];
-  const amber=[29,110,245];
-  const amberLight=[100,160,255];
+  const dark=[14,31,66];
+  const amber=[43,127,232];
+  const amberLight=[94,173,255];
+  const orange=[232,125,43];
   const white=[255,255,255];
-  const lightGray=[180,180,190];
-  const veryLightGray=[240,240,245];
+  const lightGray=[180,190,210];
+  const veryLightGray=[238,242,250];
   const profile=store.get('pii_profile',{});
   const companyName=profile.company_name||'Habitat Maintenance';
   const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   const validUntil=new Date(q.created_at);validUntil.setDate(validUntil.getDate()+30);
 
-  // ── Header sombre
+  // ── Header marine
   doc.setFillColor(...dark);doc.rect(0,0,210,50,'F');
-  // Bande dorée en bas du header
-  doc.setFillColor(...amber);doc.rect(0,48,210,2,'F');
+  // Bande orange en bas du header
+  doc.setFillColor(...orange);doc.rect(0,47,210,3,'F');
 
   // Titre DEVIS
   doc.setTextColor(...white);doc.setFontSize(24);doc.setFont('helvetica','bold');
@@ -981,20 +982,21 @@ async function sendInvoiceReminder(inv, client) {
 function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) {
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
-  const dark=[15,17,23];
-  const amber=[29,110,245];
-  const amberLight=[100,160,255];
+  const dark=[14,31,66];
+  const amber=[43,127,232];
+  const amberLight=[94,173,255];
+  const orange=[232,125,43];
   const white=[255,255,255];
-  const lightGray=[180,180,190];
-  const veryLightGray=[240,240,245];
+  const lightGray=[180,190,210];
+  const veryLightGray=[238,242,250];
   const profile=store.get('pii_profile',{});
   const companyName=profile.company_name||'Habitat Maintenance';
   const initials=companyName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   const isPaid=inv.status==='Payée'||inv.status==='Payé';
 
-  // ── Header sombre
+  // ── Header marine
   doc.setFillColor(...dark);doc.rect(0,0,210,50,'F');
-  doc.setFillColor(...amber);doc.rect(0,48,210,2,'F');
+  doc.setFillColor(...orange);doc.rect(0,47,210,3,'F');
 
   doc.setTextColor(...white);doc.setFontSize(24);doc.setFont('helvetica','bold');
   doc.text('FACTURE',14,22);
