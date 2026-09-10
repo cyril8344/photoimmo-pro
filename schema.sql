@@ -267,3 +267,66 @@ alter table user_profiles add column if not exists custom_tarifs jsonb default '
 
 -- Migration: forfait déplacement sur les devis
 alter table quotes add column if not exists deplacement numeric default 0;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Migration : rattrapage du passage de la photographie à la maintenance
+--
+-- L'app écrivait ces champs alors que les colonnes n'existaient pas. Supabase
+-- rejetait alors l'écriture entière : le profil et les devis ne survivaient que
+-- dans le localStorage du navigateur. À exécuter dans le SQL Editor Supabase.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Profil : coordonnées et mentions légales obligatoires d'un artisan
+alter table user_profiles add column if not exists email text;
+alter table user_profiles add column if not exists tva_number text;
+alter table user_profiles add column if not exists rm_number text;
+alter table user_profiles add column if not exists insurance_name text;
+alter table user_profiles add column if not exists insurance_contract text;
+alter table user_profiles add column if not exists insurance_coverage text;
+alter table user_profiles add column if not exists mediator_name text;
+alter table user_profiles add column if not exists mediator_url text;
+alter table user_profiles add column if not exists withdrawal_right boolean default false;
+
+-- Devis : lignes détaillées, remplaçant le gabarit figé de la photographie
+alter table quotes add column if not exists type_service text;
+alter table quotes add column if not exists description text;
+alter table quotes add column if not exists lines jsonb default '[]';
+alter table quotes add column if not exists penalites boolean default false;
+alter table quotes add column if not exists accept_token text;
+
+-- Devis : champs de l'ancien mode horaire/forfait, conservés pour que les devis
+-- déjà enregistrés restent lisibles (quoteLines() les reconstruit en lignes).
+alter table quotes add column if not exists mode text;
+alter table quotes add column if not exists heures numeric;
+alter table quotes add column if not exists taux_horaire numeric;
+alter table quotes add column if not exists forfait_ht numeric;
+alter table quotes add column if not exists fournitures numeric;
+alter table quotes add column if not exists marge_fournitures numeric;
+alter table quotes add column if not exists fournitures_vente numeric;
+alter table quotes add column if not exists urgence numeric default 0;
+
+-- Colonnes héritées de la photographie, désormais inutilisées.
+-- Décommenter pour nettoyer une fois la migration vérifiée.
+-- alter table quotes drop column if exists surface;
+-- alter table quotes drop column if exists photos;
+-- alter table quotes drop column if exists visite;
+-- alter table quotes drop column if exists drone;
+-- alter table quotes drop column if exists retouche;
+
+-- Le catalogue d'articles est pour l'instant purement local (pii_articles).
+create table if not exists articles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  ref text,
+  designation text not null,
+  unit text default 'u',
+  pu_achat numeric default 0,
+  pu_ht numeric default 0,
+  tva_rate numeric default 20,
+  created_at timestamptz default now()
+);
+alter table articles enable row level security;
+create policy "articles_select" on articles for select using (auth.uid() = user_id);
+create policy "articles_insert" on articles for insert with check (auth.uid() = user_id);
+create policy "articles_update" on articles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "articles_delete" on articles for delete using (auth.uid() = user_id);

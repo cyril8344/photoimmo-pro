@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/api/init"></script>
   <style>
     :root{
       --bg:#EEF2FA;--surface:#F6F8FD;--surface-2:#EBF0F8;
@@ -302,18 +304,50 @@
 </footer>
 
 <script>
-// ── Lecture localStorage ──────────────────────────────────
+// ── Chargement des données ────────────────────────────────
+// Un visiteur arrive sur /portfolio/<slug> et n'a rien dans son localStorage :
+// les données viennent de Supabase, via les politiques de lecture publique
+// conditionnées à portfolio_enabled. Le localStorage ne sert qu'à la
+// prévisualisation depuis l'app, sans slug dans l'URL.
 const store = {
   get: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
 };
 
-const profile    = store.get('pii_profile', {});
-const photos     = store.get('pii_portfolio_photos', []);
-const testimons  = store.get('pii_testimonials', []);
+let profile = {}, photos = [], testimons = [];
 
-// Preview mode si ouvert depuis l'app
-const isPreview = document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview');
-if (isPreview) document.getElementById('previewBanner').hidden = false;
+const slug = (location.pathname.match(/^\/portfolio\/([^\/?#]+)/) || [])[1] || '';
+const isPreview = !slug && (document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview'));
+
+async function loadFromSupabase(slug) {
+  const url = window.__SUPABASE_URL__, key = window.__SUPABASE_KEY__;
+  if (!url || !key || !window.supabase) return false;
+  const sb = window.supabase.createClient(url, key);
+  const { data: p } = await sb.from('user_profiles').select('*')
+    .eq('portfolio_slug', slug).eq('portfolio_enabled', true).maybeSingle();
+  if (!p) return false;
+  profile = p;
+  const [ph, te] = await Promise.all([
+    sb.from('portfolio_photos').select('*').eq('user_id', p.user_id).order('display_order'),
+    sb.from('testimonials').select('*').eq('user_id', p.user_id).order('date', { ascending: false }),
+  ]);
+  photos = ph.data || [];
+  testimons = te.data || [];
+  return true;
+}
+
+function loadFromLocal() {
+  profile = store.get('pii_profile', {});
+  photos = store.get('pii_portfolio_photos', []);
+  testimons = store.get('pii_testimonials', []);
+}
+
+function showUnavailable() {
+  document.querySelector('.hero-copy').innerHTML =
+    '<div class="eyebrow">Page indisponible</div>' +
+    '<h1 class="hero-title">Cette vitrine n\'existe pas ou n\'est plus publiée</h1>' +
+    '<p class="hero-sub">Vérifiez l\'adresse, ou contactez directement l\'artisan.</p>';
+  document.querySelectorAll('section, .hero-stats').forEach(el => el.hidden = true);
+}
 
 // ── Utilitaires ───────────────────────────────────────────
 function esc(s) {
@@ -327,6 +361,7 @@ function fmt(d) {
   try { return new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }); } catch { return d; }
 }
 
+function render() {
 // ── Header ────────────────────────────────────────────────
 const companyName = profile.company_name || 'Habitat Maintenance';
 document.getElementById('headerName').innerHTML =
@@ -402,6 +437,21 @@ const sl = profile.social_links || {};
 if (sl.website) actions.push(`<a href="${esc(sl.website)}" class="btn-ghost" target="_blank" rel="noopener">🌐 Site web</a>`);
 if (!actions.length) actions.push(`<span class="btn-w" style="cursor:default;opacity:.6;">📞 Téléphone non renseigné</span>`);
 ctaEl.innerHTML = actions.join('');
+}
+
+(async () => {
+  if (slug) {
+    let ok = false;
+    try { ok = await loadFromSupabase(slug); } catch (e) { ok = false; }
+    // Sans repli sur le localStorage ici : il contiendrait les données du
+    // propriétaire, donc une autre vitrine que celle demandée par l'URL.
+    if (!ok) { showUnavailable(); return; }
+  } else {
+    loadFromLocal();
+    if (isPreview) document.getElementById('previewBanner').hidden = false;
+  }
+  render();
+})();
 </script>
 </body>
 </html>

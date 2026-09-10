@@ -1598,9 +1598,11 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
 
   const save=async()=>{
     if(!form.client_id||missingLabels>0||!(form.lines||[]).length)return;
+    // rates n'est qu'un détail d'affichage : il n'a pas de colonne en base.
+    const {rates,...totals}=calc;
     if(modal==='new'){
       const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
-      const payload={...form,...calc,num,status:'En attente'};
+      const payload={...form,...totals,num,status:'En attente'};
       if(sb&&user){
         const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
         if(error){alert('Erreur : '+error.message);return;}
@@ -1609,7 +1611,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
         const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
       }
     } else {
-      const payload={...form,...calc};
+      const payload={...form,...totals};
       if(sb&&user){
         const{error}=await sb.from('quotes').update(payload).eq('id',modal);
         if(error){alert('Erreur : '+error.message);return;}
