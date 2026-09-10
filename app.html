@@ -3269,7 +3269,17 @@ function App(){
 
   const loadProfile=async(userId)=>{
     const{data}=await sb.from('user_profiles').select('*').eq('user_id',userId).single();
-    if(data){store.set('pii_profile',data);setProfile(data);}
+    if(!data)return;
+    // Fusion, jamais remplacement : une ligne distante incomplète (créée avant
+    // que les écritures ne fonctionnent) effacerait sinon des champs saisis
+    // localement — slug, SIRET, tarifs — qui n'existent que dans le navigateur.
+    const local=store.get('pii_profile',{});
+    const merged={...local};
+    Object.entries(data).forEach(([k,v])=>{
+      if(v!==null&&v!==undefined&&v!=='')merged[k]=v;
+    });
+    store.set('pii_profile',merged);
+    setProfile(merged);
   };
 
   const loadAllData=async(userId)=>{
