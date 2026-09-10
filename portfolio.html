@@ -418,8 +418,13 @@ if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 �
 if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
 
 // ── Photos de fond sur les cartes domaines ───────────────
+// Livrées avec le site : elles s'affichent toujours, sans dépendre de la base.
+// Une photo ajoutée depuis l'app pour la même catégorie prend le dessus.
 const defaultPhotos = {
+  'Piscine': 'images/piscine.jpg',
   'Climatisation': 'images/clim.jpg',
+  'Électricité': 'images/electricite.jpg',
+  'Plomberie': 'images/plomberie.jpg',
 };
 const photoByCategory = {};
 photos.forEach(p => { if (p.category && p.url && !photoByCategory[p.category]) photoByCategory[p.category] = p.url; });
