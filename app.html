@@ -808,14 +808,153 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
+const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
+// 10% : rénovation d'un logement de plus de 2 ans. 5,5% : rénovation énergétique.
+const TVA_RATES=[20,10,5.5];
+const r2=n=>Math.round((Number(n)||0)*100)/100;
+const newLine=(o={})=>({id:uid(),ref:'',designation:'',qty:1,unit:'u',pu_ht:0,remise_pct:0,tva_rate:20,...o});
+const lineTotal=l=>r2((Number(l.qty)||0)*(Number(l.pu_ht)||0)*(1-(Number(l.remise_pct)||0)/100));
+
+// Devis d'avant les lignes : on reconstruit des lignes à la volée pour qu'ils
+// s'affichent et s'impriment comme les nouveaux, sans toucher aux données stockées.
+function quoteLines(q){
+  if(Array.isArray(q.lines)&&q.lines.length)return q.lines;
+  const out=[];
+  const heures=Number(q.heures)||0, taux=Number(q.taux_horaire)||TARIFS.horaire;
+  if(q.mode==='forfait'&&Number(q.forfait_ht)>0)
+    out.push(newLine({designation:'Forfait intervention',qty:1,unit:'forfait',pu_ht:Number(q.forfait_ht)}));
+  else if(heures>0)
+    out.push(newLine({designation:"Main-d'œuvre",qty:heures,unit:'h',pu_ht:taux}));
+  const fourn=Number(q.fournitures_vente)>0?Number(q.fournitures_vente):Number(q.fournitures)||0;
+  if(fourn>0)out.push(newLine({designation:'Fournitures / matériaux',qty:1,pu_ht:fourn}));
+  if(Number(q.deplacement)>0)out.push(newLine({designation:'Forfait déplacement',qty:1,unit:'forfait',pu_ht:Number(q.deplacement)}));
+  if(Number(q.urgence)>0)out.push(newLine({designation:'Majoration urgence',qty:1,unit:'forfait',pu_ht:Number(q.urgence)}));
+  return out;
+}
+
+// byRate permet de ventiler la TVA quand plusieurs taux coexistent sur un devis.
+function calcLines(lines){
+  const byRate={};
+  let ht=0;
+  (lines||[]).forEach(l=>{
+    const t=lineTotal(l), rate=Number(l.tva_rate)||0;
+    ht+=t;
+    byRate[rate]=r2((byRate[rate]||0)+t);
+  });
+  ht=r2(ht);
+  let tva=0;
+  const rates=Object.keys(byRate).map(Number).sort((a,b)=>b-a)
+    .map(rate=>{const m=r2(byRate[rate]*rate/100);tva+=m;return{rate,base:byRate[rate],montant:m};});
+  tva=r2(tva);
+  return {ht,tva,ttc:r2(ht+tva),rates};
+}
+
 function calcDevis(form){
-  const mo=form.mode==='forfait'
-    ?(Number(form.forfait_ht)||0)
-    :(Number(form.heures)||0)*(Number(form.taux_horaire)||TARIFS.horaire);
-  const marge=Number(form.marge_fournitures)||0;
-  const fournitures_vente=Math.round((Number(form.fournitures)||0)*(1+marge/100)*100)/100;
-  const ht=mo+fournitures_vente+(Number(form.deplacement)||0)+(Number(form.urgence)||0);
-  return {ht:Math.round(ht*100)/100,tva:Math.round(ht*TVA*100)/100,ttc:Math.round(ht*(1+TVA)*100)/100,fournitures_vente};
+  if(Array.isArray(form.lines))return calcLines(form.lines);
+  return calcLines(quoteLines(form));
+}
+
+// Pour un devis d'avant les lignes on garde les totaux enregistrés plutôt que de
+// les recalculer, afin de ne pas faire bouger d'un centime un devis déjà envoyé.
+function quoteTotals(q){
+  if(Array.isArray(q.lines)&&q.lines.length)return calcLines(q.lines);
+  const ht=Number(q.ht)||0,tva=Number(q.tva)||0;
+  return {ht,tva,ttc:Number(q.ttc)||r2(ht+tva),rates:[{rate:20,base:ht,montant:tva}]};
+}
+
+// Tableau des lignes pour les PDF : gère le retour à la ligne des désignations,
+// la hauteur variable des lignes et les sauts de page.
+function drawLinesTable(doc,F,lines,y,C){
+  const hasRem=lines.some(l=>Number(l.remise_pct)>0);
+  const col=hasRem
+    ?{ref:17,des:40,desW:74,qty:128,pu:152,rem:168,tot:192}
+    :{ref:17,des:40,desW:86,qty:140,pu:166,rem:null,tot:192};
+  const header=()=>{
+    doc.setFillColor(...C.dark);doc.rect(14,y-5,182,9,'F');
+    doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...C.amberLight);
+    doc.text('RÉF.',col.ref,y);
+    doc.text('DÉSIGNATION',col.des,y);
+    doc.text('QTÉ',col.qty,y,{align:'right'});
+    doc.text('PU HT',col.pu,y,{align:'right'});
+    if(col.rem)doc.text('REM.',col.rem,y,{align:'right'});
+    doc.text('TOTAL HT',col.tot,y,{align:'right'});
+    y+=8;
+  };
+  const num=n=>String(Number(n)||0).replace('.',',');
+  header();
+  lines.forEach((l,i)=>{
+    doc.setFont(F,'normal');doc.setFontSize(8.5);
+    const des=doc.splitTextToSize(l.designation||'—',col.desW);
+    const h=Math.max(9,des.length*4+5);
+    // header() laisse la police en gras : on la remet avant d'écrire la ligne.
+    if(y+h>272){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
+    if(i%2===0){doc.setFillColor(...C.veryLightGray);doc.rect(14,y-4.5,182,h,'F');}
+    if(l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
+    doc.setFontSize(8.5);doc.setTextColor(20,26,40);
+    doc.text(des,col.des,y);
+    doc.setTextColor(90,96,112);
+    doc.text(num(l.qty)+(l.unit&&l.unit!=='u'?' '+l.unit:''),col.qty,y,{align:'right'});
+    doc.text(fmtMoneyPDF(l.pu_ht),col.pu,y,{align:'right'});
+    if(col.rem)doc.text(Number(l.remise_pct)>0?num(l.remise_pct)+'%':'—',col.rem,y,{align:'right'});
+    doc.setFont(F,'bold');doc.setTextColor(20,26,40);
+    doc.text(fmtMoneyPDF(lineTotal(l)),col.tot,y,{align:'right'});
+    y+=h;
+  });
+  return y;
+}
+
+// Bloc Total HT / TVA (ventilée si plusieurs taux) / Total TTC.
+function drawTotals(doc,F,totals,y,C){
+  const need=14+totals.rates.length*6.5;
+  if(y+need>272){doc.addPage();y=22;}
+  doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6.5;
+  doc.setFontSize(9);doc.setFont(F,'normal');
+  doc.setTextColor(90,96,112);doc.text('Total HT',126,y);
+  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(totals.ht),192,y,{align:'right'});y+=6.5;
+  totals.rates.forEach(r=>{
+    doc.setTextColor(90,96,112);
+    doc.text('TVA '+String(r.rate).replace('.',',')+'%',126,y);
+    doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(r.montant),192,y,{align:'right'});y+=6.5;
+  });
+  y-=2.5;
+  doc.setFillColor(...C.dark);doc.roundedRect(120,y,76,12,1.5,1.5,'F');
+  doc.setFont(F,'bold');doc.setFontSize(10.5);doc.setTextColor(...C.amberLight);
+  doc.text('TOTAL TTC',126,y+7.8);
+  doc.setFontSize(12);doc.setTextColor(255,255,255);
+  doc.text(fmtMoneyPDF(totals.ttc),190,y+7.8,{align:'right'});
+  return y+24;
+}
+
+// Mentions obligatoires pour un artisan intervenant chez des particuliers.
+// Chacune n'apparaît que si le champ correspondant est renseigné dans le profil.
+function legalMentions(profile){
+  const out=[];
+  if(profile.rm_number)out.push('Immatriculation : '+profile.rm_number+'.');
+  if(profile.insurance_name){
+    let t='Assurance professionnelle : '+profile.insurance_name;
+    if(profile.insurance_contract)t+=', contrat n° '+profile.insurance_contract;
+    t+=' — couverture : '+(profile.insurance_coverage||'France métropolitaine')+'.';
+    out.push(t);
+  }
+  if(profile.mediator_name){
+    let t='Médiateur de la consommation : '+profile.mediator_name;
+    if(profile.mediator_url)t+=' — '+profile.mediator_url;
+    out.push(t+'.');
+  }
+  return out;
+}
+
+// Écrit les mentions en gérant le retour à la ligne : sans splitTextToSize,
+// une mention longue déborde sur la suivante au lieu de pousser le bloc.
+function drawMentions(doc,lines,y){
+  lines.forEach(l=>{
+    const wrapped=doc.splitTextToSize(l,182);
+    const h=wrapped.length*3.6;
+    if(y+h>278){doc.addPage();y=20;}
+    doc.text(wrapped,14,y);
+    y+=h;
+  });
+  return y;
 }
 
 function exportPDF(q,client,mission,{returnBase64=false}={}){
@@ -894,56 +1033,22 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   const tableY=Math.max(cy||0,ey||0)+10;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
-  // ── Tableau prestations
-  let y=tableY+8;
-  doc.setFillColor(...dark);doc.rect(14,y-5,182,9,'F');
-  doc.setFontSize(8);doc.setFont(F,'bold');doc.setTextColor(...amberLight);
-  doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
-  y+=8;
-
-  const mainOeuvre=q.mode==='forfait'
-    ?(Number(q.forfait_ht)||0)
-    :(Number(q.heures)||0)*(Number(q.taux_horaire)||TARIFS.horaire);
-  const fournAffiche=Number(q.fournitures_vente)>0?Number(q.fournitures_vente):Number(q.fournitures)||0;
-  const rows=[
-    ...(q.mode==='forfait'&&mainOeuvre>0?[['Forfait intervention',mainOeuvre]]
-      :mainOeuvre>0?[['Main-d\'œuvre ('+q.heures+'h × '+q.taux_horaire+'€/h)',mainOeuvre]]:[] ),
-    ...(fournAffiche>0?[['Fournitures / matériaux',fournAffiche]]:[] ),
-    ...(Number(q.deplacement)>0?[['Forfait déplacement',Number(q.deplacement)]]:[] ),
-    ...(Number(q.urgence)>0?[['Majoration urgence',Number(q.urgence)]]:[] ),
-  ].filter(r=>r[1]>0);
-
-  doc.setFont(F,'normal');doc.setFontSize(9);
-  rows.forEach(([label,val],i)=>{
-    if(i%2===0){doc.setFillColor(...veryLightGray);doc.rect(14,y-4.5,182,9,'F');}
-    doc.setTextColor(20,26,40);doc.text(label,17,y);
-    doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-    doc.text(fmtMoneyPDF(val),192,y,{align:'right'});
-    doc.setFont(F,'normal');
-    y+=9;
-  });
+  // ── Tableau des lignes
+  const C={dark,amber,amberLight,veryLightGray};
+  let y=drawLinesTable(doc,F,quoteLines(q),tableY+8,C);
 
   // ── Totaux
-  y+=5;
-  doc.setDrawColor(...amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6.5;
-  doc.setFontSize(9);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Total HT',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(q.ht),192,y,{align:'right'});y+=6.5;
-  doc.setTextColor(90,96,112);doc.text('TVA 20%',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(q.tva),192,y,{align:'right'});y+=4;
-  doc.setFillColor(...dark);doc.roundedRect(120,y,76,12,1.5,1.5,'F');
-  doc.setFont(F,'bold');doc.setFontSize(10.5);doc.setTextColor(...amberLight);
-  doc.text('TOTAL TTC',126,y+7.8);
-  doc.setFontSize(12);doc.setTextColor(...white);
-  doc.text(fmtMoneyPDF(q.ttc),190,y+7.8,{align:'right'});
-  y+=24;
+  y=drawTotals(doc,F,quoteTotals(q),y+5,C);
 
   // ── Zone signature
   doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=7;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
   doc.text('BON POUR ACCORD',14,y);y+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Lu et approuvé — Signature du client précédée de la mention « Bon pour accord » :',14,y);y+=13;
+  doc.text('Signature du client précédée de la mention manuscrite',14,y);y+=4.5;
+  doc.setFont(F,'bold');
+  doc.text('« Devis reçu avant l\'exécution des travaux »',14,y);
+  doc.setFont(F,'normal');y+=12;
   doc.setDrawColor(190,196,208);doc.line(14,y,100,y);
   doc.setFontSize(7.5);doc.setTextColor(150,156,170);
   doc.text('Signature',14,y+4);doc.text('Date : ___/___/______',65,y+4);
@@ -953,13 +1058,15 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=5;
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const mentions=[
+    'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
-    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
-  mentions.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
+  mentions.push(...legalMentions(profile));
+  if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
+  drawMentions(doc,mentions,y);
 
   // ── Pied de page
   doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
@@ -1091,49 +1198,20 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   const tableY=Math.max(cy||0,ey||0)+10;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
-  // ── Tableau prestations
-  let y=tableY+8;
-  doc.setFillColor(...dark);doc.rect(14,y-5,182,9,'F');
-  doc.setFontSize(8);doc.setFont(F,'bold');doc.setTextColor(...amberLight);
-  doc.text('PRESTATION',17,y);doc.text('MONTANT HT',192,y,{align:'right'});
-  y+=8;
+  // ── Tableau des lignes (reprises du devis lié, sinon une ligne globale)
+  const C={dark,amber,amberLight,veryLightGray};
+  const invLines=quote
+    ?quoteLines(quote)
+    :[newLine({designation:'Prestation de maintenance',pu_ht:Number(inv.ht)||0})];
+  let y=drawLinesTable(doc,F,invLines,tableY+8,C);
 
-  const rows=[];
-  if(quote){
-    const mo=quote.mode==='forfait'?(Number(quote.forfait_ht)||0):(Number(quote.heures)||0)*(Number(quote.taux_horaire)||TARIFS.horaire);
-    const fournAffiche=Number(quote.fournitures_vente)>0?Number(quote.fournitures_vente):Number(quote.fournitures)||0;
-    if(quote.mode==='forfait'&&mo>0)rows.push(['Forfait intervention',mo]);
-    else if(mo>0)rows.push(['Main-d\'œuvre ('+quote.heures+'h × '+quote.taux_horaire+'€/h)',mo]);
-    if(fournAffiche>0)rows.push(['Fournitures / matériaux',fournAffiche]);
-    if(Number(quote.deplacement)>0)rows.push(['Forfait déplacement',Number(quote.deplacement)]);
-    if(Number(quote.urgence)>0)rows.push(['Majoration urgence',Number(quote.urgence)]);
-  }
-  if(rows.length===0)rows.push(['Prestation de maintenance',inv.ht]);
-
-  doc.setFont(F,'normal');doc.setFontSize(9);
-  rows.forEach(([label,val],i)=>{
-    if(i%2===0){doc.setFillColor(...veryLightGray);doc.rect(14,y-4.5,182,9,'F');}
-    doc.setTextColor(20,26,40);doc.text(label,17,y);
-    doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-    doc.text(fmtMoneyPDF(val),192,y,{align:'right'});
-    doc.setFont(F,'normal');
-    y+=9;
-  });
-
-  // ── Totaux
-  y+=5;
-  doc.setDrawColor(...amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6.5;
-  doc.setFontSize(9);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Total HT',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(inv.ht),192,y,{align:'right'});y+=6.5;
-  doc.setTextColor(90,96,112);doc.text('TVA 20%',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(inv.tva||Math.round(inv.ht*0.20*100)/100),192,y,{align:'right'});y+=4;
-  doc.setFillColor(...dark);doc.roundedRect(120,y,76,12,1.5,1.5,'F');
-  doc.setFont(F,'bold');doc.setFontSize(10.5);doc.setTextColor(...amberLight);
-  doc.text('TOTAL TTC',126,y+7.8);
-  doc.setFontSize(12);doc.setTextColor(...white);
-  doc.text(fmtMoneyPDF(inv.ttc),190,y+7.8,{align:'right'});
-  y+=24;
+  // ── Totaux : ceux de la facture font foi, la ventilation TVA vient du devis.
+  const qt=quote?quoteTotals(quote):null;
+  const invHt=Number(inv.ht)||0, invTva=Number(inv.tva)||r2(invHt*TVA);
+  const totals=(qt&&Math.abs(qt.ht-invHt)<0.01)
+    ?qt
+    :{ht:invHt,tva:invTva,ttc:Number(inv.ttc)||r2(invHt+invTva),rates:[{rate:20,base:invHt,montant:invTva}]};
+  y=drawTotals(doc,F,totals,y+5,C);
 
   // ── Tampon ACQUITTÉ si payée
   if(isPaid){
@@ -1151,10 +1229,10 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
     'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
-    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
-  legal.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
+  legal.push(...legalMentions(profile));
+  drawMentions(doc,legal,y);
 
   // ── Pied de page
   doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
@@ -1275,9 +1353,221 @@ function exportFacturX(inv,client,mission){
   URL.revokeObjectURL(a.href);
 }
 
+// ─── ÉDITEUR DE LIGNES DE DEVIS ───────────────────────────────────────────────
+const cellCls="w-full rounded-md border border-gray-700 bg-gray-900 text-sm px-2 py-1.5 focus:outline-none focus:border-amber-500";
+function Cell({label,children}){
+  return <label className="block"><span className="block text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{label}</span>{children}</label>;
+}
+
+function QuoteLinesEditor({lines,onChange}){
+  const articles=store.get('pii_articles',[]);
+  const [picker,setPicker]=useState(false);
+  const [q,setQ]=useState('');
+  // La colonne TVA ne s'affiche que si elle sert : sinon tout est à 20%.
+  const [showTva,setShowTva]=useState(()=>(lines||[]).some(l=>Number(l.tva_rate)!==20));
+
+  const patch=(id,p)=>onChange((lines||[]).map(l=>l.id===id?{...l,...p}:l));
+  const remove=id=>onChange((lines||[]).filter(l=>l.id!==id));
+  const addFree=()=>onChange([...(lines||[]),newLine()]);
+  const addFromArticle=a=>{
+    onChange([...(lines||[]),newLine({ref:a.ref,designation:a.designation,unit:a.unit,pu_ht:Number(a.pu_ht)||0,tva_rate:Number(a.tva_rate)||20})]);
+    setPicker(false);setQ('');
+  };
+
+  const needle=q.trim().toLowerCase();
+  const shown=needle?articles.filter(a=>(a.ref+' '+a.designation).toLowerCase().includes(needle)):articles;
+
+  return(
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-sm font-medium">Lignes du devis</span>
+        <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+          <input type="checkbox" checked={showTva} onChange={e=>setShowTva(e.target.checked)}/>
+          TVA par ligne
+        </label>
+      </div>
+
+      <div className="space-y-2">
+        {(lines||[]).length===0&&(
+          <p className="text-sm text-gray-500 py-3">Aucune ligne. Ajoutez un article du catalogue ou une ligne libre.</p>
+        )}
+        {(lines||[]).map((l,i)=>(
+          <div key={l.id} className="rounded-lg border border-gray-700 bg-gray-800/60 p-2.5 space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-xs text-gray-600 pt-2 w-4 shrink-0">{i+1}</span>
+              <div className="flex-1 grid grid-cols-3 gap-2">
+                <Cell label="Réf.">
+                  <input value={l.ref} onChange={e=>patch(l.id,{ref:e.target.value})} placeholder="—" className={cellCls}/>
+                </Cell>
+                <div className="col-span-2">
+                  <Cell label="Désignation">
+                    <input value={l.designation} onChange={e=>patch(l.id,{designation:e.target.value})} placeholder="Décrivez la prestation ou la pièce" className={cellCls}/>
+                  </Cell>
+                </div>
+              </div>
+              <button onClick={()=>remove(l.id)} title="Supprimer la ligne"
+                className="text-gray-500 hover:text-red-400 transition-colors pt-5 px-1 shrink-0">✕</button>
+            </div>
+            <div className={"grid gap-2 pl-6 "+(showTva?"grid-cols-5":"grid-cols-4")}>
+              <Cell label="Qté">
+                <input type="number" step="any" value={String(l.qty)} onChange={e=>patch(l.id,{qty:Number(e.target.value)||0})} className={cellCls}/>
+              </Cell>
+              <Cell label="Unité">
+                <select value={l.unit} onChange={e=>patch(l.id,{unit:e.target.value})} className={cellCls}>
+                  {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
+                </select>
+              </Cell>
+              <Cell label="PU HT">
+                <input type="number" step="any" value={String(l.pu_ht)} onChange={e=>patch(l.id,{pu_ht:Number(e.target.value)||0})} className={cellCls}/>
+              </Cell>
+              <Cell label="Remise %">
+                <input type="number" step="any" value={String(l.remise_pct)} onChange={e=>patch(l.id,{remise_pct:Number(e.target.value)||0})} className={cellCls}/>
+              </Cell>
+              {showTva&&(
+                <Cell label="TVA">
+                  <select value={String(l.tva_rate)} onChange={e=>patch(l.id,{tva_rate:Number(e.target.value)})} className={cellCls}>
+                    {TVA_RATES.map(r=><option key={r} value={String(r)}>{r}%</option>)}
+                  </select>
+                </Cell>
+              )}
+            </div>
+            <div className="text-right text-sm pl-6">
+              <span className="text-gray-500 text-xs mr-2">Total ligne</span>
+              <span className="font-medium">{fmtMoney(lineTotal(l))}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mt-3">
+        <Btn variant="secondary" onClick={()=>setPicker(true)}>+ Depuis le catalogue</Btn>
+        <Btn variant="secondary" onClick={addFree}>+ Ligne libre</Btn>
+      </div>
+
+      {picker&&(
+        <Modal title="Ajouter depuis le catalogue" onClose={()=>{setPicker(false);setQ('');}}>
+          {articles.length===0?(
+            <p className="text-sm text-gray-400">
+              Votre catalogue est vide. Créez vos articles dans l'onglet <span className="text-amber-400">Catalogue</span> pour les réutiliser ici.
+            </p>
+          ):(
+            <>
+              <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher…"
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 mb-3 focus:outline-none"/>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {shown.length===0&&<p className="text-sm text-gray-500">Aucun résultat.</p>}
+                {shown.map(a=>(
+                  <button key={a.id} onClick={()=>addFromArticle(a)}
+                    className="w-full text-left rounded-lg border border-gray-700 bg-gray-800/60 hover:border-amber-500/50 px-3 py-2 transition-colors">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {a.ref&&<span className="font-mono text-xs text-amber-400">{a.ref}</span>}
+                      <span className="text-sm">{a.designation}</span>
+                    </div>
+                    <div className="text-xs text-gray-500">{fmtMoney(a.pu_ht)} HT / {a.unit}{Number(a.tva_rate)!==20&&<> · TVA {a.tva_rate}%</>}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── CATALOGUE D'ARTICLES ─────────────────────────────────────────────────────
+function ArticlesPage(){
+  const [articles,setArticles]=useState(()=>store.get('pii_articles',[]));
+  const [modal,setModal]=useState(null);
+  const [q,setQ]=useState('');
+  const blank=()=>({id:'',ref:'',designation:'',unit:'u',pu_achat:0,pu_ht:0,tva_rate:20});
+  const [form,setForm]=useState(blank);
+
+  const persist=list=>{setArticles(list);store.set('pii_articles',list);};
+  const save=()=>{
+    if(!form.designation.trim())return;
+    persist(form.id
+      ?articles.map(a=>a.id===form.id?form:a)
+      :[...articles,{...form,id:uid()}]);
+    setModal(null);
+  };
+  const del=id=>{if(confirm('Supprimer cet article du catalogue ?'))persist(articles.filter(a=>a.id!==id));};
+
+  const needle=q.trim().toLowerCase();
+  const shown=needle
+    ?articles.filter(a=>(a.ref+' '+a.designation).toLowerCase().includes(needle))
+    :articles;
+  const marge=a=>{const ach=Number(a.pu_achat)||0,v=Number(a.pu_ht)||0;return ach>0?Math.round((v-ach)/ach*100):null;};
+
+  return(
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Catalogue</h1>
+        <Btn onClick={()=>{setForm(blank());setModal(true);}}>+ Nouvel article</Btn>
+      </div>
+      <p className="text-sm text-gray-400 -mt-3">
+        Vos pièces et prestations courantes. Vous les retrouverez dans le devis pour les ajouter en une ligne.
+      </p>
+      {articles.length>0&&(
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher une référence ou une désignation…"
+          className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
+      )}
+      {articles.length===0&&<Card><p className="text-gray-500 text-sm">Aucun article. Créez vos pièces courantes pour aller plus vite sur les devis.</p></Card>}
+      {articles.length>0&&shown.length===0&&<p className="text-gray-500 text-sm">Aucun résultat pour « {q} ».</p>}
+      <div className="space-y-2">
+        {shown.map(a=>{
+          const m=marge(a);
+          return(
+            <Card key={a.id} className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {a.ref&&<span className="font-mono text-xs text-amber-400">{a.ref}</span>}
+                  <span className="font-medium truncate">{a.designation}</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {fmtMoney(a.pu_ht)} HT / {a.unit}
+                  {Number(a.pu_achat)>0&&<> · achat {fmtMoney(a.pu_achat)}{m!==null&&<> · marge {m}%</>}</>}
+                  {Number(a.tva_rate)!==20&&<> · TVA {a.tva_rate}%</>}
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Btn variant="secondary" onClick={()=>{setForm(a);setModal(true);}}>Modifier</Btn>
+                <Btn variant="secondary" onClick={()=>del(a.id)}>Suppr.</Btn>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      {modal&&(
+        <Modal title={form.id?'Modifier l\'article':'Nouvel article'} onClose={()=>setModal(null)}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Référence" value={form.ref} onChange={v=>setForm(f=>({...f,ref:v}))} placeholder="JOINT-50"/>
+              <Select label="Unité" value={form.unit} onChange={v=>setForm(f=>({...f,unit:v}))} options={UNITS.map(u=>({value:u,label:u}))}/>
+            </div>
+            <Input label="Désignation *" value={form.designation} onChange={v=>setForm(f=>({...f,designation:v}))} placeholder="Joint de pompe Ø50"/>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Prix d'achat (€ HT)" type="number" value={String(form.pu_achat)} onChange={v=>setForm(f=>({...f,pu_achat:Number(v)||0}))} placeholder="0"/>
+              <Input label="Prix de vente (€ HT) *" type="number" value={String(form.pu_ht)} onChange={v=>setForm(f=>({...f,pu_ht:Number(v)||0}))} placeholder="0"/>
+            </div>
+            <Select label="TVA" value={String(form.tva_rate)} onChange={v=>setForm(f=>({...f,tva_rate:Number(v)}))}
+              options={TVA_RATES.map(r=>({value:String(r),label:r+' %'}))}/>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
+            <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+            <Btn onClick={save} disabled={!form.designation.trim()}>Enregistrer</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
-  const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',mode:'horaire',heures:1,taux_horaire:t.horaire,forfait_ht:0,fournitures:0,marge_fournitures:t.marge_fournitures,deplacement:t.deplacement,urgence:0,description:''};};
+  const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
+    lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
+           newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
@@ -1371,50 +1661,30 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
-              {/* Mode horaire / forfait */}
-              <div className="flex rounded-lg border border-gray-700 overflow-hidden">
-                {['horaire','forfait'].map(m=>(
-                  <button key={m} onClick={()=>setForm(f=>({...f,mode:m}))}
-                    className={"flex-1 py-2 text-sm font-medium transition-colors "+(form.mode===m?"bg-amber-500 text-gray-900":"bg-gray-800 text-gray-400 hover:text-gray-200")}>
-                    {m==='horaire'?'À l\'heure':'Au forfait'}
-                  </button>
-                ))}
-              </div>
-              {form.mode==='horaire'?(
-                <div className="grid grid-cols-2 gap-3">
-                  <Input label="Durée (heures)" type="number" value={String(form.heures||1)} onChange={v=>setForm(f=>({...f,heures:Number(v)||0}))} placeholder="1"/>
-                  <Input label="Taux horaire (€ HT)" type="number" value={String(form.taux_horaire||TARIFS.horaire)} onChange={v=>setForm(f=>({...f,taux_horaire:Number(v)||0}))} placeholder="55"/>
-                </div>
-              ):(
-                <Input label="Montant forfait (€ HT)" type="number" value={String(form.forfait_ht||0)} onChange={v=>setForm(f=>({...f,forfait_ht:Number(v)||0}))} placeholder="Ex: 250"/>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Prix achat fournitures (€ HT)" type="number" value={String(form.fournitures||0)} onChange={v=>setForm(f=>({...f,fournitures:Number(v)||0}))} placeholder="0"/>
-                <Input label="Marge fournitures (%)" type="number" value={String(form.marge_fournitures||0)} onChange={v=>setForm(f=>({...f,marge_fournitures:Number(v)||0}))} placeholder="0"/>
-              </div>
-              <Input label="Forfait déplacement (€ HT)" type="number" value={String(form.deplacement||TARIFS.deplacement)} onChange={v=>setForm(f=>({...f,deplacement:Number(v)||0}))} placeholder="30"/>
-              <Input label="Majoration urgence (€ HT)" type="number" value={String(form.urgence||0)} onChange={v=>setForm(f=>({...f,urgence:Number(v)||0}))} placeholder="0"/>
+              <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
             </div>
             <div>
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
                 <h3 className="font-semibold mb-4" style={{color:'var(--gold-light)'}}>Récapitulatif</h3>
-                {[
-                  form.mode==='forfait'
-                    ?['Forfait intervention',Number(form.forfait_ht)||0]
-                    :['Main-d\'œuvre ('+form.heures+'h × '+form.taux_horaire+'€)',(form.heures||0)*(form.taux_horaire||TARIFS.horaire)],
-                  form.fournitures>0&&form.marge_fournitures>0
-                    ?['Fournitures (achat '+fmtMoney(form.fournitures)+' +'+form.marge_fournitures+'%)',calc.fournitures_vente||0]
-                    :['Fournitures / matériaux',Number(calc.fournitures_vente)||0],
-                  ['Déplacement',Number(form.deplacement)||0],
-                  ...(form.urgence>0?[['Majoration urgence',Number(form.urgence)]]:[] ),
-                ].map(([l,v])=>(
-                  <div key={l} className="flex justify-between text-sm py-1.5 border-b border-gray-700">
-                    <span className="text-gray-400">{l}</span><span className={v>0?'text-white':'text-gray-600'}>{fmtMoney(v)}</span>
+                {(form.lines||[]).length===0&&<p className="text-sm text-gray-500">Aucune ligne.</p>}
+                {(form.lines||[]).map(l=>(
+                  <div key={l.id} className="flex justify-between gap-2 text-sm py-1.5 border-b border-gray-700">
+                    <span className="text-gray-400 truncate">
+                      {l.designation||<span className="italic text-gray-600">Sans désignation</span>}
+                      {(Number(l.qty)||0)!==1&&<span className="text-gray-600"> ×{l.qty}</span>}
+                      {Number(l.remise_pct)>0&&<span className="text-amber-500/80"> −{l.remise_pct}%</span>}
+                    </span>
+                    <span className="shrink-0">{fmtMoney(lineTotal(l))}</span>
                   </div>
                 ))}
                 <div className="mt-4 space-y-1">
                   <div className="flex justify-between text-sm"><span className="text-gray-400">Total HT</span><span>{fmtMoney(calc.ht)}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-400">TVA 20%</span><span>{fmtMoney(calc.tva)}</span></div>
+                  {calc.rates.map(r=>(
+                    <div key={r.rate} className="flex justify-between text-sm">
+                      <span className="text-gray-400">TVA {r.rate}%{calc.rates.length>1&&<span className="text-gray-600"> sur {fmtMoney(r.base)}</span>}</span>
+                      <span>{fmtMoney(r.montant)}</span>
+                    </div>
+                  ))}
                   <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-700">
                     <span style={{color:'var(--gold-light)'}}>Total TTC</span><span style={{color:'var(--gold-light)'}}>{fmtMoney(calc.ttc)}</span>
                   </div>
@@ -1424,7 +1694,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
             <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
-            <Btn onClick={save} disabled={!form.client_id}>Créer le devis</Btn>
+            <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length}>Créer le devis</Btn>
           </div>
         </Modal>
       )}
@@ -2502,6 +2772,30 @@ function PortfolioPage({user}) {
           </div>
           <Input label="Zone d'intervention" value={profile.zone||''} onChange={v=>saveProfile({zone:v})} placeholder="Ex: Bordeaux et Gironde"/>
         </div>
+
+        <div className="mt-6 pt-4 border-t border-gray-800">
+          <h4 className="font-semibold text-sm">Mentions légales des devis et factures</h4>
+          <p className="text-xs text-gray-400 mt-1 mb-4">
+            Obligatoires pour un artisan intervenant chez des particuliers. Chaque champ laissé vide
+            n'apparaît pas sur le PDF.
+          </p>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input label="N° RM / RCS" value={profile.rm_number||''} onChange={v=>saveProfile({rm_number:v})} placeholder="RM 109 339 275 — CMA du Var"/>
+            <Input label="Assureur (RC pro / décennale)" value={profile.insurance_name||''} onChange={v=>saveProfile({insurance_name:v})} placeholder="AXA, MAAF, SMABTP…"/>
+            <Input label="N° de contrat d'assurance" value={profile.insurance_contract||''} onChange={v=>saveProfile({insurance_contract:v})} placeholder="123456789"/>
+            <Input label="Couverture géographique" value={profile.insurance_coverage||''} onChange={v=>saveProfile({insurance_coverage:v})} placeholder="France métropolitaine"/>
+            <Input label="Médiateur de la consommation" value={profile.mediator_name||''} onChange={v=>saveProfile({mediator_name:v})} placeholder="CM2C, Medicys…"/>
+            <Input label="Site du médiateur" value={profile.mediator_url||''} onChange={v=>saveProfile({mediator_url:v})} placeholder="www.cm2c.net"/>
+          </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer mt-4 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
+            <input type="checkbox" className="mt-1" checked={!!profile.withdrawal_right} onChange={e=>saveProfile({withdrawal_right:e.target.checked})}/>
+            <span>
+              <span className="font-medium">Je fais signer mes devis chez le client</span>
+              <span className="block text-xs text-gray-400">Ajoute la mention du droit de rétractation de 14 jours (art. L.221-18), obligatoire pour un contrat conclu hors établissement.</span>
+            </span>
+          </label>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-gray-800 gap-3">
           <div className="flex items-center gap-3">
             <button onClick={()=>saveProfile({portfolio_enabled:!profile.portfolio_enabled})}
@@ -2669,6 +2963,7 @@ const NAV=[
   {id:'clients',icon:'👥',label:'Clients'},
   {id:'missions',icon:'🔧',label:'Interventions'},
   {id:'quotes',icon:'📄',label:'Devis'},
+  {id:'articles',icon:'📦',label:'Catalogue'},
   {id:'delivery',icon:'📋',label:'Rapports'},
   {id:'invoices',icon:'🧾',label:'Factures & Compta'},
   {id:'portfolio',icon:'🌐',label:'Ma Vitrine'},
@@ -2968,6 +3263,7 @@ function App(){
       case'clients':   return <ClientsPage clients={clients} setClients={setClients} missions={missions} quotes={quotes} agencies={agencies} setAgencies={setAgencies} user={user}/>;
       case'missions':  return <MissionsPage missions={missions} setMissions={setMissions} clients={clients} user={user}/>;
       case'quotes':    return <QuotesPage quotes={quotes} setQuotes={setQuotes} clients={clients} missions={missions} user={user} updateMissionStatus={updateMissionStatus}/>;
+      case'articles':  return <ArticlesPage/>;
       case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user} updateMissionStatus={updateMissionStatus}/>;
       case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user} updateMissionStatus={updateMissionStatus}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
