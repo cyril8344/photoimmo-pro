@@ -326,6 +326,12 @@ create table if not exists articles (
   created_at timestamptz default now()
 );
 alter table articles enable row level security;
+-- create policy n'est pas idempotent : on retire d'abord pour que la migration
+-- puisse être rejouée sans erreur.
+drop policy if exists "articles_select" on articles;
+drop policy if exists "articles_insert" on articles;
+drop policy if exists "articles_update" on articles;
+drop policy if exists "articles_delete" on articles;
 create policy "articles_select" on articles for select using (auth.uid() = user_id);
 create policy "articles_insert" on articles for insert with check (auth.uid() = user_id);
 create policy "articles_update" on articles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
