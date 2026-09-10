@@ -178,7 +178,9 @@
         <small>Technicien indépendant</small>
       </div>
     </a>
-    <a class="back-btn" href="/app" id="backBtn">
+    <!-- Réservé au propriétaire : révélé en prévisualisation uniquement,
+         un client n'a rien à faire dans l'application de gestion. -->
+    <a class="back-btn" href="/app" id="backBtn" hidden>
       <span class="btn-long">← Retour à l'application</span><span class="btn-short">← App</span>
     </a>
   </div>
@@ -471,6 +473,7 @@ ctaEl.innerHTML = actions.join('');
   if (isPreview) {
     loadFromLocal();
     document.getElementById('previewBanner').hidden = false;
+    document.getElementById('backBtn').hidden = false;
   } else {
     let res;
     try { res = await loadFromSupabase(slug); }
