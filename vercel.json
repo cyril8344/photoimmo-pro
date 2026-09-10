@@ -26,6 +26,6 @@
     { "source": "/quote/:token*", "destination": "/quote.html" },
     { "source": "/gallery/:token*", "destination": "/gallery.html" },
     { "source": "/portfolio/:slug*", "destination": "/portfolio.html" },
-    { "source": "/", "destination": "/landing.html" }
+    { "source": "/", "destination": "/portfolio.html" }
   ]
 }

@@ -316,7 +316,9 @@ const store = {
 let profile = {}, photos = [], testimons = [];
 
 const slug = (location.pathname.match(/^\/portfolio\/([^\/?#]+)/) || [])[1] || '';
-const isPreview = !slug && (document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview'));
+// Prévisualisation uniquement sur ?preview explicite : se fier au référent
+// afficherait les données locales du propriétaire à un visiteur venu de l'app.
+const isPreview = new URLSearchParams(location.search).has('preview');
 
 // Renvoie {ok:true} ou {ok:false, reason} — 'config' (Supabase non joignable
 // depuis ce déploiement), 'error' (requête en échec, ex. RLS) ou 'notfound'
@@ -325,8 +327,12 @@ async function loadFromSupabase(slug) {
   const url = window.__SUPABASE_URL__, key = window.__SUPABASE_KEY__;
   if (!url || !key || !window.supabase) return { ok: false, reason: 'config' };
   const sb = window.supabase.createClient(url, key);
-  const { data: p, error } = await sb.from('user_profiles').select('*')
-    .eq('portfolio_slug', slug).eq('portfolio_enabled', true).maybeSingle();
+  // Servie à la racine, la vitrine n'a pas de slug dans l'URL : il n'y a qu'un
+  // artisan sur cette instance, on prend donc la seule fiche publiée.
+  let query = sb.from('user_profiles').select('*').eq('portfolio_enabled', true);
+  if (slug) query = query.eq('portfolio_slug', slug);
+  const { data: rows, error } = await query.order('created_at').limit(1);
+  const p = rows && rows[0];
   if (error) {
     console.error('[vitrine] user_profiles:', error);
     return { ok: false, reason: 'error', detail: (error.message || '') + (error.code ? ' (code ' + error.code + ')' : '') };
@@ -457,16 +463,16 @@ ctaEl.innerHTML = actions.join('');
 }
 
 (async () => {
-  if (slug) {
+  if (isPreview) {
+    loadFromLocal();
+    document.getElementById('previewBanner').hidden = false;
+  } else {
     let res;
     try { res = await loadFromSupabase(slug); }
     catch (e) { console.error('[vitrine] exception :', e); res = { ok: false, reason: 'error', detail: String(e && e.message || e) }; }
     // Sans repli sur le localStorage ici : il contiendrait les données du
-    // propriétaire, donc une autre vitrine que celle demandée par l'URL.
+    // propriétaire, donc pas forcément la vitrine demandée par l'URL.
     if (!res.ok) { showUnavailable(res.reason, res.detail); return; }
-  } else {
-    loadFromLocal();
-    if (isPreview) document.getElementById('previewBanner').hidden = false;
   }
   render();
 })();
