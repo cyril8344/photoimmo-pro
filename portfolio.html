@@ -327,7 +327,10 @@ async function loadFromSupabase(slug) {
   const sb = window.supabase.createClient(url, key);
   const { data: p, error } = await sb.from('user_profiles').select('*')
     .eq('portfolio_slug', slug).eq('portfolio_enabled', true).maybeSingle();
-  if (error) { console.error('[vitrine] user_profiles:', error); return { ok: false, reason: 'error' }; }
+  if (error) {
+    console.error('[vitrine] user_profiles:', error);
+    return { ok: false, reason: 'error', detail: (error.message || '') + (error.code ? ' (code ' + error.code + ')' : '') };
+  }
   if (!p) return { ok: false, reason: 'notfound' };
   profile = p;
   const [ph, te] = await Promise.all([
@@ -345,17 +348,21 @@ function loadFromLocal() {
   testimons = store.get('pii_testimonials', []);
 }
 
-function showUnavailable(reason) {
+function showUnavailable(reason, detail) {
   const messages = {
     config: ['Vitrine pas encore configurée', "Cette page n'est pas encore prête", "La configuration technique n'est pas terminée. Contactez directement l'artisan en attendant."],
     error:  ['Page momentanément indisponible', 'Un problème technique empêche l\'affichage', 'Réessayez dans quelques instants, ou contactez directement l\'artisan.'],
     notfound: ['Page indisponible', "Cette vitrine n'existe pas ou n'est plus publiée", "Vérifiez l'adresse, ou contactez directement l'artisan."],
   };
   const [eyebrow, title, sub] = messages[reason] || messages.notfound;
+  // ?debug=1 dans l'URL affiche le message d'erreur brut de Supabase — utile
+  // pour diagnostiquer à distance, sans accès à la console du navigateur.
+  const showDebug = new URLSearchParams(location.search).has('debug') && detail;
   document.querySelector('.hero-copy').innerHTML =
     `<div class="eyebrow">${esc(eyebrow)}</div>` +
     `<h1 class="hero-title">${esc(title)}</h1>` +
-    `<p class="hero-sub">${esc(sub)}</p>`;
+    `<p class="hero-sub">${esc(sub)}</p>` +
+    (showDebug ? `<p class="hero-sub" style="font-family:monospace;font-size:11px;opacity:.7;margin-top:12px;">${esc(detail)}</p>` : '');
   document.querySelectorAll('section, .hero-stats, .cta-section').forEach(el => el.hidden = true);
 }
 
@@ -453,10 +460,10 @@ ctaEl.innerHTML = actions.join('');
   if (slug) {
     let res;
     try { res = await loadFromSupabase(slug); }
-    catch (e) { console.error('[vitrine] exception :', e); res = { ok: false, reason: 'error' }; }
+    catch (e) { console.error('[vitrine] exception :', e); res = { ok: false, reason: 'error', detail: String(e && e.message || e) }; }
     // Sans repli sur le localStorage ici : il contiendrait les données du
     // propriétaire, donc une autre vitrine que celle demandée par l'URL.
-    if (!res.ok) { showUnavailable(res.reason); return; }
+    if (!res.ok) { showUnavailable(res.reason, res.detail); return; }
   } else {
     loadFromLocal();
     if (isPreview) document.getElementById('previewBanner').hidden = false;
