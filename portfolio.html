@@ -318,13 +318,17 @@ let profile = {}, photos = [], testimons = [];
 const slug = (location.pathname.match(/^\/portfolio\/([^\/?#]+)/) || [])[1] || '';
 const isPreview = !slug && (document.referrer.includes('/app') || new URLSearchParams(location.search).has('preview'));
 
+// Renvoie {ok:true} ou {ok:false, reason} — 'config' (Supabase non joignable
+// depuis ce déploiement), 'error' (requête en échec, ex. RLS) ou 'notfound'
+// (aucun profil pour ce slug, ou page publique désactivée).
 async function loadFromSupabase(slug) {
   const url = window.__SUPABASE_URL__, key = window.__SUPABASE_KEY__;
-  if (!url || !key || !window.supabase) return false;
+  if (!url || !key || !window.supabase) return { ok: false, reason: 'config' };
   const sb = window.supabase.createClient(url, key);
-  const { data: p } = await sb.from('user_profiles').select('*')
+  const { data: p, error } = await sb.from('user_profiles').select('*')
     .eq('portfolio_slug', slug).eq('portfolio_enabled', true).maybeSingle();
-  if (!p) return false;
+  if (error) { console.error('[vitrine] user_profiles:', error); return { ok: false, reason: 'error' }; }
+  if (!p) return { ok: false, reason: 'notfound' };
   profile = p;
   const [ph, te] = await Promise.all([
     sb.from('portfolio_photos').select('*').eq('user_id', p.user_id).order('display_order'),
@@ -332,7 +336,7 @@ async function loadFromSupabase(slug) {
   ]);
   photos = ph.data || [];
   testimons = te.data || [];
-  return true;
+  return { ok: true };
 }
 
 function loadFromLocal() {
@@ -341,12 +345,18 @@ function loadFromLocal() {
   testimons = store.get('pii_testimonials', []);
 }
 
-function showUnavailable() {
+function showUnavailable(reason) {
+  const messages = {
+    config: ['Vitrine pas encore configurée', "Cette page n'est pas encore prête", "La configuration technique n'est pas terminée. Contactez directement l'artisan en attendant."],
+    error:  ['Page momentanément indisponible', 'Un problème technique empêche l\'affichage', 'Réessayez dans quelques instants, ou contactez directement l\'artisan.'],
+    notfound: ['Page indisponible', "Cette vitrine n'existe pas ou n'est plus publiée", "Vérifiez l'adresse, ou contactez directement l'artisan."],
+  };
+  const [eyebrow, title, sub] = messages[reason] || messages.notfound;
   document.querySelector('.hero-copy').innerHTML =
-    '<div class="eyebrow">Page indisponible</div>' +
-    '<h1 class="hero-title">Cette vitrine n\'existe pas ou n\'est plus publiée</h1>' +
-    '<p class="hero-sub">Vérifiez l\'adresse, ou contactez directement l\'artisan.</p>';
-  document.querySelectorAll('section, .hero-stats').forEach(el => el.hidden = true);
+    `<div class="eyebrow">${esc(eyebrow)}</div>` +
+    `<h1 class="hero-title">${esc(title)}</h1>` +
+    `<p class="hero-sub">${esc(sub)}</p>`;
+  document.querySelectorAll('section, .hero-stats, .cta-section').forEach(el => el.hidden = true);
 }
 
 // ── Utilitaires ───────────────────────────────────────────
@@ -441,11 +451,12 @@ ctaEl.innerHTML = actions.join('');
 
 (async () => {
   if (slug) {
-    let ok = false;
-    try { ok = await loadFromSupabase(slug); } catch (e) { ok = false; }
+    let res;
+    try { res = await loadFromSupabase(slug); }
+    catch (e) { console.error('[vitrine] exception :', e); res = { ok: false, reason: 'error' }; }
     // Sans repli sur le localStorage ici : il contiendrait les données du
     // propriétaire, donc une autre vitrine que celle demandée par l'URL.
-    if (!ok) { showUnavailable(); return; }
+    if (!res.ok) { showUnavailable(res.reason); return; }
   } else {
     loadFromLocal();
     if (isPreview) document.getElementById('previewBanner').hidden = false;
