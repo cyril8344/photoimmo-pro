@@ -818,6 +818,38 @@ function calcDevis(form){
   return {ht:Math.round(ht*100)/100,tva:Math.round(ht*TVA*100)/100,ttc:Math.round(ht*(1+TVA)*100)/100,fournitures_vente};
 }
 
+// Mentions obligatoires pour un artisan intervenant chez des particuliers.
+// Chacune n'apparaît que si le champ correspondant est renseigné dans le profil.
+function legalMentions(profile){
+  const out=[];
+  if(profile.rm_number)out.push('Immatriculation : '+profile.rm_number+'.');
+  if(profile.insurance_name){
+    let t='Assurance professionnelle : '+profile.insurance_name;
+    if(profile.insurance_contract)t+=', contrat n° '+profile.insurance_contract;
+    t+=' — couverture : '+(profile.insurance_coverage||'France métropolitaine')+'.';
+    out.push(t);
+  }
+  if(profile.mediator_name){
+    let t='Médiateur de la consommation : '+profile.mediator_name;
+    if(profile.mediator_url)t+=' — '+profile.mediator_url;
+    out.push(t+'.');
+  }
+  return out;
+}
+
+// Écrit les mentions en gérant le retour à la ligne : sans splitTextToSize,
+// une mention longue déborde sur la suivante au lieu de pousser le bloc.
+function drawMentions(doc,lines,y){
+  lines.forEach(l=>{
+    const wrapped=doc.splitTextToSize(l,182);
+    const h=wrapped.length*3.6;
+    if(y+h>278){doc.addPage();y=20;}
+    doc.text(wrapped,14,y);
+    y+=h;
+  });
+  return y;
+}
+
 function exportPDF(q,client,mission,{returnBase64=false}={}){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
@@ -943,7 +975,10 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
   doc.text('BON POUR ACCORD',14,y);y+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Lu et approuvé — Signature du client précédée de la mention « Bon pour accord » :',14,y);y+=13;
+  doc.text('Signature du client précédée de la mention manuscrite',14,y);y+=4.5;
+  doc.setFont(F,'bold');
+  doc.text('« Devis reçu avant l\'exécution des travaux »',14,y);
+  doc.setFont(F,'normal');y+=12;
   doc.setDrawColor(190,196,208);doc.line(14,y,100,y);
   doc.setFontSize(7.5);doc.setTextColor(150,156,170);
   doc.text('Signature',14,y+4);doc.text('Date : ___/___/______',65,y+4);
@@ -953,13 +988,15 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=5;
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const mentions=[
+    'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
-    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
-  mentions.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
+  mentions.push(...legalMentions(profile));
+  if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
+  drawMentions(doc,mentions,y);
 
   // ── Pied de page
   doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
@@ -1151,10 +1188,10 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
     'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
-    'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
-  legal.forEach(l=>{doc.text(l,14,y,{maxWidth:182});y+=4.5;});
+  legal.push(...legalMentions(profile));
+  drawMentions(doc,legal,y);
 
   // ── Pied de page
   doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
@@ -2502,6 +2539,30 @@ function PortfolioPage({user}) {
           </div>
           <Input label="Zone d'intervention" value={profile.zone||''} onChange={v=>saveProfile({zone:v})} placeholder="Ex: Bordeaux et Gironde"/>
         </div>
+
+        <div className="mt-6 pt-4 border-t border-gray-800">
+          <h4 className="font-semibold text-sm">Mentions légales des devis et factures</h4>
+          <p className="text-xs text-gray-400 mt-1 mb-4">
+            Obligatoires pour un artisan intervenant chez des particuliers. Chaque champ laissé vide
+            n'apparaît pas sur le PDF.
+          </p>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input label="N° RM / RCS" value={profile.rm_number||''} onChange={v=>saveProfile({rm_number:v})} placeholder="RM 109 339 275 — CMA du Var"/>
+            <Input label="Assureur (RC pro / décennale)" value={profile.insurance_name||''} onChange={v=>saveProfile({insurance_name:v})} placeholder="AXA, MAAF, SMABTP…"/>
+            <Input label="N° de contrat d'assurance" value={profile.insurance_contract||''} onChange={v=>saveProfile({insurance_contract:v})} placeholder="123456789"/>
+            <Input label="Couverture géographique" value={profile.insurance_coverage||''} onChange={v=>saveProfile({insurance_coverage:v})} placeholder="France métropolitaine"/>
+            <Input label="Médiateur de la consommation" value={profile.mediator_name||''} onChange={v=>saveProfile({mediator_name:v})} placeholder="CM2C, Medicys…"/>
+            <Input label="Site du médiateur" value={profile.mediator_url||''} onChange={v=>saveProfile({mediator_url:v})} placeholder="www.cm2c.net"/>
+          </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer mt-4 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
+            <input type="checkbox" className="mt-1" checked={!!profile.withdrawal_right} onChange={e=>saveProfile({withdrawal_right:e.target.checked})}/>
+            <span>
+              <span className="font-medium">Je fais signer mes devis chez le client</span>
+              <span className="block text-xs text-gray-400">Ajoute la mention du droit de rétractation de 14 jours (art. L.221-18), obligatoire pour un contrat conclu hors établissement.</span>
+            </span>
+          </label>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-gray-800 gap-3">
           <div className="flex items-center gap-3">
             <button onClick={()=>saveProfile({portfolio_enabled:!profile.portfolio_enabled})}
