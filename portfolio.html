@@ -188,7 +188,7 @@
     <div class="hero-copy">
       <div class="eyebrow" id="heroZone">Technicien de maintenance</div>
       <h1 class="hero-title" id="heroTitle">
-        Entretien &amp; dépannage <em>piscine, clim, électricité</em> et plomberie
+        Entretien &amp; dépannage <em>piscine, électricité</em> et plomberie
       </h1>
       <p class="hero-sub" id="heroBio">Intervenant indépendant pour les particuliers et copropriétés. Devis gratuit, réponse sous 24h.</p>
       <div class="hero-chips">
@@ -223,7 +223,7 @@
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Prestations</div>
-      <h2 class="section-title">Quatre domaines, un seul interlocuteur</h2>
+      <h2 class="section-title">Trois domaines, un seul interlocuteur</h2>
       <div class="rule"></div>
     </div>
     <div class="services-grid">
@@ -234,14 +234,6 @@
         <div class="svc-name">Piscine</div>
         <p class="svc-desc">Entretien régulier, traitement de l'eau, hivernage et remise en route. Diagnostic équipements filtration et pompes.</p>
         <div class="svc-tasks"><span class="task">Traitement eau</span><span class="task">Nettoyage filtre</span><span class="task">Hivernage</span><span class="task">Pompe &amp; robot</span></div>
-      </div>
-      <div class="svc" data-cat="Climatisation">
-        <div class="svc-icon">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="8" rx="2"/><path d="M7 11v10M17 11v10M12 11v6"/><path d="M5 19h6M13 17h6"/></svg>
-        </div>
-        <div class="svc-name">Climatisation</div>
-        <p class="svc-desc">Installation, entretien annuel et dépannage de systèmes split. Nettoyage filtres, vérification performances et contrôle électrique.</p>
-        <div class="svc-tasks"><span class="task">Split mural</span><span class="task">Multi-split</span><span class="task">Entretien annuel</span><span class="task">Nettoyage filtres</span></div>
       </div>
       <div class="svc" data-cat="Électricité">
         <div class="svc-icon">
@@ -360,9 +352,7 @@ if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 �
 if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
 
 // ── Photos de fond sur les cartes domaines ───────────────
-const defaultPhotos = {
-  'Climatisation': 'images/clim.jpg',
-};
+const defaultPhotos = {};
 const photoByCategory = {};
 photos.forEach(p => { if (p.category && p.url && !photoByCategory[p.category]) photoByCategory[p.category] = p.url; });
 document.querySelectorAll('.svc[data-cat]').forEach(card => {

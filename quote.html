@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Accepter le devis — PhotoImmo Pro</title>
+  <title>Accepter le devis — Habitat Maintenance</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -60,7 +60,7 @@
         quote = data.quote;
         client = data.client;
       } catch(e) {
-        root.innerHTML = `<div class="card fade-in"><div class="logo"><span>PI</span></div><p style="color:#f87171;text-align:center">${e.message}</p></div>`;
+        root.innerHTML = `<div class="card fade-in"><div class="logo"><span>HM</span></div><p style="color:#f87171;text-align:center">${e.message}</p></div>`;
         return;
       }
 
@@ -70,15 +70,15 @@
         const isAccepted = status === 'Accepté';
         root.innerHTML = `
           <div class="card fade-in" style="text-align:center">
-            <div class="logo"><span>PI</span></div>
+            <div class="logo"><span>HM</span></div>
             <div style="font-size:48px;margin:16px 0">${isAccepted ? '✅' : '❌'}</div>
             <h2 style="color:var(--text);margin-bottom:8px">${isAccepted ? 'Devis accepté !' : 'Devis refusé'}</h2>
             <p style="color:var(--muted);font-size:14px;line-height:1.6">
               ${isAccepted
-                ? 'Votre photographe a été notifié. Il vous contactera prochainement pour confirmer la date de shooting.'
-                : 'Votre réponse a bien été enregistrée. N\'hésitez pas à contacter votre photographe pour toute question.'}
+                ? 'Votre technicien a été notifié. Il vous contactera prochainement pour confirmer la date d\'intervention.'
+                : 'Votre réponse a bien été enregistrée. N\'hésitez pas à contacter votre technicien pour toute question.'}
             </p>
-            <p style="color:var(--muted);font-size:12px;margin-top:24px">PhotoImmo Pro — Photographie immobilière</p>
+            <p style="color:var(--muted);font-size:12px;margin-top:24px">Habitat Maintenance — Technicien indépendant</p>
           </div>`;
       }
 
@@ -86,7 +86,7 @@
 
       root.innerHTML = `
         <div class="card fade-in">
-          <div class="logo"><span>PI</span></div>
+          <div class="logo"><span>HM</span></div>
           <h2 style="text-align:center;margin-bottom:4px;color:var(--text)">Devis ${quote.num}</h2>
           <p style="text-align:center;color:var(--muted);font-size:14px;margin-bottom:24px">Bonjour ${client.name || ''}, veuillez consulter votre devis ci-dessous.</p>
 
