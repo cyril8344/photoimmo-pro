@@ -2699,18 +2699,49 @@ function PortfolioPage({user}) {
   useEffect(() => {
     if (!sb || !user) return;
     (async () => {
+      const localProfile = store.get('pii_profile', {});
       let { data: profileData } = await sb.from('user_profiles').select('*').eq('user_id', user.id).single();
       if (!profileData) {
         const { data: created } = await sb.from('user_profiles').insert({user_id: user.id}).select().single();
         profileData = created;
       }
-      if (profileData) { setProfile(profileData); store.set('pii_profile', profileData); }
+      if (profileData) {
+        // Fusion, jamais remplacement : une ligne distante incomplète effacerait
+        // sinon des champs qui n'existent que dans ce navigateur.
+        const merged = {...localProfile};
+        Object.entries(profileData).forEach(([k, v]) => {
+          if (v !== null && v !== undefined && v !== '') merged[k] = v;
+        });
+        setProfile(merged);
+        store.set('pii_profile', merged);
+      }
 
-      const { data: photosData } = await sb.from('portfolio_photos').select('*').eq('user_id', user.id).order('display_order', {ascending: true});
-      if (photosData) { setPhotos(photosData); store.set('pii_portfolio_photos', photosData); }
+      // Une table vide renvoie [], que `if (data)` accepte : les photos locales
+      // étaient donc écrasées par du vide. On les publie désormais à la place.
+      const { data: remotePhotos } = await sb.from('portfolio_photos').select('*').eq('user_id', user.id).order('display_order', {ascending: true});
+      const localPhotos = store.get('pii_portfolio_photos', []);
+      if (remotePhotos && remotePhotos.length) {
+        setPhotos(remotePhotos); store.set('pii_portfolio_photos', remotePhotos);
+      } else if (localPhotos.length) {
+        const { data: pushed } = await sb.from('portfolio_photos').insert(
+          localPhotos.map((p, i) => ({user_id: user.id, url: p.url, category: p.category,
+                                      caption: p.caption || '', display_order: i}))
+        ).select();
+        if (pushed) { setPhotos(pushed); store.set('pii_portfolio_photos', pushed); }
+      }
 
-      const { data: testimonialsData } = await sb.from('testimonials').select('*').eq('user_id', user.id).order('date', {ascending: false});
-      if (testimonialsData) { setTestimonials(testimonialsData); store.set('pii_testimonials', testimonialsData); }
+      const { data: remoteTestimonials } = await sb.from('testimonials').select('*').eq('user_id', user.id).order('date', {ascending: false});
+      const localTestimonials = store.get('pii_testimonials', []);
+      if (remoteTestimonials && remoteTestimonials.length) {
+        setTestimonials(remoteTestimonials); store.set('pii_testimonials', remoteTestimonials);
+      } else if (localTestimonials.length) {
+        const { data: pushed } = await sb.from('testimonials').insert(
+          localTestimonials.map(t => ({user_id: user.id, client_name: t.client_name,
+                                       rating: t.rating || 5, comment: t.comment || '',
+                                       date: t.date || today()}))
+        ).select();
+        if (pushed) { setTestimonials(pushed); store.set('pii_testimonials', pushed); }
+      }
     })();
   }, [user]);
 
