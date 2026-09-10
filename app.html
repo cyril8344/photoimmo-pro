@@ -138,7 +138,7 @@ const TVA = 0.20;
 const SERVICE_TYPES = ['Piscine','Climatisation','Électricité','Plomberie','Multi-services'];
 const PACKS = {
   piscine:      { type:'Piscine', label:'Entretien Piscine' },
-  climatisation:{ type:'Climatisation', label:'Nettoyage / Dépannage Clim' },
+  climatisation:{ type:'Climatisation', label:'Nettoyage Clim' },
   electricite:  { type:'Électricité', label:'Intervention Électricité' },
   plomberie:    { type:'Plomberie', label:'Intervention Plomberie' },
 };
@@ -220,7 +220,7 @@ function seedDemo(){
   const missionDate=new Date();missionDate.setDate(missionDate.getDate()+3);
   const missions=[
     {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Piscine',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'Entretien annuel + hivernage',created_at:today()},
-    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage + désinfection split, contrôle électrique',created_at:today()},
+    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage + désinfection split et filtres',created_at:today()},
     {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Électricité',date:today(),status:'Livré',notes:'Mise aux normes tableau électrique',created_at:today()},
   ];
   const quotes=[
