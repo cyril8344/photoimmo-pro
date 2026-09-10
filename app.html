@@ -1061,8 +1061,10 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
-    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
   ];
+  // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
+  // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
+  if(q.penalites)mentions.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.');
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
   mentions.push(...legalMentions(profile));
   if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
@@ -1227,9 +1229,13 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const legal=[
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
-    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
-    'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
   ];
+  // Obligatoires envers un professionnel (art. L.441-9 C. com.), sans objet
+  // envers un particulier : la case est cochée sur le devis d'origine.
+  if(quote&&quote.penalites){
+    legal.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.');
+    legal.push('Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).');
+  }
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
   legal.push(...legalMentions(profile));
   drawMentions(doc,legal,y);
@@ -1568,6 +1574,7 @@ function ArticlesPage(){
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
+    penalites:false,
     lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
            newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
@@ -1666,6 +1673,16 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
               <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
+              <label className="flex items-start gap-2 text-sm cursor-pointer bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
+                <input type="checkbox" className="mt-1" checked={!!form.penalites} onChange={e=>setForm(f=>({...f,penalites:e.target.checked}))}/>
+                <span>
+                  <span className="font-medium">Client professionnel : ajouter les pénalités de retard</span>
+                  <span className="block text-xs text-gray-400">
+                    Obligatoire sur une facture adressée à un professionnel (art. L.441-9 C. com.).
+                    Inutile pour un particulier : l'indemnité de 40 € ne lui est pas opposable.
+                  </span>
+                </span>
+              </label>
             </div>
             <div>
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
