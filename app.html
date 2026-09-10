@@ -809,10 +809,10 @@ function MissionsPage({missions,setMissions,clients,user}){
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
 const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
-// 10% : rénovation d'un logement de plus de 2 ans. 5,5% : rénovation énergétique.
-const TVA_RATES=[20,10,5.5];
 const r2=n=>Math.round((Number(n)||0)*100)/100;
-const newLine=(o={})=>({id:uid(),ref:'',designation:'',qty:1,unit:'u',pu_ht:0,remise_pct:0,tva_rate:20,...o});
+// Franchise en base de TVA : les lignes ne portent pas de taux. Le champ reste
+// dans le modèle pour les devis déjà enregistrés avec un taux.
+const newLine=(o={})=>({id:uid(),ref:'',designation:'',qty:1,unit:'u',pu_ht:0,remise_pct:0,tva_rate:0,...o});
 const lineTotal=l=>r2((Number(l.qty)||0)*(Number(l.pu_ht)||0)*(1-(Number(l.remise_pct)||0)/100));
 
 // Devis d'avant les lignes : on reconstruit des lignes à la volée pour qu'ils
@@ -832,14 +832,15 @@ function quoteLines(q){
   return out;
 }
 
-// byRate permet de ventiler la TVA quand plusieurs taux coexistent sur un devis.
+// rates est vide en franchise en base : ni ligne de TVA ni total TTC à afficher.
+// Les taux ne subsistent que sur les devis enregistrés avant ce changement.
 function calcLines(lines){
   const byRate={};
   let ht=0;
   (lines||[]).forEach(l=>{
     const t=lineTotal(l), rate=Number(l.tva_rate)||0;
     ht+=t;
-    byRate[rate]=r2((byRate[rate]||0)+t);
+    if(rate>0)byRate[rate]=r2((byRate[rate]||0)+t);
   });
   ht=r2(ht);
   let tva=0;
@@ -848,6 +849,10 @@ function calcLines(lines){
   tva=r2(tva);
   return {ht,tva,ttc:r2(ht+tva),rates};
 }
+
+// Une TVA enregistrée à zéro est une valeur, pas une absence : seul un champ
+// jamais renseigné (factures d'avant la franchise en base) retombe sur 20%.
+const invTva=inv=>(inv.tva===null||inv.tva===undefined)?r2((Number(inv.ht)||0)*TVA):Number(inv.tva)||0;
 
 function calcDevis(form){
   if(Array.isArray(form.lines))return calcLines(form.lines);
@@ -859,7 +864,7 @@ function calcDevis(form){
 function quoteTotals(q){
   if(Array.isArray(q.lines)&&q.lines.length)return calcLines(q.lines);
   const ht=Number(q.ht)||0,tva=Number(q.tva)||0;
-  return {ht,tva,ttc:Number(q.ttc)||r2(ht+tva),rates:[{rate:20,base:ht,montant:tva}]};
+  return {ht,tva,ttc:Number(q.ttc)||r2(ht+tva),rates:tva>0?[{rate:20,base:ht,montant:tva}]:[]};
 }
 
 // Tableau des lignes pour les PDF : gère le retour à la ligne des désignations,
@@ -905,8 +910,10 @@ function drawLinesTable(doc,F,lines,y,C){
   return y;
 }
 
-// Bloc Total HT / TVA (ventilée si plusieurs taux) / Total TTC.
+// Bloc Total HT / TVA (ventilée si plusieurs taux) / Total.
+// Sans TVA, le libellé « TTC » n'aurait pas de sens : on écrit « NET À PAYER ».
 function drawTotals(doc,F,totals,y,C){
+  const hasTva=totals.rates.length>0;
   const need=14+totals.rates.length*6.5;
   if(y+need>272){doc.addPage();y=22;}
   doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6.5;
@@ -921,7 +928,7 @@ function drawTotals(doc,F,totals,y,C){
   y-=2.5;
   doc.setFillColor(...C.dark);doc.roundedRect(120,y,76,12,1.5,1.5,'F');
   doc.setFont(F,'bold');doc.setFontSize(10.5);doc.setTextColor(...C.amberLight);
-  doc.text('TOTAL TTC',126,y+7.8);
+  doc.text(hasTva?'TOTAL TTC':'NET À PAYER',126,y+7.8);
   doc.setFontSize(12);doc.setTextColor(255,255,255);
   doc.text(fmtMoneyPDF(totals.ttc),190,y+7.8,{align:'right'});
   return y+24;
@@ -1040,7 +1047,8 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   let y=drawLinesTable(doc,F,quoteLines(q),tableY+8,C);
 
   // ── Totaux
-  y=drawTotals(doc,F,quoteTotals(q),y+5,C);
+  const qTotals=quoteTotals(q);
+  y=drawTotals(doc,F,qTotals,y+5,C);
 
   // ── Zone signature
   doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=7;
@@ -1067,7 +1075,10 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
   // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
   if(q.penalites)mentions.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.');
-  if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
+  // Un devis sans TVA doit dire pourquoi : la franchise en base est la seule
+  // raison possible ici, la mention est donc systématique.
+  if(!qTotals.rates.length||profile.micro_entrepreneur)
+    mentions.push('TVA non applicable — article 293 B du CGI.');
   mentions.push(...legalMentions(profile));
   if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
   drawMentions(doc,mentions,y);
@@ -1211,10 +1222,11 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
 
   // ── Totaux : ceux de la facture font foi, la ventilation TVA vient du devis.
   const qt=quote?quoteTotals(quote):null;
-  const invHt=Number(inv.ht)||0, invTva=Number(inv.tva)||r2(invHt*TVA);
+  const invHt=Number(inv.ht)||0, tvaDue=invTva(inv);
   const totals=(qt&&Math.abs(qt.ht-invHt)<0.01)
     ?qt
-    :{ht:invHt,tva:invTva,ttc:Number(inv.ttc)||r2(invHt+invTva),rates:[{rate:20,base:invHt,montant:invTva}]};
+    :{ht:invHt,tva:tvaDue,ttc:Number(inv.ttc)||r2(invHt+tvaDue),
+      rates:tvaDue>0?[{rate:20,base:invHt,montant:tvaDue}]:[]};
   y=drawTotals(doc,F,totals,y+5,C);
 
   // ── Tampon ACQUITTÉ si payée
@@ -1238,7 +1250,8 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     legal.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.');
     legal.push('Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).');
   }
-  if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
+  if(!totals.rates.length||profile.micro_entrepreneur)
+    legal.push('TVA non applicable — article 293 B du CGI.');
   legal.push(...legalMentions(profile));
   drawMentions(doc,legal,y);
 
@@ -1371,14 +1384,12 @@ function QuoteLinesEditor({lines,onChange}){
   const articles=store.get('pii_articles',[]);
   const [picker,setPicker]=useState(false);
   const [q,setQ]=useState('');
-  // La colonne TVA ne s'affiche que si elle sert : sinon tout est à 20%.
-  const [showTva,setShowTva]=useState(()=>(lines||[]).some(l=>Number(l.tva_rate)!==20));
 
   const patch=(id,p)=>onChange((lines||[]).map(l=>l.id===id?{...l,...p}:l));
   const remove=id=>onChange((lines||[]).filter(l=>l.id!==id));
   const addFree=()=>onChange([...(lines||[]),newLine()]);
   const addFromArticle=a=>{
-    onChange([...(lines||[]),newLine({ref:a.ref,designation:a.designation,unit:a.unit,pu_ht:Number(a.pu_ht)||0,tva_rate:Number(a.tva_rate)||20})]);
+    onChange([...(lines||[]),newLine({ref:a.ref,designation:a.designation,unit:a.unit,pu_ht:Number(a.pu_ht)||0})]);
     setPicker(false);setQ('');
   };
 
@@ -1387,12 +1398,8 @@ function QuoteLinesEditor({lines,onChange}){
 
   return(
     <div>
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="mb-2">
         <span className="text-sm font-medium">Lignes du devis</span>
-        <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
-          <input type="checkbox" checked={showTva} onChange={e=>setShowTva(e.target.checked)}/>
-          TVA par ligne
-        </label>
       </div>
 
       <div className="space-y-2">
@@ -1418,7 +1425,7 @@ function QuoteLinesEditor({lines,onChange}){
               <button onClick={()=>remove(l.id)} title="Supprimer la ligne"
                 className="text-gray-500 hover:text-red-400 transition-colors pt-5 px-1 shrink-0">✕</button>
             </div>
-            <div className={"grid gap-2 pl-6 "+(showTva?"grid-cols-5":"grid-cols-4")}>
+            <div className="grid gap-2 pl-6 grid-cols-4">
               <Cell label="Qté">
                 <input type="number" step="any" value={String(l.qty)} onChange={e=>patch(l.id,{qty:Number(e.target.value)||0})} className={cellCls}/>
               </Cell>
@@ -1433,13 +1440,6 @@ function QuoteLinesEditor({lines,onChange}){
               <Cell label="Remise %">
                 <input type="number" step="any" value={String(l.remise_pct)} onChange={e=>patch(l.id,{remise_pct:Number(e.target.value)||0})} className={cellCls}/>
               </Cell>
-              {showTva&&(
-                <Cell label="TVA">
-                  <select value={String(l.tva_rate)} onChange={e=>patch(l.id,{tva_rate:Number(e.target.value)})} className={cellCls}>
-                    {TVA_RATES.map(r=><option key={r} value={String(r)}>{r}%</option>)}
-                  </select>
-                </Cell>
-              )}
             </div>
             <div className="text-right text-sm pl-6">
               <span className="text-gray-500 text-xs mr-2">Total ligne</span>
@@ -1473,7 +1473,7 @@ function QuoteLinesEditor({lines,onChange}){
                       {a.ref&&<span className="font-mono text-xs text-amber-400">{a.ref}</span>}
                       <span className="text-sm">{a.designation}</span>
                     </div>
-                    <div className="text-xs text-gray-500">{fmtMoney(a.pu_ht)} HT / {a.unit}{Number(a.tva_rate)!==20&&<> · TVA {a.tva_rate}%</>}</div>
+                    <div className="text-xs text-gray-500">{fmtMoney(a.pu_ht)} HT / {a.unit}</div>
                   </button>
                 ))}
               </div>
@@ -1490,7 +1490,7 @@ function ArticlesPage(){
   const [articles,setArticles]=useState(()=>store.get('pii_articles',[]));
   const [modal,setModal]=useState(null);
   const [q,setQ]=useState('');
-  const blank=()=>({id:'',ref:'',designation:'',unit:'u',pu_achat:0,pu_ht:0,tva_rate:20});
+  const blank=()=>({id:'',ref:'',designation:'',unit:'u',pu_achat:0,pu_ht:0,tva_rate:0});
   const [form,setForm]=useState(blank);
 
   const persist=list=>{setArticles(list);store.set('pii_articles',list);};
@@ -1537,7 +1537,6 @@ function ArticlesPage(){
                 <div className="text-xs text-gray-500">
                   {fmtMoney(a.pu_ht)} HT / {a.unit}
                   {Number(a.pu_achat)>0&&<> · achat {fmtMoney(a.pu_achat)}{m!==null&&<> · marge {m}%</>}</>}
-                  {Number(a.tva_rate)!==20&&<> · TVA {a.tva_rate}%</>}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -1560,8 +1559,6 @@ function ArticlesPage(){
               <Input label="Prix d'achat (€ HT)" type="number" value={String(form.pu_achat)} onChange={v=>setForm(f=>({...f,pu_achat:Number(v)||0}))} placeholder="0"/>
               <Input label="Prix de vente (€ HT) *" type="number" value={String(form.pu_ht)} onChange={v=>setForm(f=>({...f,pu_ht:Number(v)||0}))} placeholder="0"/>
             </div>
-            <Select label="TVA" value={String(form.tva_rate)} onChange={v=>setForm(f=>({...f,tva_rate:Number(v)}))}
-              options={TVA_RATES.map(r=>({value:String(r),label:r+' %'}))}/>
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
             <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
@@ -1730,8 +1727,12 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                     </div>
                   ))}
                   <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-700">
-                    <span style={{color:'var(--gold-light)'}}>Total TTC</span><span style={{color:'var(--gold-light)'}}>{fmtMoney(calc.ttc)}</span>
+                    <span style={{color:'var(--gold-light)'}}>{calc.rates.length?'Total TTC':'Net à payer'}</span>
+                    <span style={{color:'var(--gold-light)'}}>{fmtMoney(calc.ttc)}</span>
                   </div>
+                  {!calc.rates.length&&(
+                    <p className="text-xs text-gray-500 pt-1">TVA non applicable — article 293 B du CGI.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -2142,8 +2143,11 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
     if(invoices.find(i=>i.quote_id===q.id)){alert('Une facture existe déjà pour ce devis.');return;}
     const num=`FAC-${String(invoices.length+1).padStart(3,'0')}`;
     const dueDate=new Date();dueDate.setDate(dueDate.getDate()+30);
+    // Les totaux du devis font foi : sans cela un devis sans TVA se retrouvait
+    // facturé avec 20% ajoutés par le repli.
+    const qt=quoteTotals(q);
     const payload={quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
-      num,ht:q.ht,tva:q.tva||Math.round(q.ht*0.20*100)/100,ttc:q.ttc,
+      num,ht:qt.ht,tva:qt.tva,ttc:qt.ttc,
       status:'En attente',due_date:dueDate.toISOString().split('T')[0],reminders_sent:0};
     if(sb&&user){
       const{data,error}=await sb.from('invoices').insert({...payload,user_id:user.id}).select().single();
@@ -2292,7 +2296,7 @@ function AccountingPage({invoices, quotes, clients, missions}) {
 
   // KPIs
   const totalHT = filteredInvoices.reduce((s, i) => s + (i.ht || 0), 0);
-  const totalTVA = filteredInvoices.reduce((s, i) => s + (i.tva || Math.round((i.ht || 0) * 0.20 * 100) / 100), 0);
+  const totalTVA = filteredInvoices.reduce((s, i) => s + invTva(i), 0);
   const totalTTC = filteredInvoices.reduce((s, i) => s + (i.ttc || 0), 0);
   const unpaidInvs = invoices.filter(i => i.status !== 'Payée' && i.status !== 'Annulée');
   const totalUnpaid = unpaidInvs.reduce((s, i) => s + (i.ttc || 0), 0);
@@ -2316,7 +2320,7 @@ function AccountingPage({invoices, quotes, clients, missions}) {
     const header = 'Numéro,Client,Date,HT,TVA,TTC,Statut,Echéance,Date paiement\n';
     const rows = filteredInvoices.map(inv => {
       const cl = getClient(inv.client_id);
-      const tva = inv.tva || Math.round((inv.ht || 0) * 0.20 * 100) / 100;
+      const tva = invTva(inv);
       return [
         inv.num, cl?.name || '', inv.created_at,
         (inv.ht || 0).toFixed(2), tva.toFixed(2), (inv.ttc || 0).toFixed(2),
@@ -2488,7 +2492,7 @@ function AccountingPage({invoices, quotes, clients, missions}) {
               )}
               {filteredInvoices.map(inv => {
                 const cl = getClient(inv.client_id);
-                const tva = inv.tva || Math.round((inv.ht || 0) * 0.20 * 100) / 100;
+                const tva = invTva(inv);
                 const overdue = inv.status !== 'Payée' && inv.status !== 'Annulée' && inv.due_date && new Date(inv.due_date) < new Date();
                 return (
                   <tr key={inv.id} className={`border-b border-gray-800 ${overdue ? 'bg-red-500/5' : ''}`}>
