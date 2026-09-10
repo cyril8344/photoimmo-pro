@@ -3245,7 +3245,8 @@ function Login({onLogin}){
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App(){
-  const [user]=useState(null);
+  const [user,setUser]=useState(null);
+  const [authChecked,setAuthChecked]=useState(false);
   const [page,setPage]=useState('dashboard');
   const [resetMode,setResetMode]=useState(false);
   const [sideOpen,setSideOpen]=useState(false);
@@ -3297,7 +3298,29 @@ function App(){
     }
   };
 
-  useEffect(()=>{ /* auth removed — app runs without login */ },[]);
+  // Sans Supabase configuré, on reste en mode démo/local, comme avant.
+  // Avec Supabase, l'app exige une session réelle : sans ça, auth.uid() est
+  // vide côté base et RLS refuse toute écriture (profil, devis...) — c'était
+  // la cause des sauvegardes qui semblaient fonctionner mais ne partaient
+  // en réalité jamais en base.
+  useEffect(()=>{
+    if(!sb){setAuthChecked(true);return;}
+    sb.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user||null);
+      setAuthChecked(true);
+    });
+    const {data:sub}=sb.auth.onAuthStateChange((_event,session)=>{
+      setUser(session?.user||null);
+    });
+    return ()=>sub.subscription.unsubscribe();
+  },[]);
+
+  // Uniquement le profil (nécessaire à la vitrine) — jamais clients/devis/
+  // factures ici, pour ne pas remplacer des données locales bien réelles
+  // par un résultat vide la première fois que quelqu'un se connecte.
+  useEffect(()=>{
+    if(sb&&user)loadProfile(user.id);
+  },[user&&user.id]);
 
   const updateMissionStatus=async(missionId,newStatus)=>{
     if(!missionId)return;
@@ -3356,6 +3379,13 @@ function App(){
       default:           return null;
     }
   };
+
+  if(sb&&!authChecked){
+    return <div className="min-h-screen flex items-center justify-center" style={{background:'var(--bg)',color:'var(--muted)'}}>Chargement…</div>;
+  }
+  if(sb&&!user){
+    return <Login onLogin={setUser}/>;
+  }
 
   return(
     <div className="min-h-screen">

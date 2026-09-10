@@ -336,3 +336,27 @@ create policy "articles_select" on articles for select using (auth.uid() = user_
 create policy "articles_insert" on articles for insert with check (auth.uid() = user_id);
 create policy "articles_update" on articles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "articles_delete" on articles for delete using (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Correctif : récursion infinie sur user_profiles (PostgreSQL 42P17)
+--
+-- "profiles_admin_select" se vérifiait en interrogeant user_profiles, la table
+-- qu'elle protège elle-même — chaque lecture publique de la vitrine (qui doit
+-- évaluer TOUTES les politiques SELECT de la table) déclenchait une boucle
+-- infinie. Le contournement standard Supabase/Postgres : sortir la vérification
+-- dans une fonction SECURITY DEFINER, qui s'exécute avec les droits du
+-- propriétaire (contourne RLS) plutôt que ceux de l'appelant.
+-- https://supabase.com/docs/guides/database/postgres/row-level-security#avoiding-recursive-rls-policies
+-- ─────────────────────────────────────────────────────────────────────────────
+create or replace function public.is_admin(uid uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists(select 1 from user_profiles where user_id = uid and role = 'admin');
+$$;
+
+drop policy if exists "profiles_admin_select" on user_profiles;
+create policy "profiles_admin_select" on user_profiles for select using (public.is_admin(auth.uid()));
