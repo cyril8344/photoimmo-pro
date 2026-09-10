@@ -1401,7 +1401,9 @@ function QuoteLinesEditor({lines,onChange}){
                 </Cell>
                 <div className="col-span-2">
                   <Cell label="Désignation">
-                    <input value={l.designation} onChange={e=>patch(l.id,{designation:e.target.value})} placeholder="Décrivez la prestation ou la pièce" className={cellCls}/>
+                    <input value={l.designation} onChange={e=>patch(l.id,{designation:e.target.value})}
+                      placeholder="Décrivez la prestation ou la pièce"
+                      className={cellCls+(String(l.designation||'').trim()?'':' border-amber-500/70')}/>
                   </Cell>
                 </div>
               </div>
@@ -1572,6 +1574,8 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
   const calc=useMemo(()=>calcDevis(form),[form]);
+  // Une ligne sans désignation s'imprimerait « — » sur le devis du client.
+  const missingLabels=(form.lines||[]).filter(l=>!String(l.designation||'').trim()).length;
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
   const save=async()=>{
@@ -1692,9 +1696,18 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
-            <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
-            <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length}>Créer le devis</Btn>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
+            {missingLabels>0&&(
+              <span className="text-xs text-amber-500 sm:mr-auto">
+                {missingLabels>1
+                  ?`${missingLabels} lignes sans désignation : complétez-les avant d'envoyer le devis.`
+                  :'Une ligne est sans désignation : complétez-la avant d\'envoyer le devis.'}
+              </span>
+            )}
+            <div className="flex justify-end gap-2">
+              <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+              <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length||missingLabels>0}>Créer le devis</Btn>
+            </div>
           </div>
         </Modal>
       )}
