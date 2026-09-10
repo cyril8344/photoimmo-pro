@@ -2732,7 +2732,14 @@ function PortfolioPage({user}) {
 
   const slugify = v => v.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 
-  const publicUrl = profile.portfolio_slug ? `/portfolio/${profile.portfolio_slug}` : null;
+  // Doit rester aligné sur la règle "/portfolio/:slug*" de vercel.json.
+  const publicPath = profile.portfolio_slug ? `/portfolio/${profile.portfolio_slug}` : null;
+  const publicUrl = publicPath ? location.origin + publicPath : null;
+  const copyPublicUrl = async () => {
+    if (!publicUrl) return;
+    try { await navigator.clipboard.writeText(publicUrl); showToast('Lien copié'); }
+    catch { showToast('Copie impossible — sélectionnez le lien à la main'); }
+  };
 
   return (
     <div className="fade-in space-y-6">
@@ -2763,7 +2770,7 @@ function PortfolioPage({user}) {
             <label className="block text-xs text-gray-400 mb-1">Slug URL</label>
             <input value={profile.portfolio_slug||''} onChange={e=>saveProfile({portfolio_slug:slugify(e.target.value)})}
               placeholder="habitat-maintenance" className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
-            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">/vitrine/{profile.portfolio_slug}</div>}
+            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">{publicPath}</div>}
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Bio</label>
@@ -2805,9 +2812,32 @@ function PortfolioPage({user}) {
             </button>
             <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="font-medium" style={{color:'var(--gold)'}}>active</span>:<span className="text-gray-500">inactive</span>}</span>
           </div>
-          <Btn variant="secondary" size="sm" onClick={()=>window.open('portfolio.html?preview','_blank')}>
-            👁 Prévisualiser ma vitrine
+          <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl||'portfolio.html?preview','_blank')}>
+            👁 {publicUrl?'Voir ma vitrine':'Prévisualiser ma vitrine'}
           </Btn>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-800">
+          <div className="text-xs text-gray-400 mb-1.5">Adresse publique de votre vitrine</div>
+          {publicUrl?(
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <a href={publicUrl} target="_blank" rel="noopener"
+                  className="flex-1 min-w-0 font-mono text-sm break-all rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 hover:border-amber-500/60 transition-colors"
+                  style={{color:'var(--gold-light)'}}>{publicUrl}</a>
+                <Btn variant="secondary" size="sm" onClick={copyPublicUrl}>Copier le lien</Btn>
+              </div>
+              {!profile.portfolio_enabled&&(
+                <p className="text-xs text-amber-500/80 mt-2">
+                  La page publique est désactivée : ce lien ne s'affichera pas tant que vous ne l'aurez pas activée ci-dessus.
+                </p>
+              )}
+            </>
+          ):(
+            <p className="text-sm text-gray-500">
+              Renseignez un « Slug URL » ci-dessus pour obtenir l'adresse à donner à vos clients.
+            </p>
+          )}
         </div>
       </Card>
 
