@@ -179,7 +179,16 @@ const store = {
   get:(k,d=[])=>{ try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;} },
   set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
 };
-const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+// Les identifiants servent aussi de clés en base, dans des colonnes uuid :
+// un identifiant maison comme « egvr3urdufvmtvkt61c » y est refusé, et toute
+// écriture qui le référence échoue (« invalid input syntax for type uuid »).
+const uid=()=>(typeof crypto!=='undefined'&&crypto.randomUUID)
+  ?crypto.randomUUID()
+  :'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+      const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);});
+const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||''));
+// Une référence vide doit partir à null : Postgres refuse '' dans une colonne uuid.
+const fkOrNull=v=>isUuid(v)?v:null;
 const today=()=>new Date().toISOString().split('T')[0];
 const fmt=(d)=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
 const fmtMoney=(n)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n||0);
@@ -236,6 +245,29 @@ const parseCSV=(text)=>{
 };
 
 // ─── SEED DEMO DATA ──────────────────────────────────────────────────────────
+// Les fiches créées avant le passage aux uuid gardent un identifiant maison.
+// On leur en attribue un valide, une seule fois, en reportant le changement
+// sur toutes les références pour ne casser aucun lien client ↔ devis ↔ facture.
+const ID_REFS={pii_clients:[],pii_missions:['client_id'],pii_quotes:['client_id','mission_id'],
+  pii_invoices:['client_id','mission_id','quote_id'],pii_galleries:['client_id','mission_id']};
+function migrateLocalIds(){
+  const data={},map={};
+  Object.keys(ID_REFS).forEach(k=>{
+    data[k]=store.get(k,[]);
+    if(Array.isArray(data[k]))data[k].forEach(r=>{if(r&&r.id&&!isUuid(r.id))map[r.id]=uid();});
+  });
+  if(!Object.keys(map).length)return;
+  Object.entries(ID_REFS).forEach(([k,refs])=>{
+    if(!Array.isArray(data[k]))return;
+    store.set(k,data[k].map(r=>{
+      const n={...r};
+      if(map[n.id])n.id=map[n.id];
+      refs.forEach(f=>{if(n[f]&&map[n[f]])n[f]=map[n[f]];});
+      return n;
+    }));
+  });
+}
+
 function seedDemo(){
   if(store.get('pii_seeded',false))return;
   const clients=[
@@ -684,16 +716,17 @@ function MissionsPage({missions,setMissions,clients,user}){
 
   const save=async()=>{
     if(!form.client_id||!form.address||!form.date)return;
+    const payload={...form,client_id:fkOrNull(form.client_id)};
     if(modal==='new'){
       if(sb&&user){
-        const{data,error}=await sb.from('missions').insert({...form,user_id:user.id}).select().single();
+        const{data,error}=await sb.from('missions').insert({...payload,user_id:user.id}).select().single();
         if(error){alert('Erreur : '+error.message);return;}
         const u=[...missions,data];setMissions(u);store.set('pii_missions',u);
       } else {
         const u=[...missions,{...form,id:uid(),created_at:today()}];setMissions(u);store.set('pii_missions',u);
       }
     } else {
-      if(sb&&user)await sb.from('missions').update(form).eq('id',modal);
+      if(sb&&user)await sb.from('missions').update(payload).eq('id',modal);
       const u=missions.map(m=>m.id===modal?{...m,...form}:m);setMissions(u);store.set('pii_missions',u);
     }
     setModal(null);
@@ -1597,9 +1630,11 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
     if(!form.client_id||missingLabels>0||!(form.lines||[]).length)return;
     // rates n'est qu'un détail d'affichage : il n'a pas de colonne en base.
     const {rates,...totals}=calc;
+    // « Aucune intervention » vaut '' dans le formulaire : la base attend null.
+    const refs={client_id:fkOrNull(form.client_id),mission_id:fkOrNull(form.mission_id)};
     if(modal==='new'){
       const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
-      const payload={...form,...totals,num,status:'En attente'};
+      const payload={...form,...refs,...totals,num,status:'En attente'};
       if(sb&&user){
         const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
         if(error){alert('Erreur : '+error.message);return;}
@@ -1608,7 +1643,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
         const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
       }
     } else {
-      const payload={...form,...totals};
+      const payload={...form,...refs,...totals};
       if(sb&&user){
         const{error}=await sb.from('quotes').update(payload).eq('id',modal);
         if(error){alert('Erreur : '+error.message);return;}
@@ -2146,7 +2181,7 @@ function InvoicesPage({invoices,setInvoices,quotes,clients,missions,user,updateM
     // Les totaux du devis font foi : sans cela un devis sans TVA se retrouvait
     // facturé avec 20% ajoutés par le repli.
     const qt=quoteTotals(q);
-    const payload={quote_id:q.id,client_id:q.client_id,mission_id:q.mission_id,
+    const payload={quote_id:fkOrNull(q.id),client_id:fkOrNull(q.client_id),mission_id:fkOrNull(q.mission_id),
       num,ht:qt.ht,tva:qt.tva,ttc:qt.ttc,
       status:'En attente',due_date:dueDate.toISOString().split('T')[0],reminders_sent:0};
     if(sb&&user){
@@ -3288,7 +3323,7 @@ function App(){
   const [galleries,setGalleries]=useState(()=>store.get('pii_galleries',[]));
   const [profile,setProfile]=useState(()=>store.get('pii_profile',{}));
 
-  useEffect(()=>{seedDemo();
+  useEffect(()=>{seedDemo();migrateLocalIds();
     setClients(store.get('pii_clients',[]));
     setMissions(store.get('pii_missions',[]));
     setQuotes(store.get('pii_quotes',[]));
@@ -3312,20 +3347,59 @@ function App(){
     setProfile(merged);
   };
 
-  const loadAllData=async(userId)=>{
+  // Publier, jamais effacer : on récupère ce qui est en base, on y ajoute les
+  // fiches qui n'existent que dans le navigateur, et le résultat des deux
+  // devient la liste affichée. Un compte vide en base ne vide donc rien ici.
+  const syncTable=async(table,storeKey,cols,setState,userId)=>{
+    const{data:remote,error}=await sb.from(table).select('*').eq('user_id',userId);
+    if(error){console.error('[sync] '+table+' :',error.message);return null;}
+    const local=store.get(storeKey,[]);
+    const known=new Set((remote||[]).map(r=>r.id));
+    const missing=(Array.isArray(local)?local:[]).filter(r=>r&&r.id&&!known.has(r.id)).map(r=>{
+      const out={user_id:userId};
+      cols.forEach(c=>{
+        if(!(c in r))return;
+        let v=r[c];
+        if(v==='')v=(c.endsWith('_id')||c.endsWith('_at')||c==='date'||c.endsWith('_date'))?null:v;
+        if(c.endsWith('_id'))v=fkOrNull(v);
+        out[c]=v;
+      });
+      out.id=r.id;
+      return out;
+    });
+    let merged=remote||[];
+    if(missing.length){
+      const{data:pushed,error:e2}=await sb.from(table).insert(missing).select();
+      // Un envoi refusé ne doit rien coûter : on garde les fiches locales dans
+      // la liste, sinon elles disparaîtraient de l'écran et du navigateur.
+      if(e2){
+        console.error('[sync] '+table+' (envoi) :',e2.message);
+        const ids=new Set(missing.map(r=>r.id));
+        merged=[...merged,...local.filter(r=>ids.has(r.id))];
+      } else merged=[...merged,...(pushed||[])];
+    }
+    if(merged.length||(Array.isArray(local)&&local.length===0)){
+      setState(merged);store.set(storeKey,merged);
+    }
+    return merged;
+  };
+
+  // L'ordre suit les dépendances : un devis ne peut pas partir avant son client.
+  const syncLocalToRemote=async(userId)=>{
     if(!sb)return;
-    const[{data:cd},{data:md},{data:qd},{data:ind},{data:ad}]=await Promise.all([
-      sb.from('clients').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
-      sb.from('missions').select('*').eq('user_id',userId).order('date',{ascending:false}),
-      sb.from('quotes').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
-      sb.from('invoices').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
-      sb.from('agencies').select('*').eq('user_id',userId).order('created_at',{ascending:false}),
-    ]);
-    if(cd){setClients(cd);store.set('pii_clients',cd);}
-    if(md){setMissions(md);store.set('pii_missions',md);}
-    if(qd){setQuotes(qd);store.set('pii_quotes',qd);}
-    if(ind){setInvoices(ind);store.set('pii_invoices',ind);}
-    if(ad){setAgencies(ad);store.set('pii_agencies',ad);}
+    await syncTable('clients','pii_clients',
+      ['name','email','phone','agent','agent_email','created_at'],setClients,userId);
+    await syncTable('agencies','pii_agencies',
+      ['name','contacts','preferred_rates','notes','created_at'],setAgencies,userId);
+    await syncTable('missions','pii_missions',
+      ['client_id','address','type','date','status','notes','checklist','agency_id','created_at'],setMissions,userId);
+    await syncTable('quotes','pii_quotes',
+      ['client_id','mission_id','num','ht','tva','ttc','status','created_at','type_service','description',
+       'lines','penalites','accept_token','mode','heures','taux_horaire','forfait_ht','fournitures',
+       'marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
+    await syncTable('invoices','pii_invoices',
+      ['quote_id','client_id','mission_id','num','ht','tva','ttc','status','due_date','paid_date',
+       'reminders_sent','created_at'],setInvoices,userId);
   };
 
   const loadSubscription=async(userId)=>{
@@ -3359,11 +3433,13 @@ function App(){
     return ()=>sub.subscription.unsubscribe();
   },[]);
 
-  // Uniquement le profil (nécessaire à la vitrine) — jamais clients/devis/
-  // factures ici, pour ne pas remplacer des données locales bien réelles
-  // par un résultat vide la première fois que quelqu'un se connecte.
+  // Le profil, puis la mise en base des fiches locales. Sans cette remontée,
+  // un devis référençait un client absent de la base et l'enregistrement
+  // échouait — c'est ce que signalait « invalid input syntax for type uuid ».
   useEffect(()=>{
-    if(sb&&user)loadProfile(user.id);
+    if(!sb||!user)return;
+    loadProfile(user.id);
+    syncLocalToRemote(user.id);
   },[user&&user.id]);
 
   const updateMissionStatus=async(missionId,newStatus)=>{
