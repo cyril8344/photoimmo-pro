@@ -188,7 +188,7 @@
     <div class="hero-copy">
       <div class="eyebrow" id="heroZone">Technicien de maintenance</div>
       <h1 class="hero-title" id="heroTitle">
-        Entretien &amp; dépannage <em>piscine, électricité</em> et plomberie
+        Entretien &amp; dépannage <em>piscine, clim, électricité</em> et plomberie
       </h1>
       <p class="hero-sub" id="heroBio">Intervenant indépendant pour les particuliers et copropriétés. Devis gratuit, réponse sous 24h.</p>
       <div class="hero-chips">
@@ -223,7 +223,7 @@
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Prestations</div>
-      <h2 class="section-title">Trois domaines, un seul interlocuteur</h2>
+      <h2 class="section-title">Quatre domaines, un seul interlocuteur</h2>
       <div class="rule"></div>
     </div>
     <div class="services-grid">
@@ -360,7 +360,9 @@ if (profile.zone) document.getElementById('footerZone').textContent = `© 2026 �
 if (profile.siret) document.getElementById('footerSiret').textContent = `· SIRET ${profile.siret}`;
 
 // ── Photos de fond sur les cartes domaines ───────────────
-const defaultPhotos = {};
+const defaultPhotos = {
+  'Climatisation': 'images/clim.jpg',
+};
 const photoByCategory = {};
 photos.forEach(p => { if (p.category && p.url && !photoByCategory[p.category]) photoByCategory[p.category] = p.url; });
 document.querySelectorAll('.svc[data-cat]').forEach(card => {
