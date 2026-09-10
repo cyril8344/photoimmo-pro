@@ -135,10 +135,9 @@ const SB_KEY  = typeof __SUPABASE_KEY__  !== 'undefined' ? __SUPABASE_KEY__  : '
 const sb = SB_URL && SB_KEY ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 
 const TVA = 0.20;
-const SERVICE_TYPES = ['Piscine','Climatisation','Électricité','Plomberie','Multi-services'];
+const SERVICE_TYPES = ['Piscine','Électricité','Plomberie','Multi-services'];
 const PACKS = {
   piscine:      { type:'Piscine', label:'Entretien Piscine' },
-  climatisation:{ type:'Climatisation', label:'Entretien Clim' },
   electricite:  { type:'Électricité', label:'Intervention Électricité' },
   plomberie:    { type:'Plomberie', label:'Intervention Plomberie' },
 };
@@ -156,7 +155,7 @@ function getUserTarifs(){
     marge_fournitures:ct.marge_fournitures!=null?Number(ct.marge_fournitures):0,
   };
 }
-const PROPERTY_TYPES=['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
+const PROPERTY_TYPES=['Piscine','Électricité','Plomberie','Multi-services','Autre'];
 const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Planifié','En cours','Réalisé','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
@@ -220,12 +219,12 @@ function seedDemo(){
   const missionDate=new Date();missionDate.setDate(missionDate.getDate()+3);
   const missions=[
     {id:uid(),client_id:clients[0].id,address:'12 rue des Lilas, 75015 Paris',type:'Piscine',date:missionDate.toISOString().split('T')[0],status:'Confirmé',notes:'Entretien annuel + hivernage',created_at:today()},
-    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Climatisation',date:today(),status:'Réalisé',notes:'Nettoyage split + vérification performances',created_at:today()},
+    {id:uid(),client_id:clients[1].id,address:'45 avenue Foch, 69006 Lyon',type:'Électricité',date:today(),status:'Réalisé',notes:'Mise aux normes tableau + remplacement prises',created_at:today()},
     {id:uid(),client_id:clients[2].id,address:'8 bd Haussmann, 75009 Paris',type:'Électricité',date:today(),status:'Livré',notes:'Mise aux normes tableau électrique',created_at:today()},
   ];
   const quotes=[
     {id:uid(),client_id:clients[0].id,mission_id:missions[0].id,type_service:'Piscine',heures:3,taux_horaire:55,fournitures:80,deplacement:30,urgence:0,ht:275,tva:55,ttc:330,status:'Envoyé',num:'DEV-001',created_at:today()},
-    {id:uid(),client_id:clients[1].id,mission_id:missions[1].id,type_service:'Climatisation',heures:4,taux_horaire:55,fournitures:120,deplacement:30,urgence:50,ht:400,tva:80,ttc:480,status:'Accepté',num:'DEV-002',created_at:today()},
+    {id:uid(),client_id:clients[1].id,mission_id:missions[1].id,type_service:'Électricité',heures:4,taux_horaire:55,fournitures:120,deplacement:30,urgence:50,ht:400,tva:80,ttc:480,status:'Accepté',num:'DEV-002',created_at:today()},
   ];
   store.set('pii_clients',clients);
   store.set('pii_missions',missions);
@@ -916,9 +915,8 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setFontSize(7);doc.setTextColor(120,120,130);doc.setFont('helvetica','normal');
   const mentions=[
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
-    'Conditions de paiement : acompte de 30% à la commande, solde à la livraison des fichiers.',
+    'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
-    'Clause de propriété intellectuelle : les fichiers restent la propriété du technicien jusqu\'au paiement intégral.',
     'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
@@ -1102,7 +1100,6 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
     'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
     'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
-    'Clause de propriété intellectuelle : les fichiers restent la propriété du technicien jusqu\'au paiement intégral.',
     'En cas de litige, application du droit français — Tribunal compétent : lieu du siège du prestataire.',
   ];
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
@@ -2310,7 +2307,7 @@ function PortfolioPage({user}) {
   const [toast, setToast] = useState('');
   const syncTimer = useRef(null);
 
-  const PHOTO_CATEGORIES = ['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
+  const PHOTO_CATEGORIES = ['Piscine','Électricité','Plomberie','Multi-services','Autre'];
   const SOCIAL_NETWORKS = [
     {key:'instagram', label:'Instagram', placeholder:'https://instagram.com/votre-compte'},
     {key:'facebook', label:'Facebook', placeholder:'https://facebook.com/votre-page'},
