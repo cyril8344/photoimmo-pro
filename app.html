@@ -1061,8 +1061,10 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
-    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.',
   ];
+  // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
+  // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
+  if(q.penalites)mentions.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.');
   if(profile.micro_entrepreneur)mentions.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
   mentions.push(...legalMentions(profile));
   if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
@@ -1227,9 +1229,13 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const legal=[
     `Facture émise le ${fmt(inv.created_at)} — Délai de paiement : 30 jours à compter de la date d'émission.`,
-    'En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.',
-    'Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).',
   ];
+  // Obligatoires envers un professionnel (art. L.441-9 C. com.), sans objet
+  // envers un particulier : la case est cochée sur le devis d'origine.
+  if(quote&&quote.penalites){
+    legal.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal appliquées dès le lendemain de l\'échéance.');
+    legal.push('Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-10 C. com.).');
+  }
   if(profile.micro_entrepreneur)legal.push('TVA non applicable — article 293 B du CGI (auto-entrepreneur).');
   legal.push(...legalMentions(profile));
   drawMentions(doc,legal,y);
@@ -1401,7 +1407,9 @@ function QuoteLinesEditor({lines,onChange}){
                 </Cell>
                 <div className="col-span-2">
                   <Cell label="Désignation">
-                    <input value={l.designation} onChange={e=>patch(l.id,{designation:e.target.value})} placeholder="Décrivez la prestation ou la pièce" className={cellCls}/>
+                    <input value={l.designation} onChange={e=>patch(l.id,{designation:e.target.value})}
+                      placeholder="Décrivez la prestation ou la pièce"
+                      className={cellCls+(String(l.designation||'').trim()?'':' border-amber-500/70')}/>
                   </Cell>
                 </div>
               </div>
@@ -1566,12 +1574,15 @@ function ArticlesPage(){
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
+    penalites:false,
     lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
            newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
   const getClient=id=>clients.find(c=>c.id===id);
   const getMission=id=>missions.find(m=>m.id===id);
   const calc=useMemo(()=>calcDevis(form),[form]);
+  // Une ligne sans désignation s'imprimerait « — » sur le devis du client.
+  const missingLabels=(form.lines||[]).filter(l=>!String(l.designation||'').trim()).length;
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
   const save=async()=>{
@@ -1662,6 +1673,16 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
               <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
+              <label className="flex items-start gap-2 text-sm cursor-pointer bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
+                <input type="checkbox" className="mt-1" checked={!!form.penalites} onChange={e=>setForm(f=>({...f,penalites:e.target.checked}))}/>
+                <span>
+                  <span className="font-medium">Client professionnel : ajouter les pénalités de retard</span>
+                  <span className="block text-xs text-gray-400">
+                    Obligatoire sur une facture adressée à un professionnel (art. L.441-9 C. com.).
+                    Inutile pour un particulier : l'indemnité de 40 € ne lui est pas opposable.
+                  </span>
+                </span>
+              </label>
             </div>
             <div>
               <div className="bg-gray-800 rounded-xl p-4 sticky top-0">
@@ -1692,9 +1713,18 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
-            <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
-            <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length}>Créer le devis</Btn>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 pt-4 border-t border-gray-800 mt-4">
+            {missingLabels>0&&(
+              <span className="text-xs text-amber-500 sm:mr-auto">
+                {missingLabels>1
+                  ?`${missingLabels} lignes sans désignation : complétez-les avant d'envoyer le devis.`
+                  :'Une ligne est sans désignation : complétez-la avant d\'envoyer le devis.'}
+              </span>
+            )}
+            <div className="flex justify-end gap-2">
+              <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
+              <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length||missingLabels>0}>Créer le devis</Btn>
+            </div>
           </div>
         </Modal>
       )}
@@ -2732,7 +2762,14 @@ function PortfolioPage({user}) {
 
   const slugify = v => v.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 
-  const publicUrl = profile.portfolio_slug ? `/portfolio/${profile.portfolio_slug}` : null;
+  // Doit rester aligné sur la règle "/portfolio/:slug*" de vercel.json.
+  const publicPath = profile.portfolio_slug ? `/portfolio/${profile.portfolio_slug}` : null;
+  const publicUrl = publicPath ? location.origin + publicPath : null;
+  const copyPublicUrl = async () => {
+    if (!publicUrl) return;
+    try { await navigator.clipboard.writeText(publicUrl); showToast('Lien copié'); }
+    catch { showToast('Copie impossible — sélectionnez le lien à la main'); }
+  };
 
   return (
     <div className="fade-in space-y-6">
@@ -2763,7 +2800,7 @@ function PortfolioPage({user}) {
             <label className="block text-xs text-gray-400 mb-1">Slug URL</label>
             <input value={profile.portfolio_slug||''} onChange={e=>saveProfile({portfolio_slug:slugify(e.target.value)})}
               placeholder="habitat-maintenance" className="w-full rounded-lg border border-gray-700 bg-gray-800 text-sm px-3 py-2 focus:outline-none"/>
-            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">/vitrine/{profile.portfolio_slug}</div>}
+            {profile.portfolio_slug && <div className="text-xs text-gray-500 mt-1">{publicPath}</div>}
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Bio</label>
@@ -2805,9 +2842,32 @@ function PortfolioPage({user}) {
             </button>
             <span className="text-sm text-gray-300">Page publique {profile.portfolio_enabled?<span className="font-medium" style={{color:'var(--gold)'}}>active</span>:<span className="text-gray-500">inactive</span>}</span>
           </div>
-          <Btn variant="secondary" size="sm" onClick={()=>window.open('portfolio.html?preview','_blank')}>
-            👁 Prévisualiser ma vitrine
+          <Btn variant="secondary" size="sm" onClick={()=>window.open(publicUrl||'portfolio.html?preview','_blank')}>
+            👁 {publicUrl?'Voir ma vitrine':'Prévisualiser ma vitrine'}
           </Btn>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-800">
+          <div className="text-xs text-gray-400 mb-1.5">Adresse publique de votre vitrine</div>
+          {publicUrl?(
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <a href={publicUrl} target="_blank" rel="noopener"
+                  className="flex-1 min-w-0 font-mono text-sm break-all rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 hover:border-amber-500/60 transition-colors"
+                  style={{color:'var(--gold-light)'}}>{publicUrl}</a>
+                <Btn variant="secondary" size="sm" onClick={copyPublicUrl}>Copier le lien</Btn>
+              </div>
+              {!profile.portfolio_enabled&&(
+                <p className="text-xs text-amber-500/80 mt-2">
+                  La page publique est désactivée : ce lien ne s'affichera pas tant que vous ne l'aurez pas activée ci-dessus.
+                </p>
+              )}
+            </>
+          ):(
+            <p className="text-sm text-gray-500">
+              Renseignez un « Slug URL » ci-dessus pour obtenir l'adresse à donner à vos clients.
+            </p>
+          )}
         </div>
       </Card>
 
