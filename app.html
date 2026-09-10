@@ -867,11 +867,12 @@ function quoteTotals(q){
 function drawLinesTable(doc,F,lines,y,C){
   const hasRem=lines.some(l=>Number(l.remise_pct)>0);
   const col=hasRem
-    ?{ref:17,des:40,desW:74,qty:128,pu:152,rem:168,tot:192}
-    :{ref:17,des:40,desW:86,qty:140,pu:166,rem:null,tot:192};
+    ?{num:17,ref:25,des:46,desW:68,qty:128,pu:152,rem:168,tot:192}
+    :{num:17,ref:25,des:46,desW:80,qty:140,pu:166,rem:null,tot:192};
   const header=()=>{
     doc.setFillColor(...C.dark);doc.rect(14,y-5,182,9,'F');
     doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...C.amberLight);
+    doc.text('N°',col.num,y);
     doc.text('RÉF.',col.ref,y);
     doc.text('DÉSIGNATION',col.des,y);
     doc.text('QTÉ',col.qty,y,{align:'right'});
@@ -889,6 +890,7 @@ function drawLinesTable(doc,F,lines,y,C){
     // header() laisse la police en gras : on la remet avant d'écrire la ligne.
     if(y+h>272){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
     if(i%2===0){doc.setFillColor(...C.veryLightGray);doc.rect(14,y-4.5,182,h,'F');}
+    doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(i+1),col.num,y);
     if(l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
     doc.setFontSize(8.5);doc.setTextColor(20,26,40);
     doc.text(des,col.des,y);
@@ -1585,16 +1587,34 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
   const missingLabels=(form.lines||[]).filter(l=>!String(l.designation||'').trim()).length;
   const clientMissions=missions.filter(m=>m.client_id===form.client_id);
 
+  // En édition, form ne porte que les champs modifiables : num, statut, date et
+  // id d'origine sont conservés tels quels.
+  const openEdit=q=>{
+    setForm({client_id:q.client_id||'',mission_id:q.mission_id||'',
+      type_service:q.type_service||SERVICE_TYPES[0],description:q.description||'',
+      penalites:!!q.penalites,lines:quoteLines(q).map(l=>({...l}))});
+    setModal(q.id);
+  };
+
   const save=async()=>{
-    if(!form.client_id)return;
-    const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
-    const payload={...form,...calc,num,status:'En attente'};
-    if(sb&&user){
-      const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
-      if(error){alert('Erreur : '+error.message);return;}
-      const u=[...quotes,data];setQuotes(u);store.set('pii_quotes',u);
+    if(!form.client_id||missingLabels>0||!(form.lines||[]).length)return;
+    if(modal==='new'){
+      const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
+      const payload={...form,...calc,num,status:'En attente'};
+      if(sb&&user){
+        const{data,error}=await sb.from('quotes').insert({...payload,user_id:user.id}).select().single();
+        if(error){alert('Erreur : '+error.message);return;}
+        const u=[...quotes,data];setQuotes(u);store.set('pii_quotes',u);
+      } else {
+        const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
+      }
     } else {
-      const u=[...quotes,{...payload,id:uid(),created_at:today()}];setQuotes(u);store.set('pii_quotes',u);
+      const payload={...form,...calc};
+      if(sb&&user){
+        const{error}=await sb.from('quotes').update(payload).eq('id',modal);
+        if(error){alert('Erreur : '+error.message);return;}
+      }
+      const u=quotes.map(q=>q.id===modal?{...q,...payload}:q);setQuotes(u);store.set('pii_quotes',u);
     }
     setModal(null);
   };
@@ -1643,6 +1663,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
                   {QUOTE_STATUSES.map(s=><option key={s}>{s}</option>)}
                 </select>
                 <div className="flex gap-1 shrink-0">
+                  <Btn size="sm" variant="ghost" onClick={()=>openEdit(q)}>✏️</Btn>
                   <Btn size="sm" variant="ghost" onClick={()=>exportPDF(q,cl,mi)}>📄 PDF</Btn>
                   {cl?.email&&<Btn size="sm" variant="ghost" onClick={async()=>{
                     let token=q.accept_token;
@@ -1660,7 +1681,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
       </div>
 
       {modal&&(
-        <Modal title="Nouveau devis" onClose={()=>setModal(null)} size="lg">
+        <Modal title={modal==='new'?'Nouveau devis':'Modifier le devis'} onClose={()=>setModal(null)} size="lg">
           <div className="grid lg:grid-cols-2 gap-6">
             <div className="space-y-3">
               <Select label="Client *" value={form.client_id} onChange={v=>setForm(f=>({...f,client_id:v,mission_id:''}))}
@@ -1723,7 +1744,9 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
             )}
             <div className="flex justify-end gap-2">
               <Btn variant="secondary" onClick={()=>setModal(null)}>Annuler</Btn>
-              <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length||missingLabels>0}>Créer le devis</Btn>
+              <Btn onClick={save} disabled={!form.client_id||!(form.lines||[]).length||missingLabels>0}>
+                {modal==='new'?'Créer le devis':'Enregistrer'}
+              </Btn>
             </div>
           </div>
         </Modal>
