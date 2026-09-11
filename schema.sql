@@ -369,5 +369,8 @@ create policy "profiles_admin_select" on user_profiles for select using (public.
 -- des travaux (art. L.111-1 du code de la consommation).
 -- ─────────────────────────────────────────────────────────────────────────────
 alter table user_profiles add column if not exists legal_form text;
+-- Moyens de paiement : obligatoires sur un devis de dépannage, réparation ou
+-- entretien du bâtiment (arrêté du 24 janvier 2017).
+alter table user_profiles add column if not exists payment_methods text;
 alter table quotes add column if not exists date_debut date;
 alter table quotes add column if not exists date_fin date;

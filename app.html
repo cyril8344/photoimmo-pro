@@ -841,6 +841,10 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
+// Repli tant que le champ n'est pas renseigné dans le profil : le devis doit
+// porter la mention, même sur une installation qui n'a rien réglé.
+const PAYMENT_METHODS_DEFAULT='espèces, carte bancaire, virement';
+
 // Formes juridiques les plus courantes chez un artisan. La liste n'est pas
 // fermée : « Autre » ouvre un champ libre dans les réglages.
 const LEGAL_FORMS=['Entreprise individuelle','Entreprise individuelle (micro-entreprise)',
@@ -1126,6 +1130,9 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
+    // Obligatoire sur un devis de dépannage, réparation ou entretien du
+    // bâtiment (arrêté du 24 janvier 2017).
+    'Moyens de paiement acceptés : '+(profile.payment_methods||PAYMENT_METHODS_DEFAULT)+'.',
   ];
   // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
   // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
@@ -2935,6 +2942,7 @@ function PortfolioPage({user}) {
           <Input label="Téléphone" value={profile.phone||''} onChange={v=>saveProfile({phone:v})}/>
           <Input label="Email (affiché sur devis/factures)" type="email" value={profile.email||''} onChange={v=>saveProfile({email:v})} placeholder="contact@habitat-maintenance83.fr"/>
           <Input label="Préfixe facture (ex: NF, FAC)" value={profile.invoice_prefix||''} onChange={v=>saveProfile({invoice_prefix:v})} placeholder="FAC"/>
+          <Input label="Moyens de paiement acceptés" value={profile.payment_methods||''} onChange={v=>saveProfile({payment_methods:v})} placeholder={PAYMENT_METHODS_DEFAULT}/>
           <label className="flex items-start gap-2 text-sm cursor-pointer md:col-span-2 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
             <input type="checkbox" className="mt-1" checked={!!profile.micro_entrepreneur} onChange={e=>saveProfile({micro_entrepreneur:e.target.checked})}/>
             <span>
