@@ -841,6 +841,11 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
+// Formes juridiques les plus courantes chez un artisan. La liste n'est pas
+// fermée : « Autre » ouvre un champ libre dans les réglages.
+const LEGAL_FORMS=['Entreprise individuelle','Entreprise individuelle (micro-entreprise)',
+  'EIRL','EURL','SASU','SARL','SAS','SA','SCOP'];
+
 const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Franchise en base de TVA : les lignes ne portent pas de taux. Le champ reste
@@ -1046,6 +1051,8 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
   doc.text(companyName,130,ey);ey+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
+  // La forme juridique doit figurer sur les devis comme sur les factures.
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
   if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
   if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
   if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
@@ -1070,6 +1077,18 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
     doc.setTextColor(90,96,112);
     doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
+  }
+
+  // ── Dates des travaux : la date ou le délai d'exécution est obligatoire sur
+  // un devis adressé à un particulier (art. L.111-1 code de la consommation).
+  if(q.date_debut||q.date_fin){
+    cy+=mission?11:4;
+    doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
+    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=6;
+    doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
+    doc.text((q.date_debut&&q.date_fin)
+      ?`Du ${fmt(q.date_debut)} au ${fmt(q.date_fin)}`
+      :(q.date_debut?`À partir du ${fmt(q.date_debut)}`:`Jusqu'au ${fmt(q.date_fin)}`),14,cy);
   }
 
   // ── Séparateur
@@ -1218,6 +1237,8 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
   doc.text(companyName,130,ey);ey+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
+  // La forme juridique doit figurer sur les devis comme sur les factures.
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
   if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
   if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
   if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
@@ -1609,7 +1630,7 @@ function ArticlesPage(){
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
-    penalites:false,
+    date_debut:'',date_fin:'',penalites:false,
     lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
            newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
@@ -1625,6 +1646,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
   const openEdit=q=>{
     setForm({client_id:q.client_id||'',mission_id:q.mission_id||'',
       type_service:q.type_service||SERVICE_TYPES[0],description:q.description||'',
+      date_debut:q.date_debut||'',date_fin:q.date_fin||'',
       penalites:!!q.penalites,lines:quoteLines(q).map(l=>({...l}))});
     setModal(q.id);
   };
@@ -1633,8 +1655,10 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
     if(!form.client_id||missingLabels>0||!(form.lines||[]).length)return;
     // rates n'est qu'un détail d'affichage : il n'a pas de colonne en base.
     const {rates,...totals}=calc;
-    // « Aucune intervention » vaut '' dans le formulaire : la base attend null.
-    const refs={client_id:fkOrNull(form.client_id),mission_id:fkOrNull(form.mission_id)};
+    // « Aucune intervention » et une date non saisie valent '' dans le
+    // formulaire : la base refuse '' aussi bien en uuid qu'en date.
+    const refs={client_id:fkOrNull(form.client_id),mission_id:fkOrNull(form.mission_id),
+      date_debut:form.date_debut||null,date_fin:form.date_fin||null};
     if(modal==='new'){
       const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
       const payload={...form,...refs,...totals,num,status:'En attente'};
@@ -1733,6 +1757,12 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
+              {/* La date ou le délai d'exécution est obligatoire sur un devis
+                  adressé à un particulier (art. L.111-1 code de la consommation). */}
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Début des travaux" type="date" value={form.date_debut||''} onChange={v=>setForm(f=>({...f,date_debut:v}))}/>
+                <Input label="Fin des travaux" type="date" value={form.date_fin||''} onChange={v=>setForm(f=>({...f,date_fin:v}))}/>
+              </div>
               <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
               <label className="flex items-start gap-2 text-sm cursor-pointer bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
                 <input type="checkbox" className="mt-1" checked={!!form.penalites} onChange={e=>setForm(f=>({...f,penalites:e.target.checked}))}/>
@@ -2888,6 +2918,18 @@ function PortfolioPage({user}) {
         <div className="grid md:grid-cols-2 gap-4">
           <Input label="Nom de l'entreprise" value={profile.company_name||''} onChange={v=>saveProfile({company_name:v})}/>
           <Input label="SIRET" value={profile.siret||''} onChange={v=>saveProfile({siret:v})} placeholder="123 456 789 00012"/>
+          {/* Mention obligatoire sur les devis et factures. Le champ libre
+              évite d'enfermer l'utilisateur dans une liste incomplète. */}
+          <div>
+            <Select label="Forme juridique" value={LEGAL_FORMS.includes(profile.legal_form||'')?profile.legal_form:(profile.legal_form?'Autre':'')}
+              onChange={v=>saveProfile({legal_form:v==='Autre'?' ':v})}
+              options={[{value:'',label:'— Non renseignée —'},...LEGAL_FORMS.map(f=>({value:f,label:f})),{value:'Autre',label:'Autre (à préciser)'}]}/>
+            {profile.legal_form&&!LEGAL_FORMS.includes(profile.legal_form)&&(
+              <input value={profile.legal_form.trim()} onChange={e=>saveProfile({legal_form:e.target.value||' '})}
+                placeholder="Précisez la forme juridique"
+                className="w-full rounded-xl border text-sm px-3 py-2.5 mt-2 focus:outline-none"/>
+            )}
+          </div>
           <Input label="N° TVA intracommunautaire" value={profile.tva_number||''} onChange={v=>saveProfile({tva_number:v})} placeholder="FR12345678900"/>
           <Input label="Adresse" value={profile.address||''} onChange={v=>saveProfile({address:v})}/>
           <Input label="Téléphone" value={profile.phone||''} onChange={v=>saveProfile({phone:v})}/>
@@ -3401,8 +3443,8 @@ function App(){
       ['client_id','address','type','date','status','notes','checklist','agency_id','created_at'],setMissions,userId);
     await syncTable('quotes','pii_quotes',
       ['client_id','mission_id','num','ht','tva','ttc','status','created_at','type_service','description',
-       'lines','penalites','accept_token','mode','heures','taux_horaire','forfait_ht','fournitures',
-       'marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
+       'date_debut','date_fin','lines','penalites','accept_token','mode','heures','taux_horaire',
+       'forfait_ht','fournitures','marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
     await syncTable('invoices','pii_invoices',
       ['quote_id','client_id','mission_id','num','ht','tva','ttc','status','due_date','paid_date',
        'reminders_sent','created_at'],setInvoices,userId);
