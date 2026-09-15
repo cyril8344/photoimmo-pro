@@ -23,6 +23,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
   <script src="/inter-font.js"></script>
+  <script src="/qrcode.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="/api/init"></script>
   <style>
@@ -115,6 +116,49 @@
     .app-footer{text-align:center;padding:16px;font-size:11px;color:#3a3020;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;}
     .app-footer a{color:#5a5040;text-decoration:none;}
     .app-footer a:hover{color:var(--gold);}
+
+/* ── CARTE DE VISITE ─────────────────────────────────────────────────────── */
+.bc-card{width:354px;height:224px;border-radius:9px;overflow:hidden;position:relative;
+  flex-shrink:0;display:flex;box-shadow:0 10px 36px rgba(14,31,66,.32);
+  font-family:'Inter',system-ui,sans-serif;}
+.bc-navy{background:linear-gradient(148deg,#0B1B3A 0%,#18366A 70%,#1E4080 100%);}
+.bc-grid::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:18px 18px;}
+.bc-left{width:200px;flex-shrink:0;padding:16px 16px 14px 18px;display:flex;flex-direction:column;
+  position:relative;overflow:hidden;z-index:1;}
+.bc-logo{width:44px;height:44px;border-radius:9px;object-fit:cover;margin-bottom:9px;
+  position:relative;z-index:1;}
+.bc-co{font-weight:800;font-size:19px;color:#fff;letter-spacing:.05em;text-transform:uppercase;
+  line-height:1;position:relative;z-index:1;}
+.bc-sub{font-weight:700;font-size:13px;color:#5EADFF;letter-spacing:.05em;text-transform:uppercase;
+  line-height:1;margin-bottom:9px;position:relative;z-index:1;}
+.bc-svcs{display:flex;flex-direction:column;gap:3px;margin-top:auto;position:relative;z-index:1;}
+.bc-svc{display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.68);font-weight:500;}
+.bc-dot{width:5px;height:5px;border-radius:1px;flex-shrink:0;}
+.bc-tag{font-size:7px;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.38);
+  margin-top:3px;position:relative;z-index:1;}
+.bc-right{flex:1;background:#fff;padding:14px 16px 14px 20px;display:flex;flex-direction:column;
+  position:relative;overflow:hidden;}
+.bc-right::after{content:'';position:absolute;bottom:0;right:0;width:22px;height:22px;
+  background:#E87D2B;clip-path:polygon(100% 0,100% 100%,0 100%);}
+.bc-name{font-weight:800;font-size:13px;color:#0E1F42;letter-spacing:.03em;text-transform:uppercase;
+  line-height:1.1;margin-bottom:2px;}
+.bc-role{font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:#2B7FE8;
+  font-weight:500;margin-bottom:10px;}
+.bc-rows{display:flex;flex-direction:column;gap:5px;}
+.bc-row{font-size:10px;color:#0E1F42;line-height:1.4;word-break:break-word;}
+.bc-siret{font-size:7.5px;letter-spacing:.06em;color:#566080;opacity:.6;margin-top:auto;}
+.bc-back{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:18px;
+  position:relative;overflow:hidden;padding:0 20px;}
+.bc-back-txt{display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;}
+.bc-back-co{font-weight:800;font-size:17px;color:#fff;letter-spacing:.06em;text-transform:uppercase;line-height:1;}
+.bc-back-co span{color:#5EADFF;}
+.bc-rule{height:1px;background:rgba(94,173,255,.35);}
+.bc-qr{background:#fff;padding:6px;border-radius:6px;position:relative;z-index:1;flex-shrink:0;}
+.bc-qr img{display:block;width:74px;height:74px;}
+.bc-url{font-size:7.5px;letter-spacing:.06em;color:rgba(255,255,255,.55);}
   </style>
 </head>
 <body>
@@ -190,6 +234,8 @@ const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Une référence vide doit partir à null : Postgres refuse '' dans une colonne uuid.
 const fkOrNull=v=>isUuid(v)?v:null;
 const today=()=>new Date().toISOString().split('T')[0];
+// Échappement pour les fragments HTML construits à la main (carte de visite).
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(d)=>d?new Date(d).toLocaleDateString('fr-FR'):'—';
 const fmtMoney=(n)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n||0);
 // Les espaces fines insécables d'Intl (U+202F/U+00A0) ne sont pas dans le jeu de glyphes PDF
@@ -841,6 +887,15 @@ function MissionsPage({missions,setMissions,clients,user}){
 }
 
 // ─── DEVIS ────────────────────────────────────────────────────────────────────
+// Repli tant que le champ n'est pas renseigné dans le profil : le devis doit
+// porter la mention, même sur une installation qui n'a rien réglé.
+const PAYMENT_METHODS_DEFAULT='espèces, carte bancaire, virement';
+
+// Formes juridiques les plus courantes chez un artisan. La liste n'est pas
+// fermée : « Autre » ouvre un champ libre dans les réglages.
+const LEGAL_FORMS=['Entreprise individuelle','Entreprise individuelle (micro-entreprise)',
+  'EIRL','EURL','SASU','SARL','SAS','SA','SCOP'];
+
 const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Franchise en base de TVA : les lignes ne portent pas de taux. Le champ reste
@@ -1046,6 +1101,8 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
   doc.text(companyName,130,ey);ey+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
+  // La forme juridique doit figurer sur les devis comme sur les factures.
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
   if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
   if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
   if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
@@ -1070,6 +1127,18 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
     doc.setTextColor(90,96,112);
     doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
+  }
+
+  // ── Dates des travaux : la date ou le délai d'exécution est obligatoire sur
+  // un devis adressé à un particulier (art. L.111-1 code de la consommation).
+  if(q.date_debut||q.date_fin){
+    cy+=mission?11:4;
+    doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
+    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=6;
+    doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
+    doc.text((q.date_debut&&q.date_fin)
+      ?`Du ${fmt(q.date_debut)} au ${fmt(q.date_fin)}`
+      :(q.date_debut?`À partir du ${fmt(q.date_debut)}`:`Jusqu'au ${fmt(q.date_fin)}`),14,cy);
   }
 
   // ── Séparateur
@@ -1107,6 +1176,9 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
     'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
+    // Obligatoire sur un devis de dépannage, réparation ou entretien du
+    // bâtiment (arrêté du 24 janvier 2017).
+    'Moyens de paiement acceptés : '+(profile.payment_methods||PAYMENT_METHODS_DEFAULT)+'.',
   ];
   // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
   // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
@@ -1218,6 +1290,8 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
   doc.text(companyName,130,ey);ey+=5.5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
+  // La forme juridique doit figurer sur les devis comme sur les factures.
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
   if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
   if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
   if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
@@ -1521,6 +1595,127 @@ function QuoteLinesEditor({lines,onChange}){
   );
 }
 
+// ─── CARTE DE VISITE ──────────────────────────────────────────────────────────
+// Le QR code renvoie vers la vitrine. La bibliothèque est servie depuis le site
+// (qrcode.js) et non depuis un CDN : la carte doit s'imprimer même hors ligne.
+function qrDataUrl(text,cell){
+  try{
+    const qr=qrcode(0,'M');qr.addData(text);qr.make();
+    return qr.createDataURL(cell||4,0);
+  }catch(e){console.error('[carte] QR :',e);return null;}
+}
+
+const BC_TRADES=[['Piscine','#38D8C8'],['Électricité','#FFD600'],['Climatisation','#22C78A'],['Plomberie','#5EADFF']];
+
+// Le recto et le verso sont rendus deux fois : à l'écran et dans la fenêtre
+// d'impression. Une seule fonction produit le HTML pour éviter qu'ils divergent.
+function cardHtml(d){
+  const svcs=BC_TRADES.map(([n,c])=>`<div class="bc-svc"><span class="bc-dot" style="background:${c}"></span>${esc(n)}</div>`).join('');
+  const logo=d.logo?`<img class="bc-logo" src="${d.logo}" alt=""/>`:'';
+  const contacts=[d.phone,d.email,d.site].filter(Boolean)
+    .map(v=>`<div class="bc-row">${esc(v)}</div>`).join('');
+  const recto=`<div class="bc-card">
+      <div class="bc-left bc-navy bc-grid">${logo}
+        <div class="bc-co">${esc(d.co1)}</div><div class="bc-sub">${esc(d.co2)}</div>
+        <div class="bc-svcs">${svcs}</div><div class="bc-tag">${esc(d.tagline)}</div>
+      </div>
+      <div class="bc-right">
+        <div class="bc-name">${esc(d.name||' ')}</div>
+        <div class="bc-role">${esc(d.role||' ')}</div>
+        <div class="bc-rows">${contacts}</div>
+        ${d.siret?`<div class="bc-siret">SIRET ${esc(d.siret)}</div>`:''}
+      </div>
+    </div>`;
+  const verso=`<div class="bc-card bc-navy">
+      <div class="bc-back bc-grid">
+        ${d.qr?`<div class="bc-qr"><img src="${d.qr}" alt="QR code vers le site"/></div>`:''}
+        <div class="bc-back-txt">
+          <div class="bc-back-co">${esc(d.co1)} <span>${esc(d.co2)}</span></div>
+          <div class="bc-rule"></div>
+          <div class="bc-tag">${esc(d.tagline)}</div>
+          ${d.site?`<div class="bc-url">${esc(d.site)}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  return {recto,verso};
+}
+
+function BusinessCardPage({profile}){
+  const [card,setCard]=useState(()=>store.get('pii_card',{}));
+  const set=p=>{const n={...card,...p};setCard(n);store.set('pii_card',n);};
+
+  const words=String(profile.company_name||'Habitat Maintenance').trim().split(/\s+/);
+  const site=card.site||location.origin.replace(/^https?:\/\//,'');
+  const d={
+    co1:words[0]||'Habitat', co2:words.slice(1).join(' ')||'Maintenance',
+    tagline:card.tagline||'Dépannage · Installation · Entretien',
+    name:card.name||'', role:card.role||'Gérant',
+    phone:profile.phone||'', email:profile.email||'', site,
+    siret:profile.siret||'', logo:LOGO_PDF,
+    qr:qrDataUrl(/^https?:\/\//.test(card.site||'')?card.site:'https://'+site,4),
+  };
+  const faces=cardHtml(d);
+
+  // Impression dans une fenêtre dédiée : la mise en page de l'application
+  // (barre latérale, en-tête) n'a pas à être neutralisée au forceps.
+  const print=()=>{
+    const css=[...document.styleSheets].map(sh=>{
+      try{return [...sh.cssRules].map(r=>r.cssText).join('\n');}catch(e){return '';}
+    }).join('\n');
+    const w=window.open('','_blank','width=900,height=700');
+    if(!w){alert('Autorisez les fenêtres surgissantes pour imprimer la carte.');return;}
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Carte de visite</title>
+      <style>${css}
+      body{margin:0;background:#fff;}
+      .sheet{display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px;}
+      @media print{@page{size:85mm 54mm;margin:0;}
+        .sheet{display:block;padding:0;gap:0;}
+        .bc-card{width:85mm;height:54mm;border-radius:0;box-shadow:none;page-break-after:always;}}
+      </style></head><body><div class="sheet">${faces.recto}${faces.verso}</div></body></html>`);
+    w.document.close();
+    // Laisser le temps aux images (logo, QR) d'être décodées avant d'imprimer.
+    w.onload=()=>{w.focus();w.print();};
+  };
+
+  return(
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold">🪪 Carte de visite</h1>
+      <p className="text-sm" style={{color:'var(--muted)'}}>
+        Reprend votre logo et les coordonnées de votre profil. Le QR code du verso
+        renvoie vers votre vitrine.
+      </p>
+
+      <div className="flex flex-wrap gap-6 justify-center">
+        {[['Recto',faces.recto],['Verso',faces.verso]].map(([lbl,html])=>(
+          <div key={lbl} className="flex flex-col items-center gap-2">
+            <div dangerouslySetInnerHTML={{__html:html}}/>
+            <span className="text-xs uppercase tracking-widest" style={{color:'var(--muted)'}}>{lbl}</span>
+          </div>
+        ))}
+      </div>
+
+      <Card>
+        <h3 className="font-semibold mb-4">Ce qui figure sur la carte</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Input label="Votre nom" value={card.name||''} onChange={v=>set({name:v})} placeholder="Cyril Leduc"/>
+          <Input label="Fonction" value={card.role||''} onChange={v=>set({role:v})} placeholder="Gérant"/>
+          <Input label="Accroche" value={card.tagline||''} onChange={v=>set({tagline:v})} placeholder="Dépannage · Installation · Entretien"/>
+          <Input label="Adresse du site (QR code)" value={card.site||''} onChange={v=>set({site:v})} placeholder={location.origin.replace(/^https?:\/\//,'')}/>
+        </div>
+        <p className="text-xs mt-3" style={{color:'var(--muted)'}}>
+          Le nom de l'entreprise, le téléphone, l'email et le SIRET viennent de
+          <span className="text-amber-400"> Ma Vitrine › Paramètres du profil</span>.
+        </p>
+      </Card>
+
+      <div className="flex flex-col items-center gap-2">
+        <Btn onClick={print}>Imprimer la carte</Btn>
+        <span className="text-xs" style={{color:'var(--muted)'}}>Format 85 × 54 mm — papier cartonné blanc mat recommandé</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── CATALOGUE D'ARTICLES ─────────────────────────────────────────────────────
 function ArticlesPage(){
   const [articles,setArticles]=useState(()=>store.get('pii_articles',[]));
@@ -1609,7 +1804,7 @@ function ArticlesPage(){
 function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}){
   const [modal,setModal]=useState(null);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
-    penalites:false,
+    date_debut:'',date_fin:'',penalites:false,
     lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
            newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
@@ -1625,6 +1820,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
   const openEdit=q=>{
     setForm({client_id:q.client_id||'',mission_id:q.mission_id||'',
       type_service:q.type_service||SERVICE_TYPES[0],description:q.description||'',
+      date_debut:q.date_debut||'',date_fin:q.date_fin||'',
       penalites:!!q.penalites,lines:quoteLines(q).map(l=>({...l}))});
     setModal(q.id);
   };
@@ -1633,8 +1829,10 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
     if(!form.client_id||missingLabels>0||!(form.lines||[]).length)return;
     // rates n'est qu'un détail d'affichage : il n'a pas de colonne en base.
     const {rates,...totals}=calc;
-    // « Aucune intervention » vaut '' dans le formulaire : la base attend null.
-    const refs={client_id:fkOrNull(form.client_id),mission_id:fkOrNull(form.mission_id)};
+    // « Aucune intervention » et une date non saisie valent '' dans le
+    // formulaire : la base refuse '' aussi bien en uuid qu'en date.
+    const refs={client_id:fkOrNull(form.client_id),mission_id:fkOrNull(form.mission_id),
+      date_debut:form.date_debut||null,date_fin:form.date_fin||null};
     if(modal==='new'){
       const num=`DEV-${String(quotes.length+1).padStart(3,'0')}`;
       const payload={...form,...refs,...totals,num,status:'En attente'};
@@ -1733,6 +1931,12 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
               <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
+              {/* La date ou le délai d'exécution est obligatoire sur un devis
+                  adressé à un particulier (art. L.111-1 code de la consommation). */}
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Début des travaux" type="date" value={form.date_debut||''} onChange={v=>setForm(f=>({...f,date_debut:v}))}/>
+                <Input label="Fin des travaux" type="date" value={form.date_fin||''} onChange={v=>setForm(f=>({...f,date_fin:v}))}/>
+              </div>
               <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
               <label className="flex items-start gap-2 text-sm cursor-pointer bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
                 <input type="checkbox" className="mt-1" checked={!!form.penalites} onChange={e=>setForm(f=>({...f,penalites:e.target.checked}))}/>
@@ -2888,11 +3092,24 @@ function PortfolioPage({user}) {
         <div className="grid md:grid-cols-2 gap-4">
           <Input label="Nom de l'entreprise" value={profile.company_name||''} onChange={v=>saveProfile({company_name:v})}/>
           <Input label="SIRET" value={profile.siret||''} onChange={v=>saveProfile({siret:v})} placeholder="123 456 789 00012"/>
+          {/* Mention obligatoire sur les devis et factures. Le champ libre
+              évite d'enfermer l'utilisateur dans une liste incomplète. */}
+          <div>
+            <Select label="Forme juridique" value={LEGAL_FORMS.includes(profile.legal_form||'')?profile.legal_form:(profile.legal_form?'Autre':'')}
+              onChange={v=>saveProfile({legal_form:v==='Autre'?' ':v})}
+              options={[{value:'',label:'— Non renseignée —'},...LEGAL_FORMS.map(f=>({value:f,label:f})),{value:'Autre',label:'Autre (à préciser)'}]}/>
+            {profile.legal_form&&!LEGAL_FORMS.includes(profile.legal_form)&&(
+              <input value={profile.legal_form.trim()} onChange={e=>saveProfile({legal_form:e.target.value||' '})}
+                placeholder="Précisez la forme juridique"
+                className="w-full rounded-xl border text-sm px-3 py-2.5 mt-2 focus:outline-none"/>
+            )}
+          </div>
           <Input label="N° TVA intracommunautaire" value={profile.tva_number||''} onChange={v=>saveProfile({tva_number:v})} placeholder="FR12345678900"/>
           <Input label="Adresse" value={profile.address||''} onChange={v=>saveProfile({address:v})}/>
           <Input label="Téléphone" value={profile.phone||''} onChange={v=>saveProfile({phone:v})}/>
           <Input label="Email (affiché sur devis/factures)" type="email" value={profile.email||''} onChange={v=>saveProfile({email:v})} placeholder="contact@habitat-maintenance83.fr"/>
           <Input label="Préfixe facture (ex: NF, FAC)" value={profile.invoice_prefix||''} onChange={v=>saveProfile({invoice_prefix:v})} placeholder="FAC"/>
+          <Input label="Moyens de paiement acceptés" value={profile.payment_methods||''} onChange={v=>saveProfile({payment_methods:v})} placeholder={PAYMENT_METHODS_DEFAULT}/>
           <label className="flex items-start gap-2 text-sm cursor-pointer md:col-span-2 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
             <input type="checkbox" className="mt-1" checked={!!profile.micro_entrepreneur} onChange={e=>saveProfile({micro_entrepreneur:e.target.checked})}/>
             <span>
@@ -3123,6 +3340,7 @@ const NAV=[
   {id:'delivery',icon:'📋',label:'Rapports'},
   {id:'invoices',icon:'🧾',label:'Factures & Compta'},
   {id:'portfolio',icon:'🌐',label:'Ma Vitrine'},
+  {id:'card',icon:'🪪',label:'Carte de visite'},
   {id:'admin',icon:'⚙️',label:'Admin',adminOnly:true},
 ];
 function Sidebar({page,setPage,sideOpen,setSideOpen,profile,user}){
@@ -3401,8 +3619,8 @@ function App(){
       ['client_id','address','type','date','status','notes','checklist','agency_id','created_at'],setMissions,userId);
     await syncTable('quotes','pii_quotes',
       ['client_id','mission_id','num','ht','tva','ttc','status','created_at','type_service','description',
-       'lines','penalites','accept_token','mode','heures','taux_horaire','forfait_ht','fournitures',
-       'marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
+       'date_debut','date_fin','lines','penalites','accept_token','mode','heures','taux_horaire',
+       'forfait_ht','fournitures','marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
     await syncTable('invoices','pii_invoices',
       ['quote_id','client_id','mission_id','num','ht','tva','ttc','status','due_date','paid_date',
        'reminders_sent','created_at'],setInvoices,userId);
@@ -3501,6 +3719,7 @@ function App(){
       case'delivery':  return <DeliveryPage missions={missions} clients={clients} galleries={galleries} setGalleries={setGalleries} user={user} updateMissionStatus={updateMissionStatus}/>;
       case'invoices':    return <InvoicesPage invoices={invoices} setInvoices={setInvoices} quotes={quotes} clients={clients} missions={missions} user={user} updateMissionStatus={updateMissionStatus}/>;
       case'portfolio':   return <PortfolioPage user={user}/>;
+      case'card':        return <BusinessCardPage profile={profile}/>;
       case'admin':       return <AdminPage user={user}/>;
       default:           return null;
     }
