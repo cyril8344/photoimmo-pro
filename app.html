@@ -901,7 +901,9 @@ const PAYMENT_METHODS_DEFAULT='espèces, carte bancaire, virement';
 const LEGAL_FORMS=['Entreprise individuelle','Entreprise individuelle (micro-entreprise)',
   'EIRL','EURL','SASU','SARL','SAS','SA','SCOP'];
 
-const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
+// « mois », « an » et « visite » servent aux contrats d'entretien : une ligne
+// « 12 mois à 160 € » se lit mieux qu'une quantité sans unité.
+const UNITS=['u','h','jour','mois','an','visite','forfait','m','m²','ml','kg','L'];
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Franchise en base de TVA : les lignes ne portent pas de taux. Le champ reste
 // dans le modèle pour les devis déjà enregistrés avec un taux.
