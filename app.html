@@ -900,7 +900,9 @@ const UNITS=['u','h','forfait','m','m²','ml','kg','L'];
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Franchise en base de TVA : les lignes ne portent pas de taux. Le champ reste
 // dans le modèle pour les devis déjà enregistrés avec un taux.
-const newLine=(o={})=>({id:uid(),ref:'',designation:'',qty:1,unit:'u',pu_ht:0,remise_pct:0,tva_rate:0,...o});
+// descr : détail facultatif imprimé sous la désignation, dans la même ligne du
+// tableau — le client voit ainsi à quelle prestation le texte se rapporte.
+const newLine=(o={})=>({id:uid(),ref:'',designation:'',descr:'',qty:1,unit:'u',pu_ht:0,remise_pct:0,tva_rate:0,...o});
 const lineTotal=l=>r2((Number(l.qty)||0)*(Number(l.pu_ht)||0)*(1-(Number(l.remise_pct)||0)/100));
 
 // Devis d'avant les lignes : on reconstruit des lignes à la volée pour qu'ils
@@ -980,7 +982,9 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
   lines.forEach((l,i)=>{
     doc.setFont(F,'normal');doc.setFontSize(8.5);
     const des=doc.splitTextToSize(l.designation||'—',col.desW);
-    const h=Math.max(9,des.length*4+5);
+    const dsc=String(l.descr||'').trim();
+    const dl=dsc?doc.splitTextToSize(dsc,col.desW):[];
+    const h=Math.max(9,des.length*4+dl.length*3.6+(dl.length?2:0)+5);
     // header() laisse la police en gras : on la remet avant d'écrire la ligne.
     if(y+h>272){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
     if(i%2===0){doc.setFillColor(...C.veryLightGray);doc.rect(14,y-4.5,182,h,'F');}
@@ -988,6 +992,11 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
     if(l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
     doc.setFontSize(8.5);doc.setTextColor(20,26,40);
     doc.text(des,col.des,y);
+    if(dl.length){
+      doc.setFontSize(7.2);doc.setTextColor(115,121,138);
+      doc.text(dl,col.des,y+des.length*4+0.5);
+      doc.setFontSize(8.5);
+    }
     doc.setTextColor(90,96,112);
     doc.text(num(l.qty)+(l.unit&&l.unit!=='u'?' '+l.unit:''),col.qty,y,{align:'right'});
     doc.text(fmtMoneyPDF(l.pu_ht),col.pu,y,{align:'right'});
@@ -1510,6 +1519,10 @@ function QuoteLinesEditor({lines,onChange}){
   const articles=store.get('pii_articles',[]);
   const [picker,setPicker]=useState(false);
   const [q,setQ]=useState('');
+  // Le détail reste replié tant qu'il est vide : sur cinq lignes, cinq zones de
+  // texte dépliées rendraient le formulaire illisible sur téléphone.
+  const [openDescr,setOpenDescr]=useState(()=>new Set());
+  const toggleDescr=id=>setOpenDescr(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});
 
   const patch=(id,p)=>onChange((lines||[]).map(l=>l.id===id?{...l,...p}:l));
   const remove=id=>onChange((lines||[]).filter(l=>l.id!==id));
@@ -1566,6 +1579,20 @@ function QuoteLinesEditor({lines,onChange}){
               <Cell label="Remise %">
                 <input type="number" step="any" value={String(l.remise_pct)} onChange={e=>patch(l.id,{remise_pct:Number(e.target.value)||0})} className={cellCls}/>
               </Cell>
+            </div>
+            <div className="pl-6">
+              {(String(l.descr||'').trim()||openDescr.has(l.id))?(
+                <Cell label="Détail (facultatif)">
+                  <textarea value={l.descr||''} onChange={e=>patch(l.id,{descr:e.target.value})} rows={2}
+                    className={cellCls+" resize-y"}
+                    placeholder="Ce que comprend cette prestation"/>
+                </Cell>
+              ):(
+                <button onClick={()=>toggleDescr(l.id)}
+                  className="text-xs text-gray-500 hover:text-amber-400 transition-colors">
+                  + Ajouter un détail
+                </button>
+              )}
             </div>
             <div className="text-right text-sm pl-6">
               <span className="text-gray-500 text-xs mr-2">Total ligne</span>
