@@ -374,3 +374,13 @@ alter table user_profiles add column if not exists legal_form text;
 alter table user_profiles add column if not exists payment_methods text;
 alter table quotes add column if not exists date_debut date;
 alter table quotes add column if not exists date_fin date;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Migration : conditions de paiement propres à chaque devis
+--
+-- Un contrat d'entretien mensualisé et un dépannage ponctuel ne se règlent pas
+-- de la même façon : la mention ne peut pas être la même pour tous les devis.
+-- Celle du profil sert de valeur de départ, le devis peut la remplacer.
+-- ─────────────────────────────────────────────────────────────────────────────
+alter table quotes add column if not exists payment_terms text;
+alter table user_profiles add column if not exists payment_terms text;
