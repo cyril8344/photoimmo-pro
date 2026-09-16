@@ -1146,8 +1146,12 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6;
-    doc.setTextColor(90,96,112);
-    doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
+    // Le type de bien sert à vous y retrouver dans vos interventions ; il
+    // n'apprend rien au client, qui connaît son logement. Seule la date reste.
+    if(mission.date){
+      doc.setTextColor(90,96,112);
+      doc.text(`Date d'intervention : ${fmt(mission.date)}`,14,cy);
+    }else cy-=5;
   }
 
   // ── Dates des travaux : la date ou le délai d'exécution est obligatoire sur
@@ -1360,8 +1364,12 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
     doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
     doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6;
-    doc.setTextColor(90,96,112);
-    doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
+    // Le type de bien sert à vous y retrouver dans vos interventions ; il
+    // n'apprend rien au client, qui connaît son logement. Seule la date reste.
+    if(mission.date){
+      doc.setTextColor(90,96,112);
+      doc.text(`Date d'intervention : ${fmt(mission.date)}`,14,cy);
+    }else cy-=5;
   }
 
   // ── Séparateur
