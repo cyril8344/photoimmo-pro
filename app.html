@@ -1145,12 +1145,28 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   const tableY=Math.max(cy||0,ey||0)+10;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
+  // ── Descriptif des travaux : ce que le client lit avant le chiffrage.
+  // Pleine largeur, contrairement aux blocs d'en-tête qui tiennent en colonne.
+  let topY=tableY+8;
+  const descr=String(q.description||'').trim();
+  if(descr){
+    doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
+    doc.text('DESCRIPTIF DES TRAVAUX',14,topY);topY+=5.5;
+    doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
+    const dl=doc.splitTextToSize(descr,182);
+    dl.forEach(l=>{
+      if(topY>262){doc.addPage();topY=22;}
+      doc.text(l,14,topY);topY+=4.5;
+    });
+    topY+=9;
+  }
+
   // ── Tableau des lignes
   const C={dark,amber,amberLight,veryLightGray};
   // Les totaux sont connus avant le tableau : ses en-têtes disent « HT » ou
   // « NET » selon que le devis porte de la TVA ou non.
   const qTotals=quoteTotals(q);
-  let y=drawLinesTable(doc,F,quoteLines(q),tableY+8,C,qTotals.rates.length>0);
+  let y=drawLinesTable(doc,F,quoteLines(q),topY,C,qTotals.rates.length>0);
 
   // ── Totaux
   y=drawTotals(doc,F,qTotals,y+5,C);
@@ -1930,7 +1946,15 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               )}
               <Select label="Type de prestation *" value={form.type_service} onChange={v=>setForm(f=>({...f,type_service:v}))}
                 options={SERVICE_TYPES.map(s=>({value:s,label:s}))}/>
-              <Input label="Description de l'intervention" value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Nettoyage filtres, contrôle électrique, remplacement joint…"/>
+              {/* Imprimé sur le devis sous « DESCRIPTIF DES TRAVAUX » : il faut
+                  de quoi détailler une prestation, pas une seule ligne. */}
+              <div>
+                <label className="block text-xs mb-1.5" style={{color:'var(--muted)'}}>Descriptif des travaux</label>
+                <textarea value={form.description||''} onChange={e=>setForm(f=>({...f,description:e.target.value}))} rows={4}
+                  className="w-full rounded-xl border text-sm px-3 py-2.5 focus:outline-none resize-y"
+                  placeholder={"Ex : Entretien annuel de piscine\n· Nettoyage et contrôle du système de filtration\n· Analyse et rééquilibrage de l'eau\n· Vérification de la pompe et du robot\n· Hivernage et remise en route"}/>
+                <p className="text-xs mt-1" style={{color:'var(--muted)'}}>Apparaît sur le devis, au-dessus du tableau des lignes.</p>
+              </div>
               {/* La date ou le délai d'exécution est obligatoire sur un devis
                   adressé à un particulier (art. L.111-1 code de la consommation). */}
               <div className="grid grid-cols-2 gap-3">
