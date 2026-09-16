@@ -201,7 +201,9 @@ function getUserTarifs(){
     marge_fournitures:ct.marge_fournitures!=null?Number(ct.marge_fournitures):0,
   };
 }
-const PROPERTY_TYPES=['Piscine','Climatisation','Électricité','Plomberie','Multi-services','Autre'];
+// Le bien où l'on intervient, pas le métier : celui-ci est porté par le devis
+// (type_service). « Type : Appartement » s'imprime sous le lieu d'intervention.
+const PROPERTY_TYPES=['Maison individuelle','Appartement','Copropriété','Local commercial','Terrain','Autre'];
 const MISSION_STATUSES=['Prospect','Devis envoyé','Accepté','Planifié','En cours','Réalisé','Facturé','Payé'];
 const QUOTE_STATUSES=['En attente','Envoyé','Accepté','Refusé'];
 const STATUS_COLORS={
@@ -754,7 +756,7 @@ function ClientsPage({clients,setClients,missions,quotes,agencies,setAgencies,us
 function MissionsPage({missions,setMissions,clients,user}){
   const [modal,setModal]=useState(null);
   const [filter,setFilter]=useState('Tous');
-  const [form,setForm]=useState({client_id:'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});
+  const [form,setForm]=useState({client_id:'',address:'',type:PROPERTY_TYPES[0],date:'',status:'À confirmer',notes:''});
 
   const filtered=filter==='Tous'?missions:missions.filter(m=>m.status===filter);
   const sorted=[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -779,7 +781,7 @@ function MissionsPage({missions,setMissions,clients,user}){
   };
   const del=async(id)=>{if(!confirm('Supprimer cette mission ?'))return;if(sb&&user)await sb.from('missions').delete().eq('id',id);const u=missions.filter(m=>m.id!==id);setMissions(u);store.set('pii_missions',u);};
   const openEdit=(m)=>{setForm({client_id:m.client_id,address:m.address,type:m.type,date:m.date,status:m.status,notes:m.notes||''});setModal(m.id);};
-  const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:'Appartement',date:'',status:'À confirmer',notes:''});setModal('new');};
+  const openNew=()=>{setForm({client_id:clients[0]?.id||'',address:'',type:PROPERTY_TYPES[0],date:'',status:'À confirmer',notes:''});setModal('new');};
   const setStatus=async(id,status)=>{if(sb&&user)await sb.from('missions').update({status}).eq('id',id);const u=missions.map(m=>m.id===id?{...m,status}:m);setMissions(u);store.set('pii_missions',u);};
 
   const exportCSV=()=>{
@@ -796,7 +798,7 @@ function MissionsPage({missions,setMissions,clients,user}){
       if(rows.length<2){alert('Fichier vide ou invalide');return;}
       const objs=rows.slice(1).filter(r=>r[0]&&r[1]).map(r=>{
         const client=clients.find(c=>c.name.toLowerCase()===(r[4]||'').toLowerCase());
-        return {date:r[0]||today(),address:r[1]||'',type:r[2]||'Appartement',status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''};
+        return {date:r[0]||today(),address:r[1]||'',type:r[2]||PROPERTY_TYPES[0],status:r[3]||'À confirmer',client_id:client?.id||clients[0]?.id||'',notes:r[5]||''};
       });
       if(sb&&user){
         const{data}=await sb.from('missions').insert(objs.map(o=>({...o,user_id:user.id}))).select();
@@ -866,7 +868,10 @@ function MissionsPage({missions,setMissions,clients,user}){
               options={clients.map(c=>({value:c.id,label:c.name}))}/>
             <Input label="Adresse du bien *" value={form.address} onChange={v=>setForm(f=>({...f,address:v}))} required/>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Select label="Type de bien" value={form.type} onChange={v=>setForm(f=>({...f,type:v}))} options={PROPERTY_TYPES}/>
+              {/* Une valeur enregistrée avant ce changement doit rester visible
+                  et sélectionnable, sinon elle disparaîtrait à la réouverture. */}
+              <Select label="Type de bien" value={form.type} onChange={v=>setForm(f=>({...f,type:v}))}
+                options={[...new Set([form.type,...PROPERTY_TYPES].filter(Boolean))]}/>
               <Input label="Date de la mission *" type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} required/>
             </div>
             <Select label="Statut" value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={MISSION_STATUSES}/>
@@ -962,20 +967,25 @@ function quoteTotals(q){
 // hasTva : sans TVA, « HT » n'a plus de sens sur les colonnes — c'est le prix net.
 function drawLinesTable(doc,F,lines,y,C,hasTva){
   const hasRem=lines.some(l=>Number(l.remise_pct)>0);
-  const col=hasRem
-    ?{num:17,ref:25,des:46,desW:68,qty:128,pu:152,rem:168,tot:192}
-    :{num:17,ref:25,des:46,desW:80,qty:140,pu:166,rem:null,tot:192};
+  // Une colonne qui ne sert pas vole de la largeur aux désignations, donc des
+  // lignes de plus, donc des pages de plus : on ne la réserve que si elle sert.
+  const hasRef=lines.some(l=>String(l.ref||'').trim());
+  const right=hasRem
+    ?{qty:128,pu:152,rem:168,tot:192}
+    :{qty:140,pu:166,rem:null,tot:192};
+  const des=hasRef?46:27;
+  const col={num:17,ref:hasRef?25:null,des,desW:right.qty-des-6,...right};
   const header=()=>{
     doc.setFillColor(...C.dark);doc.rect(14,y-5,182,9,'F');
     doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...C.amberLight);
     doc.text('N°',col.num,y);
-    doc.text('RÉF.',col.ref,y);
+    if(col.ref)doc.text('RÉF.',col.ref,y);
     doc.text('DÉSIGNATION',col.des,y);
     doc.text('QTÉ',col.qty,y,{align:'right'});
     doc.text(hasTva?'PU HT':'PU NET',col.pu,y,{align:'right'});
     if(col.rem)doc.text('REM.',col.rem,y,{align:'right'});
     doc.text(hasTva?'TOTAL HT':'TOTAL NET',col.tot,y,{align:'right'});
-    y+=8;
+    y+=7;
   };
   const num=n=>String(Number(n)||0).replace('.',',');
   header();
@@ -984,17 +994,17 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
     const des=doc.splitTextToSize(l.designation||'—',col.desW);
     const dsc=String(l.descr||'').trim();
     const dl=dsc?doc.splitTextToSize(dsc,col.desW):[];
-    const h=Math.max(9,des.length*4+dl.length*3.6+(dl.length?2:0)+5);
+    const h=Math.max(8,des.length*3.9+dl.length*2.9+(dl.length?1.2:0)+2.8);
     // header() laisse la police en gras : on la remet avant d'écrire la ligne.
-    if(y+h>272){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
+    if(y+h>274){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
     if(i%2===0){doc.setFillColor(...C.veryLightGray);doc.rect(14,y-4.5,182,h,'F');}
     doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(i+1),col.num,y);
-    if(l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
+    if(col.ref&&l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
     doc.setFontSize(8.5);doc.setTextColor(20,26,40);
     doc.text(des,col.des,y);
     if(dl.length){
-      doc.setFontSize(7.2);doc.setTextColor(115,121,138);
-      doc.text(dl,col.des,y+des.length*4+0.5);
+      doc.setFontSize(6.9);doc.setTextColor(115,121,138);
+      doc.text(dl,col.des,y+des.length*3.9+0.2);
       doc.setFontSize(8.5);
     }
     doc.setTextColor(90,96,112);
@@ -1012,24 +1022,24 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
 // Sans TVA, le libellé « TTC » n'aurait pas de sens : on écrit « NET À PAYER ».
 function drawTotals(doc,F,totals,y,C){
   const hasTva=totals.rates.length>0;
-  const need=14+totals.rates.length*6.5;
+  const need=13+totals.rates.length*5.8;
   if(y+need>272){doc.addPage();y=22;}
-  doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=6.5;
+  doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=5.8;
   doc.setFontSize(9);doc.setFont(F,'normal');
   doc.setTextColor(90,96,112);doc.text(hasTva?'Total HT':'Total net',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(totals.ht),192,y,{align:'right'});y+=6.5;
+  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(totals.ht),192,y,{align:'right'});y+=5.8;
   totals.rates.forEach(r=>{
     doc.setTextColor(90,96,112);
     doc.text('TVA '+String(r.rate).replace('.',',')+'%',126,y);
-    doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(r.montant),192,y,{align:'right'});y+=6.5;
+    doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(r.montant),192,y,{align:'right'});y+=5.8;
   });
   y-=2.5;
-  doc.setFillColor(...C.dark);doc.roundedRect(120,y,76,12,1.5,1.5,'F');
+  doc.setFillColor(...C.dark);doc.roundedRect(120,y,76,11,1.5,1.5,'F');
   doc.setFont(F,'bold');doc.setFontSize(10.5);doc.setTextColor(...C.amberLight);
-  doc.text(hasTva?'TOTAL TTC':'NET À PAYER',126,y+7.8);
+  doc.text(hasTva?'TOTAL TTC':'NET À PAYER',126,y+7.2);
   doc.setFontSize(12);doc.setTextColor(255,255,255);
-  doc.text(fmtMoneyPDF(totals.ttc),190,y+7.8,{align:'right'});
-  return y+24;
+  doc.text(fmtMoneyPDF(totals.ttc),190,y+7.2,{align:'right'});
+  return y+12;
 }
 
 // Mentions obligatoires pour un artisan intervenant chez des particuliers.
@@ -1056,7 +1066,7 @@ function legalMentions(profile){
 function drawMentions(doc,lines,y){
   lines.forEach(l=>{
     const wrapped=doc.splitTextToSize(l,182);
-    const h=wrapped.length*3.6;
+    const h=wrapped.length*3.2;
     if(y+h>278){doc.addPage();y=20;}
     doc.text(wrapped,14,y);
     y+=h;
@@ -1104,36 +1114,36 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   }
 
   // ── Bloc émetteur (droite)
-  let ey=64;
+  let ey=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('PRESTATAIRE',130,ey);ey+=6;
+  doc.text('PRESTATAIRE',130,ey);ey+=5;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(companyName,130,ey);ey+=5.5;
+  doc.text(companyName,130,ey);ey+=5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
   // La forme juridique doit figurer sur les devis comme sur les factures.
-  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
-  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
-  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
-  if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
-  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=5;}
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=4.3;}
+  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=4.3;}
+  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=8.6;}
+  if(profile.phone){doc.text(profile.phone,130,ey);ey+=4.3;}
+  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=4.3;}
 
   // ── Bloc client (gauche)
-  let cy=64;
+  let cy=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('CLIENT',14,cy);cy+=6;
+  doc.text('CLIENT',14,cy);cy+=5;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(client?.name||'—',14,cy);cy+=5.5;
+  doc.text(client?.name||'—',14,cy);cy+=5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  if(client?.email){doc.text(client.email,14,cy);cy+=5;}
-  if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
+  if(client?.email){doc.text(client.email,14,cy);cy+=4.3;}
+  if(client?.phone){doc.text(client.phone,14,cy);cy+=4.3;}
 
   // ── Bloc intervention
   if(mission){
-    cy+=4;
+    cy+=3;
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=6;
+    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
-    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
+    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6;
     doc.setTextColor(90,96,112);
     doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
   }
@@ -1141,9 +1151,9 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   // ── Dates des travaux : la date ou le délai d'exécution est obligatoire sur
   // un devis adressé à un particulier (art. L.111-1 code de la consommation).
   if(q.date_debut||q.date_fin){
-    cy+=mission?11:4;
+    cy+=mission?8:3;
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=6;
+    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=5;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
     doc.text((q.date_debut&&q.date_fin)
       ?`Du ${fmt(q.date_debut)} au ${fmt(q.date_fin)}`
@@ -1151,12 +1161,12 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   }
 
   // ── Séparateur
-  const tableY=Math.max(cy||0,ey||0)+10;
+  const tableY=Math.max(cy||0,ey||0)+7;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
   // ── Descriptif des travaux : ce que le client lit avant le chiffrage.
   // Pleine largeur, contrairement aux blocs d'en-tête qui tiennent en colonne.
-  let topY=tableY+8;
+  let topY=tableY+7;
   const descr=String(q.description||'').trim();
   if(descr){
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
@@ -1165,9 +1175,9 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     const dl=doc.splitTextToSize(descr,182);
     dl.forEach(l=>{
       if(topY>262){doc.addPage();topY=22;}
-      doc.text(l,14,topY);topY+=4.5;
+      doc.text(l,14,topY);topY+=3.9;
     });
-    topY+=9;
+    topY+=7;
   }
 
   // ── Tableau des lignes
@@ -1177,34 +1187,42 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   const qTotals=quoteTotals(q);
   let y=drawLinesTable(doc,F,quoteLines(q),topY,C,qTotals.rates.length>0);
 
-  // ── Totaux
-  y=drawTotals(doc,F,qTotals,y+5,C);
+  // ── Totaux à droite et bon pour accord à gauche, sur la même bande : empilés,
+  // ils laissaient une large zone blanche à gauche et poussaient les mentions
+  // sur une seconde page.
+  const yBand=y+3;
+  const yTot=drawTotals(doc,F,qTotals,yBand,C);
 
-  // ── Zone signature
-  doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=7;
+  let ys=yBand;
+  doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,ys,110,ys);ys+=5.5;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('BON POUR ACCORD',14,y);y+=5.5;
+  doc.text('BON POUR ACCORD',14,ys);ys+=4.8;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Signature du client précédée de la mention manuscrite',14,y);y+=4.5;
+  doc.text('Signature du client précédée de la mention manuscrite',14,ys);ys+=4.2;
   doc.setFont(F,'bold');
-  doc.text('« Devis reçu avant l\'exécution des travaux »',14,y);
-  doc.setFont(F,'normal');y+=12;
-  doc.setDrawColor(190,196,208);doc.line(14,y,100,y);
+  doc.text('« Devis reçu avant l\'exécution des travaux »',14,ys);
+  doc.setFont(F,'normal');ys+=11;
+  doc.setDrawColor(190,196,208);doc.line(14,ys,100,ys);
   doc.setFontSize(7.5);doc.setTextColor(150,156,170);
-  doc.text('Signature',14,y+4);doc.text('Date : ___/___/______',65,y+4);
-  y+=14;
+  doc.text('Signature',14,ys+4);doc.text('Date : ___/___/______',65,ys+4);
+  ys+=8;
+
+  y=Math.max(yTot,ys);
 
   // ── Mentions légales
-  doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=5;
+  doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=4;
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const mentions=[
     'Devis gratuit.',
     `Devis valable 30 jours à compter du ${fmt(q.created_at)} (jusqu'au ${fmt(validUntil.toISOString())}).`,
-    'Conditions de paiement : acompte de 30% à la commande, solde à réception des travaux.',
-    // Obligatoire sur un devis de dépannage, réparation ou entretien du
-    // bâtiment (arrêté du 24 janvier 2017).
-    'Moyens de paiement acceptés : '+(profile.payment_methods||PAYMENT_METHODS_DEFAULT)+'.',
   ];
+  // Propres à chaque devis : un contrat d'entretien mensualisé et un dépannage
+  // ponctuel ne se règlent pas de la même façon.
+  const terms=String(q.payment_terms||profile.payment_terms||'').trim();
+  if(terms)mentions.push('Conditions de paiement : '+terms);
+  // Obligatoire sur un devis de dépannage, réparation ou entretien du
+  // bâtiment (arrêté du 24 janvier 2017).
+  mentions.push('Moyens de paiement acceptés : '+(profile.payment_methods||PAYMENT_METHODS_DEFAULT)+'.');
   // Réservé aux clients professionnels : l'indemnité de 40 € n'est pas
   // opposable à un particulier (art. L.441-10 C. com., entre professionnels).
   if(q.penalites)mentions.push('En cas de retard de paiement, pénalités de 3× le taux d\'intérêt légal + indemnité forfaitaire de recouvrement de 40€.');
@@ -1309,43 +1327,43 @@ function exportInvoicePDF(inv, client, mission, quote, {returnBase64=false}={}) 
   }
 
   // ── Bloc prestataire (droite)
-  let ey=64;
+  let ey=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('PRESTATAIRE',130,ey);ey+=6;
+  doc.text('PRESTATAIRE',130,ey);ey+=5;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(companyName,130,ey);ey+=5.5;
+  doc.text(companyName,130,ey);ey+=5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
   // La forme juridique doit figurer sur les devis comme sur les factures.
-  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=5;}
-  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=5;}
-  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=10;}
-  if(profile.phone){doc.text(profile.phone,130,ey);ey+=5;}
-  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=5;}
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=4.3;}
+  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=4.3;}
+  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=8.6;}
+  if(profile.phone){doc.text(profile.phone,130,ey);ey+=4.3;}
+  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=4.3;}
 
   // ── Bloc client (gauche)
-  let cy=64;
+  let cy=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('FACTURÉ À',14,cy);cy+=6;
+  doc.text('FACTURÉ À',14,cy);cy+=5;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(client?.name||'—',14,cy);cy+=5.5;
+  doc.text(client?.name||'—',14,cy);cy+=5;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  if(client?.email){doc.text(client.email,14,cy);cy+=5;}
-  if(client?.phone){doc.text(client.phone,14,cy);cy+=5;}
+  if(client?.email){doc.text(client.email,14,cy);cy+=4.3;}
+  if(client?.phone){doc.text(client.phone,14,cy);cy+=4.3;}
   if(client?.agent){doc.text('Contact : '+client.agent,14,cy);cy+=5;}
 
   // ── Bloc intervention
   if(mission){
-    cy+=4;
+    cy+=3;
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=6;
+    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
-    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=7;
+    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6;
     doc.setTextColor(90,96,112);
     doc.text(`Type : ${mission.type||'—'}   Date : ${fmt(mission.date)}`,14,cy);
   }
 
   // ── Séparateur
-  const tableY=Math.max(cy||0,ey||0)+10;
+  const tableY=Math.max(cy||0,ey||0)+7;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
   // ── Tableau des lignes (reprises du devis lié, sinon une ligne globale)
@@ -1848,6 +1866,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
   const [modal,setModal]=useState(null);
   const defaultForm=()=>{const t=getUserTarifs();return{client_id:'',mission_id:'',type_service:'Piscine',description:'',
     date_debut:'',date_fin:'',penalites:false,
+    payment_terms:store.get('pii_profile',{}).payment_terms||'',
     lines:[newLine({designation:"Main-d'œuvre",unit:'h',pu_ht:t.horaire}),
            newLine({designation:'Forfait déplacement',unit:'forfait',pu_ht:t.deplacement})]};};
   const [form,setForm]=useState(defaultForm);
@@ -1864,6 +1883,7 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
     setForm({client_id:q.client_id||'',mission_id:q.mission_id||'',
       type_service:q.type_service||SERVICE_TYPES[0],description:q.description||'',
       date_debut:q.date_debut||'',date_fin:q.date_fin||'',
+      payment_terms:q.payment_terms||'',
       penalites:!!q.penalites,lines:quoteLines(q).map(l=>({...l}))});
     setModal(q.id);
   };
@@ -1987,6 +2007,13 @@ function QuotesPage({quotes,setQuotes,clients,missions,user,updateMissionStatus}
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Début des travaux" type="date" value={form.date_debut||''} onChange={v=>setForm(f=>({...f,date_debut:v}))}/>
                 <Input label="Fin des travaux" type="date" value={form.date_fin||''} onChange={v=>setForm(f=>({...f,date_fin:v}))}/>
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{color:'var(--muted)'}}>Conditions de paiement</label>
+                <textarea value={form.payment_terms||''} onChange={e=>setForm(f=>({...f,payment_terms:e.target.value}))} rows={2}
+                  className="w-full rounded-xl border text-sm px-3 py-2.5 focus:outline-none resize-y"
+                  placeholder="Ex : Règlement lissé de 160,00 € / mois par virement automatique au 1er de chaque mois."/>
+                <p className="text-xs mt-1" style={{color:'var(--muted)'}}>Imprimée dans les mentions du devis. Pré-remplie depuis vos réglages.</p>
               </div>
               <QuoteLinesEditor lines={form.lines} onChange={lines=>setForm(f=>({...f,lines}))}/>
               <label className="flex items-start gap-2 text-sm cursor-pointer bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
@@ -3161,6 +3188,7 @@ function PortfolioPage({user}) {
           <Input label="Email (affiché sur devis/factures)" type="email" value={profile.email||''} onChange={v=>saveProfile({email:v})} placeholder="contact@habitat-maintenance83.fr"/>
           <Input label="Préfixe facture (ex: NF, FAC)" value={profile.invoice_prefix||''} onChange={v=>saveProfile({invoice_prefix:v})} placeholder="FAC"/>
           <Input label="Moyens de paiement acceptés" value={profile.payment_methods||''} onChange={v=>saveProfile({payment_methods:v})} placeholder={PAYMENT_METHODS_DEFAULT}/>
+          <Input label="Conditions de paiement par défaut" value={profile.payment_terms||''} onChange={v=>saveProfile({payment_terms:v})} placeholder="Reprises sur chaque nouveau devis, modifiables au cas par cas"/>
           <label className="flex items-start gap-2 text-sm cursor-pointer md:col-span-2 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700">
             <input type="checkbox" className="mt-1" checked={!!profile.micro_entrepreneur} onChange={e=>saveProfile({micro_entrepreneur:e.target.checked})}/>
             <span>
@@ -3670,7 +3698,7 @@ function App(){
       ['client_id','address','type','date','status','notes','checklist','agency_id','created_at'],setMissions,userId);
     await syncTable('quotes','pii_quotes',
       ['client_id','mission_id','num','ht','tva','ttc','status','created_at','type_service','description',
-       'date_debut','date_fin','lines','penalites','accept_token','mode','heures','taux_horaire',
+       'date_debut','date_fin','payment_terms','lines','penalites','accept_token','mode','heures','taux_horaire',
        'forfait_ht','fournitures','marge_fournitures','fournitures_vente','urgence','deplacement'],setQuotes,userId);
     await syncTable('invoices','pii_invoices',
       ['quote_id','client_id','mission_id','num','ht','tva','ttc','status','due_date','paid_date',
