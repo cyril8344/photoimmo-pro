@@ -967,7 +967,7 @@ function quoteTotals(q){
 // Tableau des lignes pour les PDF : gère le retour à la ligne des désignations,
 // la hauteur variable des lignes et les sauts de page.
 // hasTva : sans TVA, « HT » n'a plus de sens sur les colonnes — c'est le prix net.
-function drawLinesTable(doc,F,lines,y,C,hasTva){
+function drawLinesTable(doc,F,lines,y,C,hasTva,k=1){
   const hasRem=lines.some(l=>Number(l.remise_pct)>0);
   // Une colonne qui ne sert pas vole de la largeur aux désignations, donc des
   // lignes de plus, donc des pages de plus : on ne la réserve que si elle sert.
@@ -987,7 +987,7 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
     doc.text(hasTva?'PU HT':'PU NET',col.pu,y,{align:'right'});
     if(col.rem)doc.text('REM.',col.rem,y,{align:'right'});
     doc.text(hasTva?'TOTAL HT':'TOTAL NET',col.tot,y,{align:'right'});
-    y+=7;
+    y+=7*k;
   };
   const num=n=>String(Number(n)||0).replace('.',',');
   header();
@@ -995,18 +995,28 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
     doc.setFont(F,'normal');doc.setFontSize(8.5);
     const des=doc.splitTextToSize(l.designation||'—',col.desW);
     const dsc=String(l.descr||'').trim();
+    // Découper à la taille réelle d'écriture : sinon le détail est coupé comme
+    // s'il faisait 8,5 pt alors qu'il s'imprime plus petit, et occupe des
+    // lignes supplémentaires pour rien.
+    const dSize=k<0.95?6.5:6.9;
+    doc.setFontSize(dSize);
     const dl=dsc?doc.splitTextToSize(dsc,col.desW):[];
-    const h=Math.max(8,des.length*3.9+dl.length*2.9+(dl.length?1.2:0)+2.8);
+    doc.setFontSize(8.5);
+    const h=Math.max(8*k,des.length*3.9*k+dl.length*2.9*k+(dl.length?1.2:0)+2.8*k);
     // header() laisse la police en gras : on la remet avant d'écrire la ligne.
     if(y+h>274){doc.addPage();y=22;header();doc.setFont(F,'normal');doc.setFontSize(8.5);}
     if(i%2===0){doc.setFillColor(...C.veryLightGray);doc.rect(14,y-4.5,182,h,'F');}
     doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(i+1),col.num,y);
     if(col.ref&&l.ref){doc.setFontSize(7.5);doc.setTextColor(120,126,140);doc.text(String(l.ref),col.ref,y);}
     doc.setFontSize(8.5);doc.setTextColor(20,26,40);
-    doc.text(des,col.des,y);
+    // Chaque ligne est posée à sa propre hauteur : doc.text() sur un tableau
+    // appliquerait l'interligne interne de jsPDF, pas celui réservé dans h,
+    // et le texte déborderait de sa case dès que le devis se resserre.
+    des.forEach((ln,j)=>doc.text(ln,col.des,y+j*3.9*k));
     if(dl.length){
-      doc.setFontSize(6.9);doc.setTextColor(115,121,138);
-      doc.text(dl,col.des,y+des.length*3.9+0.2);
+      doc.setFontSize(dSize);doc.setTextColor(115,121,138);
+      const dy=y+des.length*3.9*k+0.2;
+      dl.forEach((ln,j)=>doc.text(ln,col.des,dy+j*2.9*k));
       doc.setFontSize(8.5);
     }
     doc.setTextColor(90,96,112);
@@ -1022,18 +1032,18 @@ function drawLinesTable(doc,F,lines,y,C,hasTva){
 
 // Bloc Total HT / TVA (ventilée si plusieurs taux) / Total.
 // Sans TVA, le libellé « TTC » n'aurait pas de sens : on écrit « NET À PAYER ».
-function drawTotals(doc,F,totals,y,C){
+function drawTotals(doc,F,totals,y,C,k=1){
   const hasTva=totals.rates.length>0;
-  const need=13+totals.rates.length*5.8;
+  const need=(13+totals.rates.length*5.8)*k;
   if(y+need>272){doc.addPage();y=22;}
-  doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=5.8;
+  doc.setDrawColor(...C.amber);doc.setLineWidth(0.4);doc.line(120,y,196,y);y+=5.8*k;
   doc.setFontSize(9);doc.setFont(F,'normal');
   doc.setTextColor(90,96,112);doc.text(hasTva?'Total HT':'Total net',126,y);
-  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(totals.ht),192,y,{align:'right'});y+=5.8;
+  doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(totals.ht),192,y,{align:'right'});y+=5.8*k;
   totals.rates.forEach(r=>{
     doc.setTextColor(90,96,112);
     doc.text('TVA '+String(r.rate).replace('.',',')+'%',126,y);
-    doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(r.montant),192,y,{align:'right'});y+=5.8;
+    doc.setTextColor(20,26,40);doc.text(fmtMoneyPDF(r.montant),192,y,{align:'right'});y+=5.8*k;
   });
   y-=2.5;
   doc.setFillColor(...C.dark);doc.roundedRect(120,y,76,11,1.5,1.5,'F');
@@ -1041,7 +1051,7 @@ function drawTotals(doc,F,totals,y,C){
   doc.text(hasTva?'TOTAL TTC':'NET À PAYER',126,y+7.2);
   doc.setFontSize(12);doc.setTextColor(255,255,255);
   doc.text(fmtMoneyPDF(totals.ttc),190,y+7.2,{align:'right'});
-  return y+12;
+  return y+12*k;
 }
 
 // Mentions obligatoires pour un artisan intervenant chez des particuliers.
@@ -1065,18 +1075,35 @@ function legalMentions(profile){
 
 // Écrit les mentions en gérant le retour à la ligne : sans splitTextToSize,
 // une mention longue déborde sur la suivante au lieu de pousser le bloc.
-function drawMentions(doc,lines,y){
+function drawMentions(doc,lines,y,k=1){
   lines.forEach(l=>{
     const wrapped=doc.splitTextToSize(l,182);
-    const h=wrapped.length*3.2;
+    const lead=3.2*k;
+    const h=wrapped.length*lead;
     if(y+h>278){doc.addPage();y=20;}
-    doc.text(wrapped,14,y);
+    wrapped.forEach((ln,j)=>doc.text(ln,14,y+j*lead));
     y+=h;
   });
   return y;
 }
 
+// Un devis doit tenir sur une page tant que son contenu le permet. On le
+// compose d'abord aéré ; s'il déborde, on le recompose plus serré, par paliers.
+// Au-delà, le contenu est réellement trop long et la deuxième page est due.
+const FIT_STEPS=[1,0.92,0.84,0.78];
 function exportPDF(q,client,mission,{returnBase64=false}={}){
+  let doc=null,best=Infinity;
+  for(const k of FIT_STEPS){
+    const d=renderQuotePDF(q,client,mission,k);
+    const n=d.getNumberOfPages();
+    if(n<best){best=n;doc=d;}
+    if(n===1)break;
+  }
+  if(returnBase64)return doc.output('datauristring').split(',')[1];
+  doc.save(`devis-${q.num}.pdf`);
+}
+
+function renderQuotePDF(q,client,mission,k){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const dark=[14,31,66];
@@ -1118,34 +1145,34 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   // ── Bloc émetteur (droite)
   let ey=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('PRESTATAIRE',130,ey);ey+=5;
+  doc.text('PRESTATAIRE',130,ey);ey+=5*k;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(companyName,130,ey);ey+=5;
+  doc.text(companyName,130,ey);ey+=5*k;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
   // La forme juridique doit figurer sur les devis comme sur les factures.
-  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=4.3;}
-  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=4.3;}
-  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=8.6;}
-  if(profile.phone){doc.text(profile.phone,130,ey);ey+=4.3;}
-  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=4.3;}
+  if(profile.legal_form&&profile.legal_form.trim()){doc.text(profile.legal_form.trim(),130,ey,{maxWidth:66});ey+=4.3*k;}
+  if(profile.siret){doc.text('SIRET : '+profile.siret,130,ey);ey+=4.3*k;}
+  if(profile.address){doc.text(profile.address,130,ey,{maxWidth:66});ey+=8.6*k;}
+  if(profile.phone){doc.text(profile.phone,130,ey);ey+=4.3*k;}
+  if(profile.email){doc.text(profile.email,130,ey,{maxWidth:66});ey+=4.3*k;}
 
   // ── Bloc client (gauche)
   let cy=58;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('CLIENT',14,cy);cy+=5;
+  doc.text('CLIENT',14,cy);cy+=5*k;
   doc.setFontSize(9.5);doc.setFont(F,'bold');doc.setTextColor(20,26,40);
-  doc.text(client?.name||'—',14,cy);cy+=5;
+  doc.text(client?.name||'—',14,cy);cy+=5*k;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  if(client?.email){doc.text(client.email,14,cy);cy+=4.3;}
-  if(client?.phone){doc.text(client.phone,14,cy);cy+=4.3;}
+  if(client?.email){doc.text(client.email,14,cy);cy+=4.3*k;}
+  if(client?.phone){doc.text(client.phone,14,cy);cy+=4.3*k;}
 
   // ── Bloc intervention
   if(mission){
-    cy+=3;
+    cy+=3*k;
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5;
+    doc.text('LIEU D\'INTERVENTION',14,cy);cy+=5*k;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
-    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6;
+    doc.text(mission.address||'',14,cy,{maxWidth:100});cy+=6*k;
     // Le type de bien sert à vous y retrouver dans vos interventions ; il
     // n'apprend rien au client, qui connaît son logement. Seule la date reste.
     if(mission.date){
@@ -1157,9 +1184,9 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   // ── Dates des travaux : la date ou le délai d'exécution est obligatoire sur
   // un devis adressé à un particulier (art. L.111-1 code de la consommation).
   if(q.date_debut||q.date_fin){
-    cy+=mission?8:3;
+    cy+=(mission?8:3)*k;
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=5;
+    doc.text('EXÉCUTION DES TRAVAUX',14,cy);cy+=5*k;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
     doc.text((q.date_debut&&q.date_fin)
       ?`Du ${fmt(q.date_debut)} au ${fmt(q.date_fin)}`
@@ -1167,23 +1194,23 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   }
 
   // ── Séparateur
-  const tableY=Math.max(cy||0,ey||0)+7;
+  const tableY=Math.max(cy||0,ey||0)+7*k;
   doc.setDrawColor(...amber);doc.setLineWidth(0.8);doc.line(14,tableY,196,tableY);
 
   // ── Descriptif des travaux : ce que le client lit avant le chiffrage.
   // Pleine largeur, contrairement aux blocs d'en-tête qui tiennent en colonne.
-  let topY=tableY+7;
+  let topY=tableY+7*k;
   const descr=String(q.description||'').trim();
   if(descr){
     doc.setFont(F,'bold');doc.setTextColor(...amber);doc.setFontSize(7.5);
-    doc.text('DESCRIPTIF DES TRAVAUX',14,topY);topY+=5.5;
+    doc.text('DESCRIPTIF DES TRAVAUX',14,topY);topY+=5.5*k;
     doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(20,26,40);
     const dl=doc.splitTextToSize(descr,182);
     dl.forEach(l=>{
       if(topY>262){doc.addPage();topY=22;}
-      doc.text(l,14,topY);topY+=3.9;
+      doc.text(l,14,topY);topY+=3.9*k;
     });
-    topY+=7;
+    topY+=7*k;
   }
 
   // ── Tableau des lignes
@@ -1191,32 +1218,32 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
   // Les totaux sont connus avant le tableau : ses en-têtes disent « HT » ou
   // « NET » selon que le devis porte de la TVA ou non.
   const qTotals=quoteTotals(q);
-  let y=drawLinesTable(doc,F,quoteLines(q),topY,C,qTotals.rates.length>0);
+  let y=drawLinesTable(doc,F,quoteLines(q),topY,C,qTotals.rates.length>0,k);
 
   // ── Totaux à droite et bon pour accord à gauche, sur la même bande : empilés,
   // ils laissaient une large zone blanche à gauche et poussaient les mentions
   // sur une seconde page.
-  const yBand=y+3;
-  const yTot=drawTotals(doc,F,qTotals,yBand,C);
+  const yBand=y+3*k;
+  const yTot=drawTotals(doc,F,qTotals,yBand,C,k);
 
   let ys=yBand;
-  doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,ys,110,ys);ys+=5.5;
+  doc.setDrawColor(210,215,225);doc.setLineWidth(0.3);doc.line(14,ys,110,ys);ys+=5.5*k;
   doc.setFontSize(7.5);doc.setFont(F,'bold');doc.setTextColor(...amber);
-  doc.text('BON POUR ACCORD',14,ys);ys+=4.8;
+  doc.text('BON POUR ACCORD',14,ys);ys+=4.8*k;
   doc.setFontSize(8.5);doc.setFont(F,'normal');doc.setTextColor(90,96,112);
-  doc.text('Signature du client précédée de la mention manuscrite',14,ys);ys+=4.2;
+  doc.text('Signature du client précédée de la mention manuscrite',14,ys);ys+=4.2*k;
   doc.setFont(F,'bold');
   doc.text('« Devis reçu avant l\'exécution des travaux »',14,ys);
-  doc.setFont(F,'normal');ys+=11;
+  doc.setFont(F,'normal');ys+=11*k;
   doc.setDrawColor(190,196,208);doc.line(14,ys,100,ys);
   doc.setFontSize(7.5);doc.setTextColor(150,156,170);
   doc.text('Signature',14,ys+4);doc.text('Date : ___/___/______',65,ys+4);
-  ys+=8;
+  ys+=8*k;
 
   y=Math.max(yTot,ys);
 
   // ── Mentions légales
-  doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=4;
+  doc.setDrawColor(210,215,225);doc.line(14,y,196,y);y+=4*k;
   doc.setFontSize(7);doc.setTextColor(125,131,145);doc.setFont(F,'normal');
   const mentions=[
     'Devis gratuit.',
@@ -1238,15 +1265,14 @@ function exportPDF(q,client,mission,{returnBase64=false}={}){
     mentions.push('TVA non applicable — article 293 B du CGI.');
   mentions.push(...legalMentions(profile));
   if(profile.withdrawal_right)mentions.push("Contrat conclu hors établissement : le client dispose d'un délai de rétractation de 14 jours à compter de la signature (art. L.221-18 du code de la consommation).");
-  drawMentions(doc,mentions,y);
+  drawMentions(doc,mentions,y,k);
 
   // ── Pied de page
   doc.setFillColor(...dark);doc.rect(0,285,210,12,'F');
   doc.setFontSize(7);doc.setFont(F,'normal');doc.setTextColor(...lightGray);
   doc.text(companyName+(profile.siret?' — SIRET '+profile.siret:''),105,292,{align:'center'});
 
-  if(returnBase64)return doc.output('datauristring').split(',')[1];
-  doc.save(`devis-${q.num}.pdf`);
+  return doc;
 }
 
 async function sendQuoteEmail(q, client, mission, acceptUrl) {
